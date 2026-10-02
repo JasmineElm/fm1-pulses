@@ -126,17 +126,24 @@ Reference:
 - WebAudio/web-midi-api issue #212 (ordering of same-timestamp messages)
 ```
 
-### 8. FM-1 MIDI Channel Discrepancy
+### 8. FM-1 MIDI Channel: Note is Omni, FX is ch2
 
-**Problem**: Official manual says Note Channel default is ch2 (Omni). Our MVP testing (2026-09-30) found FM-1 accepts notes on **ch1 only** under Baud Girl firmware. Stock firmware may behave differently.
+**Problem**: The official MIDI spec (see `notes/fm1-midi-official.txt`) says the
+**Note channel defaults to Omni/All** (accepts any channel) while the **FX channel
+defaults to ch2**. Earlier notes conflated these — "ch2" is the FX channel, not the
+note channel. Our MVP (2026-09-30) saw notes accepted on ch1 under Baud Girl
+firmware, which is consistent with Omni.
 
-**Impact**: Wrong channel = no sound. Silent failure.
+**Impact**: Wrong channel = no sound, silent failure. Also: CCs sent on the note
+channel will NOT hit the FX parameters.
 
 **Mitigation**:
-- Default to **ch1** (verified by MVP).
-- Make channel selection prominent in UI (not buried in settings).
+- Default note channel to **ch1** (safe — device is Omni by default).
+- Default FX channel to **ch2** (per official spec).
+- Make both channel selectors prominent in the UI.
 - Include a "Test" button that sends a single note to verify connection.
-- Document: "If no sound, try switching MIDI channel. Baud Girl fw = ch1, stock fw may be ch2."
+- ⚠ CC 1 (ModWheel) on the FX channel acts as **Filter Type**, not ModWheel — send
+  ModWheel on a non-FX channel (see official spec).
 
 ---
 

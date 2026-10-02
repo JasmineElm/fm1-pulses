@@ -1,0 +1,11 @@
+{
+  "name": "FM-1 Pulses",
+  "short_name": "Pulses",
+  "description": "Generative MIDI sequencer for the M-VAVE FM-1",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": []
+}

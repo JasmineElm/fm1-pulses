@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "scales": [
+    { "id": "chromatic",       "name": "Chromatic",               "intervals": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+    { "id": "major",           "name": "Major (Ionian)",          "intervals": [0, 2, 4, 5, 7, 9, 11] },
+    { "id": "minor",           "name": "Minor (Natural/Aeolian)", "intervals": [0, 2, 3, 5, 7, 8, 10] },
+    { "id": "harmonic_minor",  "name": "Minor Harmonic",          "intervals": [0, 2, 3, 5, 7, 8, 11] },
+    { "id": "melodic_minor",   "name": "Minor Melodic (asc.)",    "intervals": [0, 2, 3, 5, 7, 9, 11] },
+    { "id": "penta_major",     "name": "Pentatonic Major",        "intervals": [0, 2, 4, 7, 9] },
+    { "id": "penta_minor",     "name": "Pentatonic Minor",        "intervals": [0, 3, 5, 7, 10] },
+    { "id": "blues",           "name": "Blues",                   "intervals": [0, 3, 5, 6, 7, 10] },
+    { "id": "dorian",          "name": "Dorian",                  "intervals": [0, 2, 3, 5, 7, 9, 10] },
+    { "id": "mixolydian",      "name": "Mixolydian",              "intervals": [0, 2, 4, 5, 7, 9, 10] },
+    { "id": "phrygian",        "name": "Phrygian",                "intervals": [0, 1, 3, 5, 7, 8, 10] },
+    { "id": "lydian",          "name": "Lydian",                  "intervals": [0, 2, 4, 6, 7, 9, 11] },
+    { "id": "locrian",         "name": "Locrian",                 "intervals": [0, 1, 3, 5, 6, 8, 10] },
+    { "id": "whole_tone",      "name": "Whole Tone",              "intervals": [0, 2, 4, 6, 8, 10] },
+    { "id": "dim_hw",          "name": "Diminished (Half-Whole)", "intervals": [0, 1, 3, 4, 6, 7, 9, 10] },
+    { "id": "dim_wh",          "name": "Diminished (Whole-Half)", "intervals": [0, 2, 3, 5, 6, 8, 9, 11] },
+    { "id": "augmented",       "name": "Augmented",               "intervals": [0, 3, 4, 7, 8, 11] },
+    { "id": "in_sen",          "name": "Japanese (In Sen)",       "intervals": [0, 1, 5, 7, 10] },
+    { "id": "hijaz",           "name": "Arabic (Hijaz)",          "intervals": [0, 1, 4, 5, 7, 8, 10] },
+    { "id": "custom",          "name": "Custom",                  "intervals": [], "custom": true }
+  ]
+}

@@ -39,7 +39,7 @@ at the Buffer.
 **Controls**:
 - **BPM** — tempo, 20–300 BPM. Default: 120.
 - **Rate** — clock subdivision per step. Values: 1/1, 1/2, 1/4, 1/8, 1/16, 1/32.
-  Default: 1/8. A rate of 1/4 means one step per beat; 1/32 means eight steps per beat.
+  Default: 1/16. A rate of 1/4 means one step per beat; 1/32 means eight steps per beat.
 - **Swing** — timing offset on even steps, 0–100%. 0 = straight, 100 = fully swung.
   Applied as a percentage of the step interval.
 - **Jitter** — timing randomness, 0–100%. 0 = metronomic, 100 = wildly off-grid.
@@ -157,7 +157,12 @@ pitch source after quantization.
 
 **FM-1 mapping**:
 - LFO output (after S&H) is a floating-point value in the range 0–127 (MIDI notes).
-  Amplitude and offset are applied as: `note = offset + (lfo_value × amplitude / 100)`.
+  Amplitude and offset are applied as (then clamped to 0–127):
+  `range  = amplitude / 100 × 127`
+  `center = 63.5 + (offset / 100) × 63.5`
+  `note   = clamp(center + (lfo_value / 127 − 0.5) × range, 0, 127)`
+- At amplitude 100% the swing covers the full 0–127 range; at 50% it spans ~64
+  notes around the center. Offset shifts the center, not the width.
 
 ---
 
@@ -506,19 +511,16 @@ GATE PROBABILITY (gate %)
 
 ---
 
-## Target Platform: Desktop Chrome First
+## Target Platform: Phone-First (Android Chrome)
 
-**Phase 1** (current): Desktop Chrome — USB MIDI reliable, full screen real estate,
-mouse + keyboard input, low GC jitter.
+The primary target is the user's phone (Xiaomi 14t, Android 14) driving the FM-1 over
+USB OTG, with BLE MIDI as a fallback. See `PLAN.md` for the phased rollout and
+`notes/android-capabilities.md` for the transport reality.
 
-**Phase 2** (after desktop works): Mobile Chrome on Android — BLE MIDI, touch UI,
-responsive layout, Web Worker timer for tab throttling.
-
-Rationale:
-- USB MIDI enumeration works 100% on desktop (native drivers).
-- Mobile Chrome has quirks with USB OTG MIDI device detection.
-- Desktop allows faster iteration and testing.
-- Mobile-specific concerns (BLE jitter, tab throttling, touch UI) deferred.
+- **Primary:** Android Chrome, Web MIDI over USB OTG. Touch-first UI.
+- **Fallback:** BLE MIDI (higher jitter — acceptable only at slower rates).
+- **Desktop:** still runs in desktop Chrome for dev/iteration, but it is no longer the
+target; no desktop-specific UI.
 
 ---
 
@@ -545,8 +547,6 @@ All parameters visible at once. No tabs, no menus, no hidden sections.
 │                                                                     │
 │  ┌─ GATE ─────────────────────────────────────────────────────────┐ │
 │  │ Gate %     [==============|====] [70%]                         │ │
-│  │ Velocity   [===========|======] [100]                          │ │
-│  │ Duration   [========|=========] [gate]                         │ │
 │  └───────────────────────────────────────────────────────────────┘ │
 │                                                                     │
 │  ┌─ LFO ──────────────────────────────────────────────────────────┐ │
@@ -577,6 +577,8 @@ All parameters visible at once. No tabs, no menus, no hidden sections.
 │                                                                     │
 │  ┌─ FM-1 OUTPUT ──────────────────────────────────────────────────┐ │
 │  │ Channel    [====|==============] [1]                           │ │
+│  │ Velocity   [===========|======] [100]                          │ │
+│  │ Duration   [========|=========] [gate]                         │ │
 │  │ FX Channel [====|==============] [2]                           │ │
 │  └───────────────────────────────────────────────────────────────┘ │
 │                                                                     │
@@ -649,7 +651,7 @@ Custom scale option for user-defined note sets.
 | 14 | Whole Tone | 6 | 1 2 3 #4 #5 #6 |
 | 15 | Diminished (Half-Whole) | 8 | 1 b2 b3 3 #4 5 6 b7 |
 | 16 | Diminished (Whole-Half) | 8 | 1 2 b3 4 b5 b6 6 7 |
-| 17 | Augmented | 6 | 1 3 b3 5 #5 7 |
+| 17 | Augmented | 6 | 1 b3 3 5 #5 7 |
 | 18 | Japanese (In Sen) | 5 | 1 b2 4 5 b7 |
 | 19 | Arabic (Hijaz) | 7 | 1 b2 3 4 5 b6 b7 |
 | 20 | Custom | — | User-defined via toggle grid |

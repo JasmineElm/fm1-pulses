@@ -1,0 +1,40 @@
+
+FM-1 MIDI English VersionChannels: Note channel (midich) defaults to All / Omni; FX channel (effectch) defaults to MIDI ch 2; System Real-Time has no channel.⚠ CC 1 (ModWheel) sent on the FX channel (default ch2) acts as an FX parameter (Filter Type), not ModWheel; send it on another channel. Pitch Bend is unaffected on any channel.1. Note Channel (midich)Message Byte Data / CC Response
+Note On 9n note, vel 1–127 Sound (vel 0 = Note Off)
+Note Off 8n note Key release
+Program Change Cn 0–127 Voice 001–128
+Pitch Bend En 14-bit Pitch bend
+Aftertouch Dn 0–127 Channel aftertouch
+Mod Wheel Bn CC 1 Modulation
+Sustain Bn CC 64 Sustain (release on off)
+2. FX Channel (effectch, default ch2) · CC 0–23CC Effect Parameter Range
+0 Filter Switch 0=off / ≥1=on
+1 Filter Type 0–2 (LPF/BPF/HPF)
+2 Filter Cutoff 0–107
+3 Filter Q 0–10
+4 Reverb Switch 0=off / ≥1=on
+5 Reverb Type 0–2 (Room/Hall/Plate)
+6 Reverb Decay 0–100
+7 Reverb Mix 0–100
+8 Delay Switch 0=off / ≥1=on
+9 Delay Decay 0–100
+10 Delay Rate 0–100
+11 Delay Mix 0–100
+12 Distortion Switch 0=off / ≥1=on
+13 Distortion Gain 0–100
+14 Distortion Tone 0–100
+15 Distortion Level 0–100
+16 Chorus Switch 0=off / ≥1=on
+17 Chorus Freq 0–100
+18 Chorus Depth 0–100
+19 Chorus Mix 0–100
+20 Phaser Switch 0=off / ≥1=on
+21 Phaser Freq 0–100
+22 Phaser Depth 0–100
+23 Phaser Mix 0–100
+3. System Real-Time (no channel)Byte Message Response
+F8 Clock Follow external BPM
+FA Start Start from step 0
+FB Continue Same as Start (no resume)
+FC Stop Stop
+SysEx: F0 43 10 pp qq vv F7 → single-parameter write (param = pp×128+qq, 0–155; value vv).
