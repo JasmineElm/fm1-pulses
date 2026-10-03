@@ -7,16 +7,29 @@ Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
 
 ## Quick start
 
+It is a **sequence generator**: shape the randomness, generate a 64-step phrase,
+and **freeze** it into one of the FM-1's 16 sequencer patterns. Once frozen the
+FM-1 plays it standalone — the browser is not needed.
+
 ```bash
-# Web MIDI requires a secure context — file:// will NOT work
-python3 -m http.server 8080
-# then open http://localhost:8080
+python3 -m http.server 8080   # Web MIDI needs a secure context (https or localhost)
 ```
 
-1. Connect the FM-1 via USB (recommended; BLE works but has more latency).
-2. Allow the MIDI permission prompt in Chrome.
-3. Select **FM-1** from the device dropdown.
-4. Press **▶** or the Spacebar.
+1. Connect the FM-1 via USB and allow the MIDI permission prompt.
+2. Pick **FM-1** in the device dropdown → status turns green.
+3. Shape it → **Generate ⟳** (or Space) → the 64-step grid fills in.
+4. Pick a **Slot** → **Freeze → FM-1** (or `F`), or **Fill all 16** for a whole bank.
+
+> ### ⚠ Caveat: the FM-1's own sequencer must be **stopped**
+>
+> The firmware **refuses** a pattern write while its sequencer is playing:
+> SysEx `0x20` comes back `status 3` — *"the Sequencer is playing; stop it and
+> send again"*. So before freezing, turn **SEQ off** (or STOP) on the device.
+> The app reads the reply and shows this if a freeze is refused.
+> (`status 1` = value out of range, `2` = damaged in transit.)
+
+Auditioning (the **Audition** button) plays the phrase over live MIDI at the
+pattern's tempo — that path is unaffected by the caveat.
 
 ## Docs
 
@@ -38,10 +51,15 @@ empty `intervals` — the user fills it via the chromatic toggle grid (persisted
 
 ```
 index.html, manifest.json, sw.js, css/style.css
-js/{app,clock,gate,lfo,distribution,quantizer,buffer,midi,state,ui}.js
+js/pattern.js    — the SysEx 0x20 encoder (byte-verified vs Virtual-FM-1's codec)
+js/generator.js  — LFO → distribution → quantizer → gate → Deja Vu
+js/midi.js       — Web MIDI: find FM-1, send pattern (reads the reply), notes
+js/app.js        — UI wiring: controls, step grid, theme menu, freeze/audition
 presets/scales.json
 ```
 
 ## Status
 
-Scaffold + design docs only. No implementation yet — see `DESIGN.md` for the plan.
+**Working** — generate → freeze → the FM-1 plays it standalone. Live-MIDI
+audition works too. Themes are the FM-1's own seven (decoded from its firmware's
+`BGTHEME` table).

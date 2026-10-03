@@ -123,6 +123,8 @@ footer {
 .swatch:hover { border-color: var(--dim); }
 .swatch.active { border-color: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
 
+.hint { color: var(--dim); font-size: 11px; opacity: .85; }
+
 @media (max-width: 640px) {
   .ctl { grid-template-columns: 84px 1fr 56px; }
   .steps { grid-template-columns: repeat(8, 1fr); }
