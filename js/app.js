@@ -6,6 +6,10 @@ import * as midi from "./midi.js";
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
 
+// rate index -> duration in quarter notes (1/32 = a quarter/8, etc.)
+const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
+const LFO_RATE_STEPS = [1, 2, 4, 8, 16, 32, 64];
+
 const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   drift: 50,
@@ -19,6 +23,34 @@ const state = { ...DEFAULT };
 let bank = [];          // 16 patterns
 let selected = 0;       // 0..15
 let busy = false;
+
+// The LFO rate means "one cycle every N steps". Spell that out musically - the
+// cycle length in bars and how many cycles the sequence runs - so it reads as a
+// duration instead of a cryptic "/16".
+function lfoRateLabel(n) {
+  const q = RATE_QUARTERS[state.rate] ?? RATE_QUARTERS[6];
+  const stepsPerBar = 4 / q;                 // steps in one 4/4 bar at this note value
+  const bars = n / stepsPerBar;
+  const cycles = (state.length || 64) / n;
+  const bar = bars >= 1
+    ? `${+bars.toFixed(2)} bar${bars === 1 ? "" : "s"}`
+    : (() => { const inv = 1 / bars; return Math.abs(inv - Math.round(inv)) < 0.05 ? `1/${Math.round(inv)} bar` : `${+bars.toFixed(3)} bar`; })();
+  const cyc = cycles % 1 === 0 ? cycles : +cycles.toFixed(1);
+  return `/${n} · ${n} step${n === 1 ? "" : "s"} · ${bar} · ${cyc} cycle${cyc === 1 ? "" : "s"}`;
+}
+
+function refreshLfoRate() {
+  const inp = refs.lfoRate?.inp;
+  if (!inp) return;
+  const cur = inp.value;
+  inp.innerHTML = "";
+  for (const o of LFO_RATE_STEPS) {
+    const op = document.createElement("option");
+    op.value = String(o); op.textContent = lfoRateLabel(o);
+    inp.appendChild(op);
+  }
+  inp.value = cur;
+}
 
 // --------------------------------------------------------------------------- //
 // Controls
@@ -72,7 +104,8 @@ function buildControls() {
         inp = document.createElement("select");
         for (const o of it.opts) {
           const op = document.createElement("option");
-          op.value = String(o); op.textContent = it.fmt ? it.fmt(o) : String(o);
+          op.value = String(o);
+          op.textContent = it.k === "lfoRate" ? lfoRateLabel(o) : it.fmt ? it.fmt(o) : String(o);
           inp.appendChild(op);
         }
       } else if (it.t === "num") {
@@ -87,6 +120,7 @@ function buildControls() {
         const v = read();
         state[it.k] = v;
         if (out) out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
+        if (it.k === "rate" || it.k === "length") refreshLfoRate();
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
       inp.value = String(state[it.k]); sync();
@@ -214,7 +248,6 @@ async function doSendAll() {
   } finally { busy = false; }
 }
 
-const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Live regeneration: any control change re-derives the bank from the same seed,
@@ -382,6 +415,7 @@ function buildFooter() {
 
 buildTheme();
 buildControls();
+refreshLfoRate();
 buildFooter();
 doGenerate(true);
 initMidi();
