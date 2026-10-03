@@ -81,16 +81,17 @@ function buildControls() {
         inp = document.createElement("input");
         inp.type = "range"; inp.min = it.min; inp.max = it.max; inp.step = it.step || 1;
       }
-      const out = document.createElement("b");
+      const out = it.t === "select" ? null : document.createElement("b");
       const read = () => (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
       const sync = () => {
         const v = read();
         state[it.k] = v;
-        out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
+        if (out) out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
       inp.value = String(state[it.k]); sync();
-      row.append(name, inp, out);
+      if (it.t === "select") { inp.classList.add("span2"); row.append(name, inp); }
+      else row.append(name, inp, out);
       grid.appendChild(row);
       refs[it.k] = { inp, sync };
     }
