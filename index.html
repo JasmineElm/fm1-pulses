@@ -29,6 +29,16 @@
   <section class="buffer">
     <h2>Slot <span id="selnum">1</span> <small id="bufinfo"></small></h2>
     <div id="steps" class="steps"></div>
+    <div id="editor" class="editor">
+      <span class="elab">Step <b id="estep">—</b></span>
+      <span id="enote" class="enote">click a step to edit it</span>
+      <button id="edown" title="Lower this step's note a semitone (locks the step)">−</button>
+      <button id="eup" title="Raise this step's note a semitone (locks the step)">+</button>
+      <button id="eclear" title="Empty this step and lock it so it stays empty">✕</button>
+      <button id="elock" class="elock" title="Locked steps keep their note when the bank regenerates. Click to unlock.">🔓 unlocked</button>
+      <button id="eclearlocks" title="Forget every locked step; the generator reclaims them">clear all locks</button>
+      <span id="lockcount" class="lockcount"></span>
+    </div>
   </section>
 </main>
 

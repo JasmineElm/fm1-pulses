@@ -243,6 +243,63 @@ function renderBank() {
   if (el2) el2.textContent = bank.length ? `16 slots · ${tot} notes · drift ${state.drift}%` : "";
 }
 
+// ---- step editing + locks --------------------------------------------------
+// A locked step keeps its notes when the bank regenerates. Locks are per
+// (slot, step), so you can pin notes in any of the 16 slots.
+const locks = new Map();      // "slot:step" -> [{ note, vel }]
+let editStep = -1;
+
+const locked = (slot, i) => locks.has(`${slot}:${i}`);
+
+function applyLocks() {
+  for (const [key, notes] of locks) {
+    const [s, i] = key.split(":").map(Number);
+    const p = bank[s];
+    if (p && p.steps[i]) p.steps[i].notes = notes.map((n) => ({ ...n }));
+  }
+}
+
+function refreshLockCount() {
+  const el = document.getElementById("lockcount");
+  if (el) el.textContent = locks.size ? `${locks.size} locked` : "";
+}
+
+function renderEditor() {
+  const p = bank[selected];
+  const has = editStep >= 0 && p && p.steps[editStep];
+  document.getElementById("estep").textContent = editStep >= 0 ? String(editStep + 1) : "—";
+  const noteEl = document.getElementById("enote");
+  const lockBtn = document.getElementById("elock");
+  if (!has) {
+    noteEl.textContent = "click a step to edit it";
+    lockBtn.textContent = "🔓 unlocked"; lockBtn.classList.remove("on");
+    return;
+  }
+  const notes = p.steps[editStep].notes;
+  noteEl.textContent = notes.length ? notes.map((n) => midiName(n.note)).join(" ") : "(empty)";
+  const isL = locked(selected, editStep);
+  lockBtn.textContent = isL ? "🔒 locked" : "🔓 unlocked";
+  lockBtn.classList.toggle("on", isL);
+}
+
+function selectStep(i) { editStep = i; renderBuffer(); }
+
+// set a step's note (null = empty) and lock it so it survives regeneration
+function setStepNote(i, note) {
+  const p = bank[selected];
+  if (!p || !p.steps[i]) return;
+  if (note == null) {
+    p.steps[i].notes = [];
+  } else {
+    const v = p.steps[i].notes[0]?.vel ?? (typeof state.velocity === "number" ? state.velocity : 100);
+    p.steps[i].notes = [{ note: Math.max(0, Math.min(127, note)), vel: Math.max(1, Math.min(127, v)) }];
+  }
+  locks.set(`${selected}:${i}`, p.steps[i].notes.map((n) => ({ ...n })));
+  renderBank(); renderBuffer(); refreshLockCount();
+}
+
+function clearLocks() { locks.clear(); renderBank(); renderBuffer(); refreshLockCount(); status("locks cleared"); }
+
 function renderBuffer() {
   const el = document.getElementById("steps");
   el.innerHTML = "";
@@ -260,11 +317,15 @@ function renderBuffer() {
     } else if (i >= p.length) {
       cell.classList.add("off");
     }
+    if (locked(selected, i)) cell.classList.add("locked");
+    if (i === editStep) cell.classList.add("edit");
+    cell.addEventListener("click", () => selectStep(i));
     el.appendChild(cell);
   }
   document.getElementById("selnum").textContent = String(selected + 1);
   document.getElementById("bufinfo").textContent =
     `${p.length} steps · ${RATE_NAMES[p.rate]} · ${noteCount(p)} notes`;
+  renderEditor();
 }
 
 function status(msg, cls = "") {
@@ -290,7 +351,7 @@ function doGenerate(newSeed = false) {
   if (newSeed) state.seed = (Math.random() * 1e9) | 0;
   refs.seed.inp.value = String(state.seed); refs.seed.sync();
   bank = generateBank(state, state.drift);
-  selected = 0;
+  applyLocks();
   renderBank(); renderBuffer();
   status(`generated 16 slots (seed ${state.seed}, drift ${state.drift}%)`);
 }
@@ -332,6 +393,7 @@ function scheduleRegen() {
   clearTimeout(regenTimer);
   regenTimer = setTimeout(() => {
     bank = generateBank(state, state.drift);
+    applyLocks();
     renderBank(); renderBuffer();
   }, 40);
 }
@@ -484,6 +546,30 @@ async function initMidi() {
   }
 }
 
+function buildEditor() {
+  const p0 = () => bank[selected];
+  document.getElementById("edown").addEventListener("click", () => {
+    if (editStep < 0 || !p0()) return;
+    const cur = p0().steps[editStep].notes[0]?.note;
+    setStepNote(editStep, cur == null ? state.root : cur - 1);
+  });
+  document.getElementById("eup").addEventListener("click", () => {
+    if (editStep < 0 || !p0()) return;
+    const cur = p0().steps[editStep].notes[0]?.note;
+    setStepNote(editStep, cur == null ? state.root : cur + 1);
+  });
+  document.getElementById("eclear").addEventListener("click", () => { if (editStep >= 0) setStepNote(editStep, null); });
+  document.getElementById("elock").addEventListener("click", () => {
+    if (editStep < 0 || !p0()) return;
+    const key = `${selected}:${editStep}`;
+    if (locks.has(key)) locks.delete(key);
+    else locks.set(key, p0().steps[editStep].notes.map((n) => ({ ...n })));
+    renderBuffer(); refreshLockCount();
+  });
+  document.getElementById("eclearlocks").addEventListener("click", clearLocks);
+  refreshLockCount();
+}
+
 function buildFooter() {
   document.getElementById("gen").addEventListener("click", () => doGenerate(true));
   document.getElementById("rand").addEventListener("click", () => {
@@ -516,6 +602,7 @@ function buildFooter() {
 buildTheme();
 buildControls();
 refreshLfoRate();
+buildEditor();
 buildFooter();
 doGenerate(true);
 initMidi();

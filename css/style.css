@@ -130,6 +130,21 @@ button.playing { background: var(--err); color: var(--bg); border-color: var(--e
 .cell.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 .cell.off { opacity: .18; }
 .cell.now { box-shadow: 0 0 0 2px var(--accent2); }
+.cell.locked { border-color: var(--accent2); box-shadow: inset 0 0 0 1px var(--accent2); }
+.cell.edit { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* step editor bar */
+.editor {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 8px; padding: 8px 10px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 10px; font-size: 12px;
+}
+.editor .elab { color: var(--fg); opacity: .62; }
+.editor .elab b { color: var(--accent); }
+.editor .enote { color: var(--accent); font-weight: 600; min-width: 52px; }
+.editor button { padding: 4px 9px; }
+.editor .elock.on { border-color: var(--accent2); color: var(--accent2); }
+.editor .lockcount { color: var(--dim); margin-left: auto; }
 
 footer {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
