@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="purple">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0e0e12">
+<meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — sequence generator</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
@@ -19,12 +19,16 @@
 </header>
 
 <main>
-  <div id="controls"></div>
+  <div class="layout">
+    <div id="controls"></div>
 
-  <section class="buffer">
-    <h2>Phrase <small id="bufinfo"></small></h2>
-    <div id="steps" class="steps"></div>
-  </section>
+    <section class="buffer">
+      <h2>Phrase <small id="bufinfo"></small></h2>
+      <div class="wheel-wrap">
+        <svg id="wheel" class="wheel" viewBox="0 0 360 360" role="img" aria-label="phrase wheel"></svg>
+      </div>
+    </section>
+  </div>
 </main>
 
 <footer>
@@ -34,9 +38,8 @@
     <button id="audition">Audition</button>
   </div>
   <div class="group">
-    <label class="slotpick">Slot
-      <select id="slot"></select>
-    </label>
+    <label class="themepick">Theme <select id="theme"></select></label>
+    <label class="slotpick">Slot <select id="slot"></select></label>
     <button id="freeze" class="primary">Freeze → FM-1</button>
     <button id="fill">Fill all 16</button>
   </div>
