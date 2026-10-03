@@ -198,7 +198,7 @@ export function generateBank(base, driftPct = 50) {
       lfoRate: LFO_RATES[clamp(rateIdx0 + Math.round(dir.lfoRate * t * 2), 0, LFO_RATES.length - 1)],
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
     };
-    bank.push(generate(p, null));
+    bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
   }
   return bank;
 }
