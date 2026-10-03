@@ -230,10 +230,24 @@ function scheduleRegen() {
 
 // Looping audition: plays the selected slot continuously, re-reading the live
 // pattern every step so slider changes are heard as they happen.
-let live = false, liveToken = 0;
+let live = false, liveToken = 0, nowCell = null, liveStep = -1;
+
+function clearPlayhead() {
+  if (nowCell) nowCell.classList.remove("now");
+  nowCell = null; liveStep = -1;
+}
+
+function markStep(i) {
+  liveStep = i;
+  const el = document.getElementById("steps");
+  if (nowCell) nowCell.classList.remove("now");
+  nowCell = el.children[i] || null;
+  if (nowCell) nowCell.classList.add("now");
+}
 
 function stopLive() {
   live = false; liveToken++;
+  clearPlayhead();
   const btn = document.getElementById("audition");
   if (btn) { btn.textContent = "▶ Play"; btn.classList.remove("playing"); }
   status("stopped");
@@ -251,23 +265,30 @@ function toggleLive() {
 async function liveLoop(token) {
   let i = 0;
   while (live && token === liveToken) {
-    const p = bank[selected];
-    if (!p || !p.length) { await sleep(100); continue; }
-    if (i >= p.length) i = 0;
-    const st = p.steps[i];
-    const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
-    const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
-    const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
-    if (st.notes.length) {
-      for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
-      await sleep(Math.max(12, stepMs * gate));
-      for (const n of st.notes) midi.sendNoteOff(n.note);
-      await sleep(Math.max(3, stepMs * (1 - gate)));
-    } else {
-      await sleep(stepMs);
+    try {
+      const p = bank[selected];
+      if (!p || !p.length) { await sleep(100); continue; }
+      if (i >= p.length) i = 0;
+      markStep(i);
+      const st = p.steps[i];
+      const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
+      const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
+      const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+      if (st.notes.length) {
+        for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
+        await sleep(Math.max(12, stepMs * gate));
+        for (const n of st.notes) midi.sendNoteOff(n.note);
+        await sleep(Math.max(3, stepMs * (1 - gate)));
+      } else {
+        await sleep(stepMs);
+      }
+      i++;
+    } catch (e) {
+      status("play error: " + (e.message || e), "err");
+      await sleep(200);
     }
-    i++;
   }
+  clearPlayhead();
 }
 
 // --------------------------------------------------------------------------- //

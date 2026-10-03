@@ -123,6 +123,7 @@ button.playing { background: var(--err); color: var(--bg); border-color: var(--e
 }
 .cell.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 .cell.off { opacity: .18; }
+.cell.now { box-shadow: 0 0 0 2px var(--accent2); }
 
 footer {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;

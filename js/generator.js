@@ -181,8 +181,11 @@ export function generateBank(base, driftPct = 50) {
     const t = (i / 15) * drift;                 // 0 .. drift
     const p = {
       ...base,
-      // same seed for every slot: the bank shares one underlying contour and only
-      // the parameters evolve, so the 16 read as one idea morphing across the bank
+      // 16 DISTINCT generations, all derived from the one seed (so the bank is
+      // reproducible). Drift is the optional evolution on top: at 0% the 16 are
+      // 16 fresh takes on the same parameters; higher, the parameters themselves
+      // move from slot 1 to slot 16.
+      seed: (seed + i * 0x9e3779b1) >>> 0,
       gateProb: clamp(base.gateProb + dir.gateProb * t * 40, 5, 100),
       lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),

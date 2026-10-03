@@ -17,11 +17,13 @@ python3 -m http.server 8080   # Web MIDI needs a secure context (https or localh
 
 1. Connect the FM-1 via USB and allow the MIDI permission prompt.
 2. Pick **FM-1** in the device dropdown → status turns green.
-3. Shape the sound → **Generate ⟳** (or Space) → a **bank of 16** patterns
-   appears, one per FM-1 slot. The **Drift** control sets how far the parameters
-   evolve from slot 1 to slot 16; all 16 come from the one **Seed** (so the bank
-   is reproducible) and stay in the same scale/root.
-4. Click a slot in the bank to see its 64-step grid → **Freeze → FM-1** (or `F`)
+3. Set your parameters → **Generate ⟳** → **16 distinct sequencers** appear, one
+   per FM-1 slot. All 16 are **derived from the one Seed** (16 fresh takes on the
+   same parameters, so the bank is reproducible), and you tap a slot to view it.
+4. **Drift** is the evolution on top: at **0%** the 16 share the parameters and
+   differ only by generation; raise it and the parameters themselves move across
+   the bank (slot 1 → slot 16) — more/less amplitude, bias, density, LFO speed…
+5. Click a slot in the bank to see its 64-step grid → **Freeze → FM-1** (or `F`)
    writes just that one, or **Send all 16** writes the whole bank.
 
 `←` / `→` move between slots. **Randomize** rolls a new seed + parameters;
