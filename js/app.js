@@ -88,7 +88,7 @@ function buildControls() {
         state[it.k] = v;
         out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
       };
-      inp.addEventListener("input", sync);
+      inp.addEventListener("input", () => { sync(); scheduleRegen(); });
       inp.value = String(state[it.k]); sync();
       row.append(name, inp, out);
       grid.appendChild(row);
@@ -214,29 +214,59 @@ async function doSendAll() {
 }
 
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function doAudition() {
-  const p = bank[selected];
-  if (!p) return;
-  syncHeader();
-  const tempo = Math.max(20, Math.min(300, state.tempo || 120));
-  const qMs = 60000 / tempo;
-  const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
-  const totalMs = p.steps.slice(0, p.length).reduce((a, s) => a + qMs * (RATE_QUARTERS[s.rate] ?? RATE_QUARTERS[p.rate]), 0);
-  status(`auditioning slot ${selected + 1} at ${tempo} BPM (${(totalMs / 1000).toFixed(1)}s)…`);
-  for (let i = 0; i < p.length; i++) {
+// Live regeneration: any control change re-derives the bank from the same seed,
+// so the step view (and a running loop) follows the sliders in real time.
+let regenTimer = null;
+function scheduleRegen() {
+  clearTimeout(regenTimer);
+  regenTimer = setTimeout(() => {
+    bank = generateBank(state, state.drift);
+    renderBank(); renderBuffer();
+  }, 40);
+}
+
+// Looping audition: plays the selected slot continuously, re-reading the live
+// pattern every step so slider changes are heard as they happen.
+let live = false, liveToken = 0;
+
+function stopLive() {
+  live = false; liveToken++;
+  const btn = document.getElementById("audition");
+  if (btn) { btn.textContent = "▶ Play"; btn.classList.remove("playing"); }
+  status("stopped");
+}
+
+function toggleLive() {
+  if (live) { stopLive(); return; }
+  live = true; liveToken++;
+  const btn = document.getElementById("audition");
+  btn.textContent = "■ Stop"; btn.classList.add("playing");
+  status("playing (loop) — tweak the sliders live");
+  liveLoop(liveToken);
+}
+
+async function liveLoop(token) {
+  let i = 0;
+  while (live && token === liveToken) {
+    const p = bank[selected];
+    if (!p || !p.length) { await sleep(100); continue; }
+    if (i >= p.length) i = 0;
     const st = p.steps[i];
+    const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
+    const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
     const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
     if (st.notes.length) {
       for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
-      await new Promise((r) => setTimeout(r, Math.max(15, stepMs * gate)));
+      await sleep(Math.max(12, stepMs * gate));
       for (const n of st.notes) midi.sendNoteOff(n.note);
-      await new Promise((r) => setTimeout(r, Math.max(4, stepMs * (1 - gate))));
+      await sleep(Math.max(3, stepMs * (1 - gate)));
     } else {
-      await new Promise((r) => setTimeout(r, stepMs));
+      await sleep(stepMs);
     }
+    i++;
   }
-  status("audition done");
 }
 
 // --------------------------------------------------------------------------- //
@@ -302,7 +332,7 @@ async function initMidi() {
 }
 
 function buildFooter() {
-  document.getElementById("gen").addEventListener("click", () => doGenerate(false));
+  document.getElementById("gen").addEventListener("click", () => doGenerate(true));
   document.getElementById("rand").addEventListener("click", () => {
     state.seed = (Math.random() * 1e9) | 0;
     Object.assign(state, {
@@ -315,13 +345,14 @@ function buildFooter() {
     });
     refreshControls(); doGenerate(true);
   });
-  document.getElementById("audition").addEventListener("click", doAudition);
+  document.getElementById("audition").addEventListener("click", toggleLive);
   document.getElementById("freeze").addEventListener("click", () => doFreeze(selected));
   document.getElementById("fill").addEventListener("click", doSendAll);
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-    if (e.code === "Space") { e.preventDefault(); doGenerate(true); }
+    if (e.code === "Space") { e.preventDefault(); toggleLive(); }
     if (e.key === "f") doFreeze(selected);
+    if (e.key === "g") doGenerate(true);
     if (e.key === "ArrowRight") { selected = (selected + 1) % SLOTS; renderBank(); renderBuffer(); }
     if (e.key === "ArrowLeft") { selected = (selected + SLOTS - 1) % SLOTS; renderBank(); renderBuffer(); }
   });

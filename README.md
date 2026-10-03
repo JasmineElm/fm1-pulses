@@ -35,8 +35,12 @@ python3 -m http.server 8080   # Web MIDI needs a secure context (https or localh
 > The app reads the reply and shows this if a freeze is refused.
 > (`status 1` = value out of range, `2` = damaged in transit.)
 
-Auditioning (the **Audition** button) plays the phrase over live MIDI at the
-pattern's tempo — that path is unaffected by the caveat.
+Auditioning is the **▶ Play** button: it **loops** the selected slot over live MIDI
+at the pattern's tempo, and keeps looping. Because the sliders re-derive the bank
+in real time, you can **morph the sound while it plays** — change Scale, Gate,
+Bias, Drift… and the loop follows on the next step. That makes it a live
+generative broadcaster: plug in the FM-1, hit Play, and tweak. Press **■ Stop**
+(or Space) to end. This path is unaffected by the freeze caveat.
 
 ## Docs
 
