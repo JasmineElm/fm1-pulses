@@ -17,8 +17,15 @@ python3 -m http.server 8080   # Web MIDI needs a secure context (https or localh
 
 1. Connect the FM-1 via USB and allow the MIDI permission prompt.
 2. Pick **FM-1** in the device dropdown → status turns green.
-3. Shape it → **Generate ⟳** (or Space) → the 64-step grid fills in.
-4. Pick a **Slot** → **Freeze → FM-1** (or `F`), or **Fill all 16** for a whole bank.
+3. Shape the sound → **Generate ⟳** (or Space) → a **bank of 16** patterns
+   appears, one per FM-1 slot. The **Drift** control sets how far the parameters
+   evolve from slot 1 to slot 16; all 16 come from the one **Seed** (so the bank
+   is reproducible) and stay in the same scale/root.
+4. Click a slot in the bank to see its 64-step grid → **Freeze → FM-1** (or `F`)
+   writes just that one, or **Send all 16** writes the whole bank.
+
+`←` / `→` move between slots. **Randomize** rolls a new seed + parameters;
+**Generate** re-derives the bank from the current seed.
 
 > ### ⚠ Caveat: the FM-1's own sequencer must be **stopped**
 >
@@ -60,6 +67,6 @@ presets/scales.json
 
 ## Status
 
-**Working** — generate → freeze → the FM-1 plays it standalone. Live-MIDI
-audition works too. Themes are the FM-1's own seven (decoded from its firmware's
-`BGTHEME` table).
+**Working** — generate a 16-slot bank → freeze → the FM-1 plays it standalone.
+Live-MIDI audition works too. Themes are the FM-1's own seven (decoded from its
+firmware's `BGTHEME` table).

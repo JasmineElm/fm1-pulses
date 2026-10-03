@@ -148,3 +148,49 @@ export function generate(params, prevSteps = null) {
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
 }
+
+export const LFO_RATES = [1, 2, 4, 8, 16, 32, 64];
+export const SPREADS = ["constant", "bell", "uniform", "extremes"];
+
+/**
+ * generateBank(base, driftPct) -> 16 patterns.
+ *
+ * All 16 are derived from `base.seed` (so the bank is reproducible) but the
+ * character parameters *evolve* across them: slot 0 is the base, slot 15 is
+ * drifted furthest along a seeded direction. Notes are quantised to the same
+ * scale/root, so the bank reads as one evolving idea rather than 16 randoms.
+ */
+export function generateBank(base, driftPct = 50) {
+  const drift = Math.max(0, Math.min(100, driftPct)) / 100;
+  const seed = base.seed >>> 0;
+  const r = mulberry32(seed ^ 0x9e3779b9);
+  // seeded drift direction per parameter
+  const dir = {
+    gateProb: r() < 0.5 ? -1 : 1,
+    lfoAmp: r() < 0.5 ? -1 : 1,
+    bias: r() < 0.5 ? -1 : 1,
+    lfoOffset: r() < 0.5 ? -1 : 1,
+    lfoRate: r() < 0.5 ? -1 : 1,
+    spread: r() < 0.5 ? -1 : 1,
+  };
+  const rateIdx0 = Math.max(0, LFO_RATES.indexOf(base.lfoRate));
+  const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
+
+  const bank = [];
+  for (let i = 0; i < 16; i++) {
+    const t = (i / 15) * drift;                 // 0 .. drift
+    const p = {
+      ...base,
+      // same seed for every slot: the bank shares one underlying contour and only
+      // the parameters evolve, so the 16 read as one idea morphing across the bank
+      gateProb: clamp(base.gateProb + dir.gateProb * t * 40, 5, 100),
+      lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
+      bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
+      lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
+      lfoRate: LFO_RATES[clamp(rateIdx0 + Math.round(dir.lfoRate * t * 2), 0, LFO_RATES.length - 1)],
+      spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
+    };
+    bank.push(generate(p, null));
+  }
+  return bank;
+}

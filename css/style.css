@@ -91,6 +91,23 @@ button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 button.primary:hover { filter: brightness(1.08); }
 
+/* ---- bank strip: 16 slots, each a mini 8x8 step map ---- */
+.banksec { margin-top: 12px; }
+.bank { display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px; }
+.bankcell {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 6px 4px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; cursor: pointer; font: inherit;
+}
+.bankcell:hover { border-color: var(--dim); }
+.bankcell.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.bankcell .bn { font-size: 10px; color: var(--dim); }
+.bankcell.sel .bn { color: var(--accent); font-weight: 600; }
+.bankcell .mini { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; width: 100%; }
+.bankcell .mini i { aspect-ratio: 1 / 1; border-radius: 50%; background: var(--line); opacity: .55; }
+.bankcell .mini i.on { background: var(--accent); opacity: 1; }
+.bankcell .bc { font-size: 9px; color: var(--dim); }
+
 /* ---- phrase step grid: each step is a circle, like the FM-1's LEDs ---- */
 .buffer { margin-top: 8px; }
 .steps {
@@ -128,4 +145,5 @@ footer {
 @media (max-width: 640px) {
   .ctl { grid-template-columns: 84px 1fr 56px; }
   .steps { grid-template-columns: repeat(8, 1fr); }
+  .bank { grid-template-columns: repeat(8, 1fr); }
 }

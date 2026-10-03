@@ -1,12 +1,14 @@
-// app.js — FM-1 Pulses: generate a phrase, freeze it into the FM-1's sequencer.
-import { generate, SCALES, LFO_WAVES, midiName } from "./generator.js";
+// app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js";
 import { encodeWrite } from "./pattern.js";
 import * as midi from "./midi.js";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
+const SLOTS = 16;
 
 const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
+  drift: 50,
   length: 64, rate: 8, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100,
   scale: "pentMinor", root: 60,
@@ -14,14 +16,18 @@ const DEFAULT = {
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
 };
 const state = { ...DEFAULT };
-let pattern = null;
-let prevSteps = null;
+let bank = [];          // 16 patterns
+let selected = 0;       // 0..15
 let busy = false;
 
 // --------------------------------------------------------------------------- //
 // Controls
 // --------------------------------------------------------------------------- //
 const CONTROLS = [
+  { sec: "Bank", items: [
+    { k: "drift", t: "range", label: "Drift", min: 0, max: 100, suffix: "%" },
+    { k: "seed", t: "num", label: "Seed" },
+  ] },
   { sec: "Pitch", items: [
     { k: "scale", t: "select", label: "Scale", opts: Object.keys(SCALES) },
     { k: "root", t: "range", label: "Root", min: 24, max: 84, fmt: midiName },
@@ -69,12 +75,14 @@ function buildControls() {
           op.value = String(o); op.textContent = it.fmt ? it.fmt(o) : String(o);
           inp.appendChild(op);
         }
+      } else if (it.t === "num") {
+        inp = document.createElement("input"); inp.type = "number"; inp.min = 0; inp.step = 1;
       } else {
         inp = document.createElement("input");
         inp.type = "range"; inp.min = it.min; inp.max = it.max; inp.step = it.step || 1;
       }
       const out = document.createElement("b");
-      const read = () => (it.t === "range" || numSel) ? Number(inp.value) : inp.value;
+      const read = () => (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
       const sync = () => {
         const v = read();
         state[it.k] = v;
@@ -94,40 +102,59 @@ function refreshControls() {
 }
 
 // --------------------------------------------------------------------------- //
-// Phrase view — the step grid, each step a circle (like the FM-1's LEDs)
+// Bank strip (16 slots) + the selected slot's step grid
 // --------------------------------------------------------------------------- //
-// The FM-1's seven themes, with each theme's accent colour (from its firmware).
-const THEMES = [
-  { id: "purple", name: "Purple", accent: "#ff5da4" },
-  { id: "black", name: "Black", accent: "#f6f2f6" },
-  { id: "grey", name: "Grey", accent: "#f6e6d5" },
-  { id: "orange", name: "Orange", accent: "#ff7939" },
-  { id: "green", name: "Green", accent: "#6ae2cd" },
-  { id: "blue", name: "Blue", accent: "#8bb2e6" },
-  { id: "brown", name: "Brown", accent: "#e69962" },
-];
+function noteCount(p) {
+  return p ? p.steps.slice(0, p.length).reduce((a, s) => a + s.notes.length, 0) : 0;
+}
+
+function renderBank() {
+  const el = document.getElementById("bank");
+  el.innerHTML = "";
+  for (let s = 0; s < SLOTS; s++) {
+    const p = bank[s];
+    const cell = document.createElement("button");
+    cell.className = "bankcell" + (s === selected ? " sel" : "");
+    const num = document.createElement("span"); num.className = "bn"; num.textContent = s + 1;
+    const mini = document.createElement("div"); mini.className = "mini";
+    for (let i = 0; i < 64; i++) {
+      const d = document.createElement("i");
+      if (p && i < p.length && p.steps[i] && p.steps[i].notes.length) d.className = "on";
+      mini.appendChild(d);
+    }
+    const cnt = document.createElement("span"); cnt.className = "bc"; cnt.textContent = noteCount(p);
+    cell.append(num, mini, cnt);
+    cell.title = `slot ${s + 1}: ${noteCount(p)} notes`;
+    cell.addEventListener("click", () => { selected = s; renderBank(); renderBuffer(); });
+    el.appendChild(cell);
+  }
+  const tot = bank.reduce((a, p) => a + noteCount(p), 0);
+  const el2 = document.getElementById("bankinfo");
+  if (el2) el2.textContent = bank.length ? `16 slots · ${tot} notes · drift ${state.drift}%` : "";
+}
 
 function renderBuffer() {
   const el = document.getElementById("steps");
   el.innerHTML = "";
-  if (!pattern) return;
+  const p = bank[selected];
+  if (!p) return;
   for (let i = 0; i < 64; i++) {
-    const st = pattern.steps[i];
+    const st = p.steps[i];
     const cell = document.createElement("div");
     cell.className = "cell";
-    const on = i < pattern.length && st && st.notes.length;
+    const on = i < p.length && st && st.notes.length;
     if (on) {
       cell.textContent = midiName(st.notes[0].note);
       cell.classList.add("on");
       cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
-    } else if (i >= pattern.length) {
+    } else if (i >= p.length) {
       cell.classList.add("off");
     }
     el.appendChild(cell);
   }
-  const count = pattern.steps.slice(0, pattern.length).reduce((a, s) => a + s.notes.length, 0);
+  document.getElementById("selnum").textContent = String(selected + 1);
   document.getElementById("bufinfo").textContent =
-    `${pattern.length} steps · ${RATE_NAMES[pattern.rate]} · ${count} notes`;
+    `${p.length} steps · ${RATE_NAMES[p.rate]} · ${noteCount(p)} notes`;
 }
 
 function status(msg, cls = "") {
@@ -135,74 +162,71 @@ function status(msg, cls = "") {
   el.textContent = msg; el.className = "status " + cls;
 }
 
+// Header fields (tempo/rate/gate/swing/length) come from the live controls and
+// don't affect the generated notes, so they apply to every slot without regen.
+function syncHeader() {
+  for (const p of bank) {
+    if (!p) continue;
+    p.tempo = state.tempo; p.rate = state.rate; p.gate = state.gate; p.swing = state.swing;
+    p.length = Math.max(1, Math.min(64, state.length));
+    for (const st of p.steps) st.rate = state.rate;
+  }
+}
+
 // --------------------------------------------------------------------------- //
 // Actions
 // --------------------------------------------------------------------------- //
-function doGenerate(keepPrev = true) {
-  state.seed = (Math.random() * 1e9) | 0;
-  const next = generate(state, keepPrev ? prevSteps : null);
-  prevSteps = pattern ? pattern.steps : null;
-  pattern = next;
-  renderBuffer();
-  status("generated");
-}
-
-// Pattern-header fields come from the live controls (they don't affect the
-// generated notes), so changing Tempo/Rate/Gate takes effect without regenerating.
-function syncHeader() {
-  if (!pattern) return;
-  pattern.tempo = state.tempo;
-  pattern.rate = state.rate;
-  pattern.gate = state.gate;
-  pattern.swing = state.swing;
-  pattern.length = Math.max(1, Math.min(64, state.length));
-  for (const st of pattern.steps) st.rate = state.rate;
+function doGenerate(newSeed = false) {
+  if (newSeed) state.seed = (Math.random() * 1e9) | 0;
+  refs.seed.inp.value = String(state.seed); refs.seed.sync();
+  bank = generateBank(state, state.drift);
+  selected = 0;
+  renderBank(); renderBuffer();
+  status(`generated 16 slots (seed ${state.seed}, drift ${state.drift}%)`);
 }
 
 async function doFreeze(slotIndex) {
-  if (!pattern) doGenerate(false);
+  if (!bank[slotIndex]) return;
   syncHeader();
-  const msgs = encodeWrite(pattern, slotIndex, true);
+  const msgs = encodeWrite(bank[slotIndex], slotIndex, true);
   try {
-    status(`freezing ${msgs.length} messages → slot ${slotIndex + 1}…`);
+    status(`freezing slot ${slotIndex + 1}…`);
     const name = await midi.sendPattern(msgs);
-    status(`frozen to slot ${slotIndex + 1} ✓ (${name})`, "ok");
+    status(`slot ${slotIndex + 1} frozen ✓ (${name})`, "ok");
   } catch (e) {
     status(String(e.message || e), "err");
   }
 }
 
-async function doFillAll() {
-  if (busy) return;
+async function doSendAll() {
+  if (busy || !bank.length) return;
   busy = true;
   try {
-    for (let i = 0; i < 16; i++) {
-      const p = generate({ ...state, seed: (Math.random() * 1e9) | 0 }, i === 0 ? prevSteps : null);
-      const msgs = encodeWrite(p, i, true);
-      status(`filling slot ${i + 1}/16…`);
-      await midi.sendPattern(msgs);
+    syncHeader();
+    for (let i = 0; i < SLOTS; i++) {
+      status(`freezing ${i + 1}/${SLOTS}…`);
+      await midi.sendPattern(encodeWrite(bank[i], i, true));
     }
-    status("all 16 slots filled ✓", "ok");
+    status(`all ${SLOTS} slots frozen ✓`, "ok");
   } catch (e) {
     status(String(e.message || e), "err");
   } finally { busy = false; }
 }
 
-// rate index -> duration in quarter notes (1/32 = quarter/8, etc.)
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
 
 async function doAudition() {
-  if (!pattern) doGenerate(false);
+  const p = bank[selected];
+  if (!p) return;
   syncHeader();
   const tempo = Math.max(20, Math.min(300, state.tempo || 120));
-  const qMs = 60000 / tempo;                       // one quarter note in ms
+  const qMs = 60000 / tempo;
   const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
-  const totalMs = pattern.steps.slice(0, pattern.length)
-    .reduce((a, s) => a + qMs * (RATE_QUARTERS[s.rate] ?? RATE_QUARTERS[pattern.rate]), 0);
-  status(`auditioning at ${tempo} BPM (${(totalMs / 1000).toFixed(1)}s)…`);
-  for (let i = 0; i < pattern.length; i++) {
-    const st = pattern.steps[i];
-    const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[pattern.rate]);
+  const totalMs = p.steps.slice(0, p.length).reduce((a, s) => a + qMs * (RATE_QUARTERS[s.rate] ?? RATE_QUARTERS[p.rate]), 0);
+  status(`auditioning slot ${selected + 1} at ${tempo} BPM (${(totalMs / 1000).toFixed(1)}s)…`);
+  for (let i = 0; i < p.length; i++) {
+    const st = p.steps[i];
+    const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
     if (st.notes.length) {
       for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
       await new Promise((r) => setTimeout(r, Math.max(15, stepMs * gate)));
@@ -216,33 +240,17 @@ async function doAudition() {
 }
 
 // --------------------------------------------------------------------------- //
-// MIDI + wiring
+// Themes (the FM-1's seven, decoded from its firmware)
 // --------------------------------------------------------------------------- //
-async function initMidi() {
-  const sel = document.getElementById("device");
-  const fill = () => {
-    sel.innerHTML = "";
-    const outs = midi.listOutputs();
-    const fm1 = midi.findFm1();
-    for (const o of outs) {
-      const op = document.createElement("option");
-      op.value = o.id; op.textContent = o.name;
-      if (fm1 && o.id === fm1.id) op.selected = true;
-      sel.appendChild(op);
-    }
-    if (!outs.length) sel.innerHTML = "<option>— no MIDI outputs —</option>";
-    status(fm1 ? `FM-1: ${fm1.name}` : "FM-1 not found — connect it", fm1 ? "ok" : "");
-  };
-  try {
-    await midi.initMidi();
-    fill();
-    midi.onStateChange(fill);
-    sel.addEventListener("change", fill);
-  } catch (e) {
-    status(String(e.message || e), "err");
-    sel.innerHTML = "<option>— Web MIDI blocked —</option>";
-  }
-}
+const THEMES = [
+  { id: "purple", name: "Purple", accent: "#ff5da4" },
+  { id: "black", name: "Black", accent: "#f6f2f6" },
+  { id: "grey", name: "Grey", accent: "#f6e6d5" },
+  { id: "orange", name: "Orange", accent: "#ff7939" },
+  { id: "green", name: "Green", accent: "#6ae2cd" },
+  { id: "blue", name: "Blue", accent: "#8bb2e6" },
+  { id: "brown", name: "Brown", accent: "#e69962" },
+];
 
 function applyTheme(id) {
   document.documentElement.dataset.theme = id;
@@ -266,17 +274,37 @@ function buildTheme() {
   applyTheme(THEMES.some((t) => t.id === saved) ? saved : "purple");
 }
 
-function buildFooter() {
-  const slot = document.getElementById("slot");
-  for (let i = 1; i <= 16; i++) {
-    const op = document.createElement("option"); op.value = String(i - 1); op.textContent = String(i);
-    slot.appendChild(op);
+// --------------------------------------------------------------------------- //
+// MIDI + wiring
+// --------------------------------------------------------------------------- //
+async function initMidi() {
+  const sel = document.getElementById("device");
+  const fill = () => {
+    sel.innerHTML = "";
+    const outs = midi.listOutputs();
+    const fm1 = midi.findFm1();
+    for (const o of outs) {
+      const op = document.createElement("option");
+      op.value = o.id; op.textContent = o.name;
+      if (fm1 && o.id === fm1.id) op.selected = true;
+      sel.appendChild(op);
+    }
+    if (!outs.length) sel.innerHTML = "<option>— no MIDI outputs —</option>";
+    status(fm1 ? `FM-1: ${fm1.name}` : "FM-1 not found — connect it", fm1 ? "ok" : "");
+  };
+  try {
+    await midi.initMidi(); fill(); midi.onStateChange(fill);
+    sel.addEventListener("change", fill);
+  } catch (e) {
+    status(String(e.message || e), "err");
+    sel.innerHTML = "<option>— Web MIDI blocked —</option>";
   }
-  document.getElementById("freeze").addEventListener("click", () => doFreeze(Number(slot.value)));
-  document.getElementById("fill").addEventListener("click", doFillAll);
-  document.getElementById("audition").addEventListener("click", doAudition);
-  document.getElementById("gen").addEventListener("click", () => doGenerate(true));
+}
+
+function buildFooter() {
+  document.getElementById("gen").addEventListener("click", () => doGenerate(false));
   document.getElementById("rand").addEventListener("click", () => {
+    state.seed = (Math.random() * 1e9) | 0;
     Object.assign(state, {
       scale: Object.keys(SCALES)[(Math.random() * Object.keys(SCALES).length) | 0],
       lfoWave: LFO_WAVES[(Math.random() * LFO_WAVES.length) | 0],
@@ -285,17 +313,22 @@ function buildFooter() {
       spread: ["constant", "bell", "uniform", "extremes"][(Math.random() * 4) | 0],
       quantSteps: (Math.random() * 100) | 0, dejaVu: (Math.random() * 100) | 0,
     });
-    refreshControls(); doGenerate(false);
+    refreshControls(); doGenerate(true);
   });
+  document.getElementById("audition").addEventListener("click", doAudition);
+  document.getElementById("freeze").addEventListener("click", () => doFreeze(selected));
+  document.getElementById("fill").addEventListener("click", doSendAll);
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     if (e.code === "Space") { e.preventDefault(); doGenerate(true); }
-    if (e.key === "f") doFreeze(Number(slot.value));
+    if (e.key === "f") doFreeze(selected);
+    if (e.key === "ArrowRight") { selected = (selected + 1) % SLOTS; renderBank(); renderBuffer(); }
+    if (e.key === "ArrowLeft") { selected = (selected + SLOTS - 1) % SLOTS; renderBank(); renderBuffer(); }
   });
 }
 
 buildTheme();
 buildControls();
 buildFooter();
-doGenerate(false);
+doGenerate(true);
 initMidi();
