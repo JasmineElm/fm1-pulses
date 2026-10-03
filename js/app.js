@@ -147,8 +147,21 @@ function doGenerate(keepPrev = true) {
   status("generated");
 }
 
+// Pattern-header fields come from the live controls (they don't affect the
+// generated notes), so changing Tempo/Rate/Gate takes effect without regenerating.
+function syncHeader() {
+  if (!pattern) return;
+  pattern.tempo = state.tempo;
+  pattern.rate = state.rate;
+  pattern.gate = state.gate;
+  pattern.swing = state.swing;
+  pattern.length = Math.max(1, Math.min(64, state.length));
+  for (const st of pattern.steps) st.rate = state.rate;
+}
+
 async function doFreeze(slotIndex) {
   if (!pattern) doGenerate(false);
+  syncHeader();
   const msgs = encodeWrite(pattern, slotIndex, true);
   try {
     status(`freezing ${msgs.length} messages → slot ${slotIndex + 1}…`);
@@ -175,18 +188,31 @@ async function doFillAll() {
   } finally { busy = false; }
 }
 
+// rate index -> duration in quarter notes (1/32 = quarter/8, etc.)
+const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
+
 async function doAudition() {
-  if (!pattern) return;
-  const stepMs = 2000 / (pattern.length || 64);
+  if (!pattern) doGenerate(false);
+  syncHeader();
+  const tempo = Math.max(20, Math.min(300, state.tempo || 120));
+  const qMs = 60000 / tempo;                       // one quarter note in ms
+  const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
+  const totalMs = pattern.steps.slice(0, pattern.length)
+    .reduce((a, s) => a + qMs * (RATE_QUARTERS[s.rate] ?? RATE_QUARTERS[pattern.rate]), 0);
+  status(`auditioning at ${tempo} BPM (${(totalMs / 1000).toFixed(1)}s)…`);
   for (let i = 0; i < pattern.length; i++) {
     const st = pattern.steps[i];
+    const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[pattern.rate]);
     if (st.notes.length) {
       for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
-      await new Promise((r) => setTimeout(r, Math.max(30, stepMs * pattern.gate / 100)));
+      await new Promise((r) => setTimeout(r, Math.max(15, stepMs * gate)));
       for (const n of st.notes) midi.sendNoteOff(n.note);
+      await new Promise((r) => setTimeout(r, Math.max(4, stepMs * (1 - gate))));
+    } else {
+      await new Promise((r) => setTimeout(r, stepMs));
     }
-    await new Promise((r) => setTimeout(r, Math.max(20, stepMs * (1 - pattern.gate / 100))));
   }
+  status("audition done");
 }
 
 // --------------------------------------------------------------------------- //
