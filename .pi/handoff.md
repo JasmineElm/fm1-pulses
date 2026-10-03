@@ -12,6 +12,9 @@ selected slot and morph it in real time).
 - **Repo:** `github.com/mene311/fm1-pulses` (public) — Pages deploys from `main` / root
 - **Local:** `~/Projects/fm1-pulses/`
 - **Device notes / tools:** `~/Projects/mvave-fm1/` (see its README)
+- **Bluetooth:** the FM-1 has native **BLE MIDI** (documented + the standard BLE-MIDI
+  GATT UUIDs are in its firmware). Plan, evidence, risks and the verification ladder live
+  in **`notes/BLUETOOTH-PLAN.md`** — planned, not implemented.
 
 ## Progress
 
@@ -62,6 +65,13 @@ selected slot and morph it in real time).
 
 ## Remaining
 
+- [ ] **Bluetooth / wireless (planned — see `notes/BLUETOOTH-PLAN.md`).** The FM-1 is a
+  standard **BLE-MIDI peripheral** (`03B80E5A-…` service + `7772E5DB-…` data I/O
+  characteristic, both found in `baudgirl_092_flash.bin`), so the browser can drive it via
+  **Web Bluetooth** — no cable, no OS pairing, and unlike Web MIDI it also works on
+  Android Chrome. Blocked on one binary unknown: **does the FM-1's BLE side accept the
+  proprietary `0x20` pattern write, or only SysEx voice dumps?** Run the verification
+  ladder (power on → BT scan → small SysEx → the 177-byte write) before writing any code.
 - [ ] **Spread → real randomness.** Today `spread` only reshapes the LFO value; it
   doesn't inject new values, so a slow LFO rate caps the melody to ~3 pitches and
   amplitude/offset feel weak. Make it Marbles-style (stochastic source shaped by
