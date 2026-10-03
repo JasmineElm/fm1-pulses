@@ -3,6 +3,8 @@
 Browser-based generative MIDI sequencer for the **M-VAVE FM-1** (6-op FM synth).
 Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
 
+**▶ Live:** https://mene311.github.io/fm1-pulses/
+
 **Signal chain:** Clock → Gate Probability → S&H → LFO → Distribution → Quantizer → MIDI out → Buffer (Deja Vu feedback).
 
 ## Quick start
