@@ -138,8 +138,10 @@ export function generate(params, prevSteps = null) {
     const lfoVal = lfo(phase);
     let v = 0.5 + (lfoVal - 0.5) * amp * 2 + offset;   // 0..1-ish
     v = shape(clamp(v, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
-    let note = center + (v - 0.5) * span;
-    note = quantize(note, scale, params.root, quantStrength, rng);
+    // Amplitude 0 = no pitch swing: every note sits on the scale root (quantize
+    // then confirms it against the scale). Offset/spread are ignored at 0.
+    const raw = amp === 0 ? params.root : center + (v - 0.5) * span;
+    let note = quantize(raw, scale, params.root, quantStrength, rng);
 
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
