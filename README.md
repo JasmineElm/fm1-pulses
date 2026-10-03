@@ -37,8 +37,11 @@ python3 -m http.server 8080   # Web MIDI needs a secure context (https or localh
 > The app reads the reply and shows this if a freeze is refused.
 > (`status 1` = value out of range, `2` = damaged in transit.)
 
-Auditioning is the **▶ Play** button: it **loops** the selected slot over live MIDI
-at the pattern's tempo, and keeps looping. Because the sliders re-derive the bank
+Auditioning is the **▶ Play** button: it **loops** the selected slot, and keeps
+looping. It plays through a **small built-in FM synth in the browser** *and* sends
+MIDI to the FM-1 — so you hear it even with no device attached (the **🔊** button
+mutes the browser side only). Clicking a bank slot previews that slot once.
+Because the sliders re-derive the bank
 in real time, you can **morph the sound while it plays** — change Scale, Gate,
 Bias, Drift… and the loop follows on the next step. That makes it a live
 generative broadcaster: plug in the FM-1, hit Play, and tweak. Press **■ Stop**

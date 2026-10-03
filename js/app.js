@@ -2,6 +2,7 @@
 import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js";
 import { encodeWrite } from "./pattern.js";
 import * as midi from "./midi.js";
+import * as audio from "./audio.js";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
@@ -234,7 +235,7 @@ function renderBank() {
     const cnt = document.createElement("span"); cnt.className = "bc"; cnt.textContent = noteCount(p);
     cell.append(num, mini, cnt);
     cell.title = `slot ${s + 1}: ${noteCount(p)} notes`;
-    cell.addEventListener("click", () => { selected = s; renderBank(); renderBuffer(); });
+    cell.addEventListener("click", () => { selected = s; renderBank(); renderBuffer(); if (!live) playOnce(); });
     el.appendChild(cell);
   }
   const tot = bank.reduce((a, p) => a + noteCount(p), 0);
@@ -337,7 +338,28 @@ function scheduleRegen() {
 
 // Looping audition: plays the selected slot continuously, re-reading the live
 // pattern every step so slider changes are heard as they happen.
-let live = false, liveToken = 0, nowCell = null, liveStep = -1;
+let live = false, liveToken = 0, nowCell = null, liveStep = -1, onceToken = 0;
+
+// one-shot preview of the selected slot (browser synth + FM-1 if attached)
+async function playOnce() {
+  const p = bank[selected];
+  if (!p || live) return;
+  const token = ++onceToken;
+  audio.unlock();
+  const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
+  const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
+  for (let i = 0; i < p.length; i++) {
+    if (token !== onceToken || live) return;
+    const st = p.steps[i];
+    const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+    if (st.notes.length) {
+      for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
+      await sleep(Math.max(12, stepMs * gate));
+      for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
+      await sleep(Math.max(3, stepMs * (1 - gate)));
+    } else await sleep(stepMs);
+  }
+}
 
 function clearPlayhead() {
   if (nowCell) nowCell.classList.remove("now");
@@ -362,7 +384,9 @@ function stopLive() {
 
 function toggleLive() {
   if (live) { stopLive(); return; }
+  onceToken++;                 // cancel any one-shot preview
   live = true; liveToken++;
+  audio.unlock();
   const btn = document.getElementById("audition");
   btn.textContent = "■ Stop"; btn.classList.add("playing");
   status("playing (loop) — tweak the sliders live");
@@ -382,9 +406,9 @@ async function liveLoop(token) {
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
       const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
       if (st.notes.length) {
-        for (const n of st.notes) midi.sendNoteOn(n.note, n.vel);
+        for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
         await sleep(Math.max(12, stepMs * gate));
-        for (const n of st.notes) midi.sendNoteOff(n.note);
+        for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
         await sleep(Math.max(3, stepMs * (1 - gate)));
       } else {
         await sleep(stepMs);
@@ -475,6 +499,8 @@ function buildFooter() {
     refreshControls(); doGenerate(true);
   });
   document.getElementById("audition").addEventListener("click", toggleLive);
+  const muteBtn = document.getElementById("mute");
+  if (muteBtn) muteBtn.addEventListener("click", () => { const m = !audio.isMuted(); audio.setMuted(m); muteBtn.textContent = m ? "🔇" : "🔊"; status(m ? "browser audio muted" : "browser audio on"); });
   document.getElementById("freeze").addEventListener("click", () => doFreeze(selected));
   document.getElementById("fill").addEventListener("click", doSendAll);
   document.addEventListener("keydown", (e) => {
