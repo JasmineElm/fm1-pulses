@@ -96,7 +96,16 @@ function refreshControls() {
 // --------------------------------------------------------------------------- //
 // Phrase view — the step grid, each step a circle (like the FM-1's LEDs)
 // --------------------------------------------------------------------------- //
-const THEMES = ["purple", "black", "grey", "orange", "green", "blue", "brown"];
+// The FM-1's seven themes, with each theme's accent colour (from its firmware).
+const THEMES = [
+  { id: "purple", name: "Purple", accent: "#ff5da4" },
+  { id: "black", name: "Black", accent: "#f6f2f6" },
+  { id: "grey", name: "Grey", accent: "#f6e6d5" },
+  { id: "orange", name: "Orange", accent: "#ff7939" },
+  { id: "green", name: "Green", accent: "#6ae2cd" },
+  { id: "blue", name: "Blue", accent: "#8bb2e6" },
+  { id: "brown", name: "Brown", accent: "#e69962" },
+];
 
 function renderBuffer() {
   const el = document.getElementById("steps");
@@ -209,22 +218,26 @@ async function initMidi() {
   }
 }
 
+function applyTheme(id) {
+  document.documentElement.dataset.theme = id;
+  localStorage.setItem("fm1p.theme", id);
+  document.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s.dataset.id === id));
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
+}
+
 function buildTheme() {
-  const sel = document.getElementById("theme");
+  const menu = document.getElementById("theme-menu");
   for (const t of THEMES) {
-    const op = document.createElement("option"); op.value = t; op.textContent = t;
-    sel.appendChild(op);
+    const b = document.createElement("button");
+    b.className = "swatch"; b.dataset.id = t.id;
+    b.title = t.name; b.setAttribute("aria-label", t.name);
+    b.style.background = t.accent;
+    b.addEventListener("click", () => applyTheme(t.id));
+    menu.appendChild(b);
   }
   const saved = localStorage.getItem("fm1p.theme");
-  const active = THEMES.includes(saved) ? saved : "purple";
-  document.documentElement.dataset.theme = active;
-  sel.value = active;
-  sel.addEventListener("change", () => {
-    document.documentElement.dataset.theme = sel.value;
-    localStorage.setItem("fm1p.theme", sel.value);
-    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
-  });
+  applyTheme(THEMES.some((t) => t.id === saved) ? saved : "purple");
 }
 
 function buildFooter() {
