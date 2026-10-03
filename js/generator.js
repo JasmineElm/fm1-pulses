@@ -139,12 +139,16 @@ export function generate(params, prevSteps = null) {
 
     const phase = ((i / div) % 1 + 1) % 1;
     const lfoVal = lfo(phase);
-    let v = 0.5 + (lfoVal - 0.5) * amp + offset;   // 0..1 (amp 1 = full span)
-    v = shape(clamp(v, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
+    // Distribution shapes the LFO itself, then amplitude/offset place it: the
+    // offset shifts the centre by up to +/-18 semitones (same as full amplitude).
+    const shaped = shape(clamp(lfoVal, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
+    const v = 0.5 + (shaped - 0.5) * amp + offset * 0.5;   // may exceed 0..1
     // Amplitude 0 = no pitch swing: every note sits on the scale root (quantize
     // then confirms it against the scale). Offset/spread are ignored at 0.
     const raw = amp === 0 ? params.root : center + (v - 0.5) * span;
-    let note = quantize(raw, scale, params.root, quantStrength, rng);
+    // clamp the NOTE, not the LFO position, so offset shifts the range without
+    // collapsing the swing (it only pins once the note hits the MIDI limits)
+    let note = quantize(clamp(raw, 0, 127), scale, params.root, quantStrength, rng);
 
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
