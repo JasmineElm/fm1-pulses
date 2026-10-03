@@ -46,6 +46,23 @@ selected slot and morph it in real time).
 - [x] Amplitude 0 = the scale root (unconditionally)
 - [x] Defaults: note value 1/16, LFO rate /4
 
+**BLE probe (2026-10-03) — `probe/`**
+- [x] `probe/encode.js` — DOM/Bluetooth-free byte layer: BLE-MIDI `packetize`,
+      `0x11` read, `0x20` write, `createSysexReassembler`, `decodeReply`.
+      This is the byte half of the future `BleTransport`.
+- [x] `probe/ble.html` — throwaway Web Bluetooth page on Pages:
+      connect → service/char dump → note on/off → `0x11` (R1) → `0x20` (R2).
+      **https://mene311.github.io/fm1-pulses/probe/ble.html** (deployed, HTTP 200)
+- [x] Byte-verified **before hardware**: `0x20` output is byte-identical to
+      `fm1pat.py encode_write`; 177 B → 10 packets, all ≤ 20 B (MTU 23);
+      reassembler round-trips byte-exact for reply lengths 0/20/127/128/179/180
+      at **all 217** split points.
+- [x] **Bug found:** the reply length field is 2× 7-bit groups ⇒ shift is **7**,
+      not 8. `js/midi.js` and `fm1tool.c` both use `<< 8`, which cannot represent
+      a length ≥ 128. Unused in both, so harmless — but wrong.
+- [ ] **Run the ladder on the phone (Chrome, FM-1 paired to the phone).**
+      Hardware is the last gate; nothing else stays blocked on it.
+
 ## Key device facts (hard-won — do not re-learn)
 
 - **Pattern write** (FM-1+VA / baud girl firmware only): SysEx `0x20`, 8 steps per
@@ -65,7 +82,9 @@ selected slot and morph it in real time).
 
 ## Remaining
 
-- [ ] **Bluetooth / wireless (planned — see `notes/BLUETOOTH-PLAN.md`).** The FM-1 is a
+- [ ] **Bluetooth / wireless.** Probe built and byte-verified — see `probe/`.
+  Remaining: run the hardware ladder, then implement `BleTransport` behind the
+  transport seam. The FM-1 is a
   standard **BLE-MIDI peripheral** (`03B80E5A-…` service + `7772E5DB-…` data I/O
   characteristic, both found in `baudgirl_092_flash.bin`), so the browser can drive it via
   **Web Bluetooth** — no cable, no OS pairing, and unlike Web MIDI it also works on
