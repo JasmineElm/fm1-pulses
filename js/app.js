@@ -10,6 +10,16 @@ const SLOTS = 16;
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
 const LFO_RATE_STEPS = [1, 2, 4, 8, 16, 32, 64];
 
+// Pitch mapping (must match generator.js): the LFO swings +/- SPAN/2 semitones.
+const SPAN = 36;
+const ampSemi = (a) => (a / 100) * (SPAN / 2);   // amplitude % -> +/- semitones
+const offSemi = (o) => (o / 100) * (SPAN / 2);   // offset % -> centre shift (semitones)
+// "Magnets": values where the LFO lands on a simple interval from the root.
+const MAG_INTERVALS = [0, 3, 5, 7, 12, 18];      // root, m3, 4th, 5th, octave, 12th
+const toPct = (semis) => Math.round((semis / (SPAN / 2)) * 100);
+const AMP_MAGNETS = MAG_INTERVALS.map(toPct);
+const OFF_MAGNETS = [...new Set([0, ...MAG_INTERVALS.slice(1).flatMap((s) => [-s, s])].map(toPct))].sort((a, b) => a - b);
+
 const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   drift: 50,
@@ -70,9 +80,13 @@ const CONTROLS = [
     { k: "lfoWave", t: "select", label: "LFO wave", opts: LFO_WAVES,
       help: "The pitch contour. sine/triangle are smooth; randomWalk and smoothRandom give the most variety." },
     { k: "lfoAmp", t: "range", label: "Amplitude", min: 0, max: 100, suffix: "%",
-      help: "Pitch spread. 0% = every note is the root; 100% = the full range (±18 semitones). Was capped at 50%." },
+      magnets: AMP_MAGNETS,
+      readout: (v) => `${midiName(state.root - ampSemi(v))}–${midiName(state.root + ampSemi(v))}`,
+      help: "Pitch spread, shown as the note range it produces. 0% = every note is the root; 100% = the full range (±18 semitones). Snaps to root/3rd/5th/octave." },
     { k: "lfoOffset", t: "range", label: "Offset", min: -100, max: 100,
-      help: "Shifts the whole pitch range up or down without changing its width." },
+      magnets: OFF_MAGNETS,
+      readout: (v) => midiName(state.root + offSemi(v)),
+      help: "Shifts the whole pitch range up or down; the readout is the note it centres on. Snaps to intervals from the root." },
     { k: "lfoRate", t: "select", label: "LFO rate", opts: [1, 2, 4, 8, 16, 32, 64], fmt: (v) => "/" + v,
       help: "One LFO cycle every N steps. The label shows that in bars and how many cycles the phrase runs. Slower = longer melodic arcs." },
   ] },
@@ -144,14 +158,35 @@ function buildControls() {
       }
       const out = it.t === "range" ? document.createElement("b") : null;
       const read = () => (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
+      // magnet tick marks on the slider (datalist renders as ticks in Chrome)
+      if (it.magnets && it.t === "range") {
+        const dl = document.createElement("datalist"); dl.id = "mag-" + it.k;
+        for (const m of it.magnets) {
+          if (m >= it.min && m <= it.max) { const op = document.createElement("option"); op.value = String(m); dl.appendChild(op); }
+        }
+        row.appendChild(dl);
+        inp.setAttribute("list", dl.id);
+      }
+      const label = (v) => it.readout ? it.readout(v)
+        : (it.suffix || (it.fmt && it.fmt(v) !== String(v) ? it.fmt(v) : ""));
       const sync = () => {
         const v = read();
         state[it.k] = v;
         if (box) box.value = String(v);
-        if (out) out.textContent = it.suffix || (it.fmt && it.fmt(v) !== String(v) ? it.fmt(v) : "");
+        if (out) out.textContent = label(v);
         if (it.k === "rate" || it.k === "length") refreshLfoRate();
+        if (it.k === "root") { refs.lfoAmp?.sync(); refs.lfoOffset?.sync(); }
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
+      // soft magnet: on release, snap to a nearby interval mark
+      if (it.magnets && it.t === "range") {
+        inp.addEventListener("change", () => {
+          const v = Number(inp.value);
+          let best = v, bd = 99;
+          for (const m of it.magnets) { const d = Math.abs(v - m); if (d < bd) { bd = d; best = m; } }
+          if (bd <= 2 && best !== v) { inp.value = String(best); sync(); scheduleRegen(); }
+        });
+      }
       if (box) {
         box.value = String(state[it.k]);
         box.addEventListener("input", () => {

@@ -41,7 +41,10 @@ export function mulberry32(a) {
   };
 }
 
-export const midiName = (n) => NOTE_NAMES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
+export const midiName = (n) => {
+  const m = Math.round(Number(n) || 0);
+  return NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+};
 
 // ---- LFO: value in [0,1] for phase in [0,1), with state for random shapes ----
 function lfoFactory(wave, rng) {
