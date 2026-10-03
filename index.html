@@ -13,7 +13,7 @@
 <header>
   <h1>FM-1 <span>Pulses</span> <small>sequence generator</small></h1>
   <div class="midi">
-    <select id="device"><option>— no MIDI —</option></select>
+    <select id="device" title="MIDI output. Pick the FM-1; it is auto-selected when found."><option>— no MIDI —</option></select>
     <span id="status" class="status">loading…</span>
   </div>
 </header>
@@ -34,17 +34,16 @@
 
 <footer>
   <div class="group">
-    <button id="gen" class="primary">Generate ⟳</button>
-    <button id="rand">Randomize</button>
-    <button id="audition">▶ Play</button>
+    <button id="gen" class="primary" title="Derive a fresh 16-slot bank from a new seed. (Any control change also re-derives it live.) (G)">Generate ⟳</button>
+    <button id="rand" title="Roll random parameters + a new seed, then generate.">Randomize</button>
+    <button id="audition" title="Loop the selected slot over live MIDI at the pattern tempo. Tweak the sliders while it plays. (Space)">▶ Play</button>
   </div>
   <div class="group">
-    <span class="themepick">Theme</span>
+    <span class="themepick" title="The FM-1's own seven display themes, decoded from its firmware.">Theme</span>
     <div id="theme-menu" class="theme-menu"></div>
-    <label class="slotpick">Slot <select id="slot"></select></label>
-    <button id="freeze" class="primary" title="The FM-1's sequencer must be stopped (SEQ off) to receive a pattern">Freeze → FM-1</button>
-    <button id="fill">Fill all 16</button>
-    <span class="hint" title="The FM-1 refuses a pattern write while its sequencer is playing (SysEx status 3)">⚠ stop the FM-1's seq first</span>
+    <button id="freeze" class="primary" title="Write the selected slot into the FM-1's sequencer. The FM-1's sequencer must be stopped (SEQ off). (F)">Freeze → FM-1</button>
+    <button id="fill" title="Write all 16 slots into the FM-1's sequencer patterns, 1-16. The FM-1's sequencer must be stopped.">Send all 16</button>
+    <span class="hint" title="The FM-1 refuses a pattern write while its sequencer is playing (SysEx status 3).">⚠ stop the FM-1's seq first</span>
   </div>
 </footer>
 

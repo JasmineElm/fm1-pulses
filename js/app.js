@@ -57,35 +57,54 @@ function refreshLfoRate() {
 // --------------------------------------------------------------------------- //
 const CONTROLS = [
   { sec: "Bank", items: [
-    { k: "drift", t: "range", label: "Drift", min: 0, max: 100, suffix: "%" },
-    { k: "seed", t: "num", label: "Seed" },
+    { k: "drift", t: "range", label: "Drift", min: 0, max: 100, suffix: "%",
+      help: "How far the parameters evolve across the bank, slot 1 → slot 16. 0% = all 16 share the parameters; higher = they drift apart (density, amplitude, bias, LFO speed…)." },
+    { k: "seed", t: "num", label: "Seed",
+      help: "The one seed every slot is derived from. Same seed + same settings = the same bank." },
   ] },
   { sec: "Pitch", items: [
-    { k: "scale", t: "select", label: "Scale", opts: Object.keys(SCALES) },
-    { k: "root", t: "range", label: "Root", min: 24, max: 84, fmt: midiName },
-    { k: "lfoWave", t: "select", label: "LFO wave", opts: LFO_WAVES },
-    { k: "lfoAmp", t: "range", label: "Amplitude", min: 0, max: 100, suffix: "%" },
-    { k: "lfoOffset", t: "range", label: "Offset", min: -100, max: 100 },
-    { k: "lfoRate", t: "select", label: "LFO rate", opts: [1, 2, 4, 8, 16, 32, 64], fmt: (v) => "/" + v },
+    { k: "scale", t: "select", label: "Scale", opts: Object.keys(SCALES),
+      help: "Notes are quantised to this scale." },
+    { k: "root", t: "range", label: "Root", min: 24, max: 84, fmt: midiName,
+      help: "The scale's root note (MIDI number). At LFO amplitude 0 every note sits here." },
+    { k: "lfoWave", t: "select", label: "LFO wave", opts: LFO_WAVES,
+      help: "The pitch contour. sine/triangle are smooth; randomWalk and smoothRandom give the most variety." },
+    { k: "lfoAmp", t: "range", label: "Amplitude", min: 0, max: 100, suffix: "%",
+      help: "Pitch spread. 0% = every note is the root; 100% = the full range (±18 semitones). Was capped at 50%." },
+    { k: "lfoOffset", t: "range", label: "Offset", min: -100, max: 100,
+      help: "Shifts the whole pitch range up or down without changing its width." },
+    { k: "lfoRate", t: "select", label: "LFO rate", opts: [1, 2, 4, 8, 16, 32, 64], fmt: (v) => "/" + v,
+      help: "One LFO cycle every N steps. The label shows that in bars and how many cycles the phrase runs. Slower = longer melodic arcs." },
   ] },
   { sec: "Density", items: [
-    { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%" },
-    { k: "velocity", t: "range", label: "Velocity", min: 1, max: 127 },
+    { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
+      help: "Probability each step plays a note. 0% = silence, 100% = every step. This is the rhythmic density." },
+    { k: "velocity", t: "range", label: "Velocity", min: 1, max: 127,
+      help: "Note velocity for the live audition. The FM-1's own sequencer ignores velocity on pattern playback." },
   ] },
   { sec: "Character", items: [
-    { k: "spread", t: "select", label: "Spread", opts: ["constant", "bell", "uniform", "extremes"] },
-    { k: "bias", t: "range", label: "Bias", min: -100, max: 100 },
-    { k: "quantSteps", t: "range", label: "Quantize", min: 0, max: 100, suffix: "%" },
+    { k: "spread", t: "select", label: "Spread", opts: ["constant", "bell", "uniform", "extremes"],
+      help: "Shapes how the LFO value maps to notes: constant (no movement), bell (centre-weighted), uniform (flat), extremes (only the low/high ends)." },
+    { k: "bias", t: "range", label: "Bias", min: -100, max: 100,
+      help: "Skews the note distribution toward low (−) or high (+). Not a pitch shift — it changes how likely each register is." },
+    { k: "quantSteps", t: "range", label: "Quantize", min: 0, max: 100, suffix: "%",
+      help: "Snap strength to the scale. 100% = always in scale, lower lets chromatic passing notes through." },
   ] },
   { sec: "Memory", items: [
-    { k: "dejaVu", t: "range", label: "Deja Vu", min: 0, max: 100, suffix: "%" },
+    { k: "dejaVu", t: "range", label: "Deja Vu", min: 0, max: 100, suffix: "%",
+      help: "How much each slot reuses the previous slot's notes. 0% = fully fresh, 100% = a locked loop. Applied across the bank." },
   ] },
   { sec: "Pattern", items: [
-    { k: "rate", t: "select", label: "Note value", opts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], fmt: (v) => RATE_NAMES[v] },
-    { k: "tempo", t: "range", label: "Tempo", min: 30, max: 300, suffix: " BPM" },
-    { k: "gate", t: "range", label: "Gate length", min: 5, max: 100, suffix: "%" },
-    { k: "swing", t: "range", label: "Swing", min: 50, max: 75, suffix: "%" },
-    { k: "length", t: "range", label: "Length", min: 1, max: 64, suffix: " steps" },
+    { k: "rate", t: "select", label: "Note value", opts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], fmt: (v) => RATE_NAMES[v],
+      help: "The note value of one step, which sets the bar length. At 1/32 a 64-step phrase is 2 bars; at 1/16 it is 4 bars. Written to the FM-1." },
+    { k: "tempo", t: "range", label: "Tempo", min: 30, max: 300, suffix: " BPM",
+      help: "Playback tempo. Written into the pattern header and used by the live audition." },
+    { k: "gate", t: "range", label: "Gate length", min: 5, max: 100, suffix: "%",
+      help: "How much of each step a note holds. Low = staccato, high = legato. Written into the pattern header." },
+    { k: "swing", t: "range", label: "Swing", min: 50, max: 75, suffix: "%",
+      help: "Delays every other step for a shuffle feel. 50% = straight. Written into the pattern header." },
+    { k: "length", t: "range", label: "Length", min: 1, max: 64, suffix: " steps",
+      help: "How many of the 64 steps the pattern plays. Written into the pattern header." },
   ] },
 ];
 
@@ -97,9 +116,11 @@ function buildControls() {
     const grid = document.createElement("div"); grid.className = "grid";
     for (const it of sec.items) {
       const row = document.createElement("label"); row.className = "ctl";
+      if (it.help) row.title = it.help;
       const name = document.createElement("span"); name.textContent = it.label;
+      if (it.help) name.title = it.help;
       const numSel = it.t === "select" && it.opts.every((o) => typeof o === "number");
-      let inp;
+      let inp, box = null;
       if (it.t === "select") {
         inp = document.createElement("select");
         for (const o of it.opts) {
@@ -108,24 +129,42 @@ function buildControls() {
           op.textContent = it.k === "lfoRate" ? lfoRateLabel(o) : it.fmt ? it.fmt(o) : String(o);
           inp.appendChild(op);
         }
-      } else if (it.t === "num") {
-        inp = document.createElement("input"); inp.type = "number"; inp.min = 0; inp.step = 1;
       } else {
         inp = document.createElement("input");
-        inp.type = "range"; inp.min = it.min; inp.max = it.max; inp.step = it.step || 1;
+        if (it.t === "num") {
+          inp.type = "number"; if (it.min != null) inp.min = it.min; if (it.max != null) inp.max = it.max; inp.step = 1;
+        } else {
+          inp.type = "range"; inp.min = it.min; inp.max = it.max; inp.step = it.step || 1;
+          // typeable box for exact values
+          box = document.createElement("input");
+          box.type = "number"; box.className = "box";
+          box.min = it.min; box.max = it.max; box.step = it.step || 1;
+          box.title = "Type an exact value";
+        }
       }
-      const out = it.t === "select" ? null : document.createElement("b");
+      const out = it.t === "range" ? document.createElement("b") : null;
       const read = () => (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
       const sync = () => {
         const v = read();
         state[it.k] = v;
+        if (box) box.value = String(v);
         if (out) out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
         if (it.k === "rate" || it.k === "length") refreshLfoRate();
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
+      if (box) {
+        box.value = String(state[it.k]);
+        box.addEventListener("input", () => {
+          let v = Number(box.value);
+          if (!Number.isFinite(v)) return;
+          v = Math.min(it.max, Math.max(it.min, Math.round(v)));
+          inp.value = String(v);
+          sync(); scheduleRegen();
+        });
+      }
       inp.value = String(state[it.k]); sync();
-      if (it.t === "select") { inp.classList.add("span2"); row.append(name, inp); }
-      else row.append(name, inp, out);
+      if (it.t === "select" || it.t === "num") { inp.classList.add("span2"); row.append(name, inp); }
+      else row.append(name, inp, box, out);
       grid.appendChild(row);
       refs[it.k] = { inp, sync };
     }
