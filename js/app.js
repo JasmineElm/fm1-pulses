@@ -148,7 +148,7 @@ function buildControls() {
         const v = read();
         state[it.k] = v;
         if (box) box.value = String(v);
-        if (out) out.textContent = (it.fmt ? it.fmt(v) : v) + (it.suffix || "");
+        if (out) out.textContent = it.suffix || (it.fmt && it.fmt(v) !== String(v) ? it.fmt(v) : "");
         if (it.k === "rate" || it.k === "length") refreshLfoRate();
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
