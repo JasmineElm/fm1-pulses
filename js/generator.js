@@ -136,7 +136,7 @@ export function generate(params, prevSteps = null) {
 
     const phase = ((i / div) % 1 + 1) % 1;
     const lfoVal = lfo(phase);
-    let v = 0.5 + (lfoVal - 0.5) * amp * 2 + offset;   // 0..1-ish
+    let v = 0.5 + (lfoVal - 0.5) * amp + offset;   // 0..1 (amp 1 = full span)
     v = shape(clamp(v, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
     // Amplitude 0 = no pitch swing: every note sits on the scale root (quantize
     // then confirms it against the scale). Offset/spread are ignored at 0.
