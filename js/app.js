@@ -13,7 +13,7 @@ const LFO_RATE_STEPS = [1, 2, 4, 8, 16, 32, 64];
 const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   drift: 50,
-  length: 64, rate: 8, tempo: 120, swing: 50, gate: 50,
+  length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100,
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 4,
