@@ -62,9 +62,6 @@ h1 small { color: var(--dim); font-weight: 400; margin-left: 8px; font-size: 11p
 
 main { flex: 1; padding: 14px 16px; max-width: 1180px; width: 100%; margin: 0 auto; }
 
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 22px; align-items: start; }
-@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-
 h2 {
   font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px;
   color: var(--dim); margin: 16px 0 8px; font-weight: 600;
@@ -94,19 +91,19 @@ button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 button.primary:hover { filter: brightness(1.08); }
 
-/* ---- radial phrase wheel ---- */
-.buffer { position: sticky; top: 62px; }
-.wheel-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
-.wheel { display: block; width: 100%; height: auto; }
-.wheel .ring-tick { stroke: var(--line); stroke-width: 2; }
-.wheel .ring-tick.on { stroke: var(--accent); opacity: .55; }
-.wheel .ref-ring { fill: none; stroke: var(--line); stroke-width: 1; opacity: .5; }
-.wheel .note-dot { fill: var(--accent); }
-.wheel .note-dot.root { fill: var(--accent2); }
-.wheel .contour { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: .6; }
-.wheel .hub { fill: var(--panel2); stroke: var(--line); }
-.wheel .hub-text { fill: var(--dim); font-size: 11px; text-anchor: middle; font-family: inherit; }
-.wheel .step-label { fill: var(--dim); font-size: 9px; text-anchor: middle; font-family: inherit; opacity: .8; }
+/* ---- phrase step grid: each step is a circle, like the FM-1's LEDs ---- */
+.buffer { margin-top: 8px; }
+.steps {
+  display: grid; grid-template-columns: repeat(16, 1fr); gap: 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+}
+.cell {
+  aspect-ratio: 1 / 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; background: var(--panel2); color: var(--dim);
+  border: 1px solid var(--line); user-select: none;
+}
+.cell.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.cell.off { opacity: .3; }
 
 footer {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -119,5 +116,5 @@ footer {
 
 @media (max-width: 640px) {
   .ctl { grid-template-columns: 84px 1fr 56px; }
-  .buffer { position: static; }
+  .steps { grid-template-columns: repeat(8, 1fr); }
 }

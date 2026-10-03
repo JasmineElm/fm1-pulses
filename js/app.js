@@ -94,65 +94,31 @@ function refreshControls() {
 }
 
 // --------------------------------------------------------------------------- //
-// Radial phrase wheel — angle = step, radius = pitch (like the FM-1's round UI)
+// Phrase view — the step grid, each step a circle (like the FM-1's LEDs)
 // --------------------------------------------------------------------------- //
 const THEMES = ["purple", "black", "grey", "orange", "green", "blue", "brown"];
 
 function renderBuffer() {
-  const svg = document.getElementById("wheel");
-  if (!pattern) { svg.innerHTML = ""; return; }
-  const CX = 180, CY = 180, HUB = 34, INNER = 52, OUTER = 148, STEPS = 64;
-  const notes = pattern.steps.slice(0, pattern.length).flatMap((s) => s.notes.map((n) => n.note));
-  const lo = notes.length ? Math.min(...notes) : 48;
-  const hi = notes.length ? Math.max(...notes) : 72;
-  const span = Math.max(6, hi - lo);
-  const R = (n) => INNER + ((n - lo) / span) * (OUTER - INNER);
-  const ang = (i) => (i / STEPS) * Math.PI * 2 - Math.PI / 2;
-  const P = (i, r) => [CX + Math.cos(ang(i)) * r, CY + Math.sin(ang(i)) * r];
-  const f1 = (v) => v.toFixed(1);
-
-  const out = [];
-  // pitch reference rings (octave grid)
-  for (const fr of [0, 0.5, 1]) {
-    out.push(`<circle class="ref-ring" cx="${CX}" cy="${CY}" r="${f1(INNER + fr * (OUTER - INNER))}"/>`);
-  }
-  // 64 step ticks — bright when the step carries a note
-  for (let i = 0; i < STEPS; i++) {
-    const on = i < pattern.length && pattern.steps[i].notes.length;
-    const [x1, y1] = P(i, OUTER + 4);
-    const [x2, y2] = P(i, OUTER + (on ? 12 : 8));
-    out.push(`<line class="ring-tick${on ? " on" : ""}" x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}"/>`);
-  }
-  // step markers every 8 (1, 9, 17 …)
-  for (let i = 0; i < STEPS; i += 8) {
-    const [x, y] = P(i, OUTER + 22);
-    out.push(`<text class="step-label" x="${f1(x)}" y="${f1(y + 3)}">${i + 1}</text>`);
-  }
-  // notes: dot at (angle=step, radius=pitch); root-coloured when == scale root
-  const contour = [];
-  for (let i = 0; i < pattern.length; i++) {
+  const el = document.getElementById("steps");
+  el.innerHTML = "";
+  if (!pattern) return;
+  for (let i = 0; i < 64; i++) {
     const st = pattern.steps[i];
-    if (!st.notes.length) continue;
-    const [cx0, cy0] = P(i, R(st.notes[0].note));
-    contour.push([cx0, cy0]);
-    for (const n of st.notes) {
-      const [x, y] = P(i, R(n.note));
-      const isRoot = (((n.note - state.root) % 12) + 12) % 12 === 0;
-      out.push(`<circle class="note-dot${isRoot ? " root" : ""}" cx="${f1(x)}" cy="${f1(y)}" r="3">`
-             + `<title>step ${i + 1}: ${midiName(n.note)} v${n.vel}</title></circle>`);
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    const on = i < pattern.length && st && st.notes.length;
+    if (on) {
+      cell.textContent = midiName(st.notes[0].note);
+      cell.classList.add("on");
+      cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
+    } else if (i >= pattern.length) {
+      cell.classList.add("off");
     }
+    el.appendChild(cell);
   }
-  if (contour.length > 1) {
-    out.push(`<polyline class="contour" points="${contour.map(([x, y]) => f1(x) + "," + f1(y)).join(" ")}"/>`);
-  }
-  // hub
-  out.push(`<circle class="hub" cx="${CX}" cy="${CY}" r="${HUB}"/>`);
-  out.push(`<text class="hub-text" x="${CX}" y="${CY - 2}">${midiName(state.root)}</text>`);
-  out.push(`<text class="hub-text" x="${CX}" y="${CY + 12}" style="font-size:9px">${state.scale}</text>`);
-  svg.innerHTML = out.join("");
-
   const count = pattern.steps.slice(0, pattern.length).reduce((a, s) => a + s.notes.length, 0);
-  document.getElementById("bufinfo").textContent = `${pattern.length} steps · ${RATE_NAMES[pattern.rate]} · ${count} notes`;
+  document.getElementById("bufinfo").textContent =
+    `${pattern.length} steps · ${RATE_NAMES[pattern.rate]} · ${count} notes`;
 }
 
 function status(msg, cls = "") {
