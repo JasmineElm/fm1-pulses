@@ -5,7 +5,7 @@ Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
 
 **▶ Live:** https://mene311.github.io/fm1-pulses/
 
-**Signal chain:** Clock → Gate Probability → S&H → LFO → Distribution → Quantizer → MIDI out → Buffer (Deja Vu feedback).
+**Signal chain:** Clock → Gate Probability → S&H → LFO → Distribution → Quantizer → MIDI out → Buffer (Loop + Deja Vu).
 
 ## Quick start
 
@@ -72,7 +72,7 @@ empty `intervals` — the user fills it via the chromatic toggle grid (persisted
 ```
 index.html, manifest.json, sw.js, css/style.css
 js/pattern.js    — the SysEx 0x20 encoder (byte-verified vs Virtual-FM-1's codec)
-js/generator.js  — LFO → distribution → quantizer → gate → Deja Vu
+js/generator.js  — LFO → distribution → quantizer → gate → grid snap → Loop
 js/midi.js       — Web MIDI: find FM-1, send pattern (reads the reply), notes
 js/app.js        — UI wiring: controls, step grid, theme menu, freeze/audition
 presets/scales.json
