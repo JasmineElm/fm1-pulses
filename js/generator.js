@@ -163,7 +163,7 @@ export function generate(params, prevSteps = null) {
   const gravity = (params.gravity ?? 0) / 100;     // chance a note snaps to the nearest root
   const unipolar = !!params.unipolar;              // range rises from Offset instead of centring on it
   const gateQuant = (params.gateQuant ?? 0) / 100; // chance a note snaps to the grid
-  const snapGrid = Math.max(2, Math.round(params.snapGrid || SNAP_GRID));  // grid spacing in steps
+  const snapGrid = Math.max(2, Math.min(8, Math.round(params.snapGrid || SNAP_GRID)));  // grid spacing in steps
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {

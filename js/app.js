@@ -1,8 +1,8 @@
 // app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=17";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=17";
-import * as midi from "./midi.js?v=17";
-import * as audio from "./audio.js?v=17";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=18";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=18";
+import * as midi from "./midi.js?v=18";
+import * as audio from "./audio.js?v=18";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
@@ -82,8 +82,8 @@ const CONTROLS = [
       help: "Probability each step plays a note. 0% = silence, 100% = every step. This is the rhythmic density." },
     { k: "gateQuant", t: "range", label: "Grid snap", min: 0, max: 100, suffix: "%",
       help: "Chance a note is kept only if it lands on a grid line (spacing set by Snap grid). 0% = the whole random rhythm, 100% = only grid lines. Notes off the grid become rests. Gate still decides how many of those lines fire, so the two controls work together instead of fighting." },
-    { k: "snapGrid", t: "select", label: "Snap grid", opts: [2, 3, 4, 6, 8], fmt: (v) => `every ${v} steps`,
-      help: "Spacing of the grid lines, in steps. 4 = one beat at 1/16 (quarter notes), 2 = eighth notes, 3 = a lopsided feel because it does not divide the bar evenly." },
+    { k: "snapGrid", t: "range", label: "Snap grid", min: 2, max: 8, step: 1, suffix: " steps",
+      help: "Spacing of the grid lines, in steps. 4 is one beat at 1/16 (quarter notes), 2 is eighth notes. Odd values like 3 and 5 do not divide the bar, so they land lopsided and drift across the phrase." },
     { k: "velocity", t: "range", label: "Velocity", min: 1, max: 127,
       help: "Base note velocity. Only the browser/live-MIDI audition uses it — the FM-1 plays its own velocity on pattern playback." },
     { k: "humanize", t: "range", label: "Humanize", min: 0, max: 100, suffix: "%",
