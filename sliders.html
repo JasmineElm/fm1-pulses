@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="purple">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12101a">
+<title>FM-1 Pulses — sequence generator</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+<header>
+  <h1>FM-1 <span>Pulses</span> <small>sequence generator</small></h1>
+  <div class="midi">
+    <a class="guide" href="guide.html?v=19">Guide</a>
+    <select id="device" title="MIDI output. Pick the FM-1; it is auto-selected when found."><option>— no MIDI —</option></select>
+    <span id="status" class="status">loading…</span>
+  </div>
+</header>
+
+<main>
+  <div id="controls"></div>
+
+  <section class="banksec">
+    <h2>Bank <small id="bankinfo"></small></h2>
+    <div id="bank" class="bank"></div>
+  </section>
+
+  <section class="buffer">
+    <h2>Slot <span id="selnum">1</span> <small id="bufinfo"></small></h2>
+    <div id="steps" class="steps"></div>
+    <div id="editor" class="editor">
+      <span class="elab">Step <b id="estep">—</b></span>
+      <span id="enote" class="enote">click a step to edit it</span>
+      <button id="edown" title="Lower this step's note a semitone (locks the step)">−</button>
+      <button id="eup" title="Raise this step's note a semitone (locks the step)">+</button>
+      <button id="eclear" title="Empty this step and lock it so it stays empty">✕</button>
+      <button id="elock" class="elock" title="Locked steps keep their note when the bank regenerates. Click to unlock.">🔓 unlocked</button>
+      <button id="eclearlocks" title="Forget every locked step; the generator reclaims them">clear all locks</button>
+      <span id="lockcount" class="lockcount"></span>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="group">
+    <button id="gen" class="primary" title="Derive a fresh 16-slot bank from a new seed. (Any control change also re-derives it live.) (G)">Generate ⟳</button>
+    <button id="rand" title="Roll random parameters + a new seed, then generate.">Randomize</button>
+    <button id="audition" title="Loop the selected slot — plays in the browser and on the FM-1 if attached. Tweak the sliders while it plays. (Space)">▶ Play</button>
+    <button id="mute" title="Mute / unmute the BROWSER preview. Affects only what you hear here, not the FM-1.">🔊</button>
+  </div>
+  <div class="group">
+    <span class="themepick" title="The FM-1's own seven display themes, decoded from its firmware.">Theme</span>
+    <div id="theme-menu" class="theme-menu"></div>
+    <button id="freeze" class="primary" title="Write the selected slot into the FM-1's sequencer. The FM-1's sequencer must be stopped (SEQ off). (F)">Freeze → FM-1</button>
+    <button id="fill" title="Write all 16 slots into the FM-1's sequencer patterns, 1-16. The FM-1's sequencer must be stopped.">Send all 16</button>
+    <button id="clearall" class="danger" title="Erase all 16 patterns on the FM-1 by writing empty ones. The browser bank is left alone. The FM-1's sequencer must be stopped.">Clear all 16</button>
+    <span class="hint" title="The FM-1 refuses a pattern write while its sequencer is playing (SysEx status 3).">⚠ stop the FM-1's seq first</span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js?v=19"></script>
+</body>
+</html>

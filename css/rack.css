@@ -155,7 +155,9 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .brand .dev #devname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 42vw; }
 .brand .led { width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
 .brand .led.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-.statusrow { display: flex; justify-content: flex-end; padding: 3px 2px 6px; }
+.statusrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 3px 2px 6px; }
+.statusrow .glink { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); text-decoration: none; }
+.statusrow .glink:hover { color: var(--accent); }
 .statusrow .status { font-size: 9px; letter-spacing: .5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusrow .status.ok { color: var(--fg); }
 .statusrow .status.err { color: var(--err); }

@@ -4,62 +4,55 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#12101a">
-<title>FM-1 Pulses — sequence generator</title>
+<title>FM-1 Pulses — rack</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=19">
-<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css?v=63">
+<link rel="stylesheet" href="css/rack.css?v=63">
 </head>
 <body>
-<header>
-  <h1>FM-1 <span>Pulses</span> <small>sequence generator</small></h1>
-  <div class="midi">
-    <a class="guide" href="guide.html?v=19">Guide</a>
-    <select id="device" title="MIDI output. Pick the FM-1; it is auto-selected when found."><option>— no MIDI —</option></select>
-    <span id="status" class="status">loading…</span>
-  </div>
-</header>
-
-<main>
-  <div id="controls"></div>
-
-  <section class="banksec">
-    <h2>Bank <small id="bankinfo"></small></h2>
-    <div id="bank" class="bank"></div>
-  </section>
-
-  <section class="buffer">
-    <h2>Slot <span id="selnum">1</span> <small id="bufinfo"></small></h2>
-    <div id="steps" class="steps"></div>
-    <div id="editor" class="editor">
-      <span class="elab">Step <b id="estep">—</b></span>
-      <span id="enote" class="enote">click a step to edit it</span>
-      <button id="edown" title="Lower this step's note a semitone (locks the step)">−</button>
-      <button id="eup" title="Raise this step's note a semitone (locks the step)">+</button>
-      <button id="eclear" title="Empty this step and lock it so it stays empty">✕</button>
-      <button id="elock" class="elock" title="Locked steps keep their note when the bank regenerates. Click to unlock.">🔓 unlocked</button>
-      <button id="eclearlocks" title="Forget every locked step; the generator reclaims them">clear all locks</button>
-      <span id="lockcount" class="lockcount"></span>
+<div class="case">
+  <header class="brand">
+    <h1>FM-1 <b>PULSES</b></h1>
+    <div class="dev">
+      <span class="led" id="led"></span>
+      <span id="devname">no MIDI</span>
     </div>
-  </section>
-</main>
+  </header>
+  <div class="statusrow"><a class="glink" href="guide.html">guide</a><span id="status" class="status">loading…</span></div>
 
-<footer>
-  <div class="group">
-    <button id="gen" class="primary" title="Derive a fresh 16-slot bank from a new seed. (Any control change also re-derives it live.) (G)">Generate ⟳</button>
-    <button id="rand" title="Roll random parameters + a new seed, then generate.">Randomize</button>
-    <button id="audition" title="Loop the selected slot — plays in the browser and on the FM-1 if attached. Tweak the sliders while it plays. (Space)">▶ Play</button>
-    <button id="mute" title="Mute / unmute the BROWSER preview. Affects only what you hear here, not the FM-1.">🔊</button>
-  </div>
-  <div class="group">
-    <span class="themepick" title="The FM-1's own seven display themes, decoded from its firmware.">Theme</span>
-    <div id="theme-menu" class="theme-menu"></div>
-    <button id="freeze" class="primary" title="Write the selected slot into the FM-1's sequencer. The FM-1's sequencer must be stopped (SEQ off). (F)">Freeze → FM-1</button>
-    <button id="fill" title="Write all 16 slots into the FM-1's sequencer patterns, 1-16. The FM-1's sequencer must be stopped.">Send all 16</button>
-    <button id="clearall" class="danger" title="Erase all 16 patterns on the FM-1 by writing empty ones. The browser bank is left alone. The FM-1's sequencer must be stopped.">Clear all 16</button>
-    <span class="hint" title="The FM-1 refuses a pattern write while its sequencer is playing (SysEx status 3).">⚠ stop the FM-1's seq first</span>
-  </div>
-</footer>
+  <div class="layout">
+    <div class="module">
+      <div class="transport">
+        <button id="gen" title="Derive a fresh bank from a new seed (G)">Generate</button>
+        <button id="rand" title="Random parameters + a new seed">Randomize</button>
+        <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
+        <button id="mute" title="Mute the browser preview">🔊</button>
+        <button id="freeze" title="Write the selected slot into the FM-1 (F)">Freeze</button>
+        <button id="fill" title="Write all 16 slots into the FM-1">Send 16</button>
+        <button id="clearall" title="Erase all 16 patterns on the FM-1">Clear</button>
+      </div>
 
-<script type="module" src="js/app.js?v=19"></script>
+      <div class="rack" id="panel"></div>
+      <div class="themebar"><span class="swatches" id="themes"></span></div>
+    </div>
+
+    <div class="display">
+      <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
+      <div id="bank" class="bank"></div>
+      <div id="steps" class="steps"></div>
+      <div id="editor" class="editor">
+        <span class="elab">Step <b id="estep">—</b></span>
+        <span id="enote" class="enote">—</span>
+        <button id="edown" title="Lower this step a semitone (locks it)">−</button>
+        <button id="eup" title="Raise this step a semitone (locks it)">+</button>
+        <button id="eclear" title="Empty this step and lock it">✕</button>
+        <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
+        <button id="eclearlocks" title="Forget every locked step">clear locks</button>
+        <span id="lockcount" class="lockcount"></span>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/rack.js?v=63"></script>
 </body>
 </html>
