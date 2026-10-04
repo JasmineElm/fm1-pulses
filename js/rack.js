@@ -171,6 +171,27 @@ function scheduleRegen() {
     applyLocks();
     renderBank(); renderBuffer();
   }, 40);
+  scheduleTempoProbe();
+}
+
+// Trailing device-tempo probe: every control tweak schedules ONE read that fires
+// 1.2s after the user stops interacting. Dragging resets the timer, so there is
+// no traffic while turning a knob — just one read after the hand leaves it. The
+// busy flag keeps a slow reply from overlapping the next probe.
+let tempoProbeTimer = null;
+let tempoProbeBusy = false;
+function scheduleTempoProbe() {
+  if (!midi.hasAccess()) return;
+  clearTimeout(tempoProbeTimer);
+  tempoProbeTimer = setTimeout(() => {
+    if (tempoProbeBusy || !midi.findFm1()) return;
+    tempoProbeBusy = true;
+    const before = state.tempo;
+    syncDeviceTempo().catch(() => null).finally(() => { tempoProbeBusy = false; })
+      .then((held) => {
+        if (held && held !== before) status(`device BPM: ${held} — Tempo synced`, "ok");
+      });
+  }, 1200);
 }
 
 // --------------------------------------------------------------------------- //
