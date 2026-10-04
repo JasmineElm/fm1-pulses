@@ -76,14 +76,17 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   defs.appendChild(grad);
   svg.appendChild(defs);
 
-  // the pot itself: solid domed cap + pointer, no progress arc
+  // the pot: a dark skirt, then a domed cap, then the pointer
+  const base = document.createElementNS(NS, "circle");
+  base.setAttribute("cx", 50); base.setAttribute("cy", 50); base.setAttribute("r", 29.5);
+  base.setAttribute("class", "k-base");
   const cap = document.createElementNS(NS, "circle");
   cap.setAttribute("cx", 50); cap.setAttribute("cy", 50); cap.setAttribute("r", 26);
   cap.setAttribute("class", "k-cap");
   cap.setAttribute("fill", `url(#${uid})`);
   const ptr = document.createElementNS(NS, "line");
   ptr.setAttribute("class", "k-ptr");
-  svg.append(cap, ptr);
+  svg.append(base, cap, ptr);
 
   const lab = document.createElement("div");
   lab.className = "k-lab";
