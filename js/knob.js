@@ -185,3 +185,18 @@ export function sw({ label, options, value, onInput }) {
   paint();
   return el;
 }
+
+// A latching panel toggle.
+export function toggle({ label, value = false, onInput }) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "toggle" + (value ? " on" : "");
+  el.textContent = label;
+  el.addEventListener("click", () => {
+    const on = !el.classList.contains("on");
+    el.classList.toggle("on", on);
+    if (onInput) onInput(on);
+  });
+  el.setValue = (v) => el.classList.toggle("on", !!v);
+  return el;
+}
