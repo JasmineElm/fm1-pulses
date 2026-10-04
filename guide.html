@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — guide</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 <style>
   main.guide { max-width: 760px; }
   .intro { color: var(--dim); max-width: 60ch; }
@@ -88,7 +88,7 @@
   </div>
   <div class="param">
     <h3>Grid snap <span class="rng">0–100%</span></h3>
-    <p>Chance a note snaps to the nearest grid line. 0% leaves the rhythm fully random, 100% puts every note on the grid. A taken line never deletes the note, so Gate density survives.</p>
+    <p>Chance a note is kept only if it lands on a grid line. 0% leaves the rhythm fully random, 100% keeps only the grid lines. Notes off the grid become rests. Gate decides how many of those lines fire, so density and grid work together.</p>
   </div>
   <div class="param">
     <h3>Snap grid <span class="rng">steps</span></h3>

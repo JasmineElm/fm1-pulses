@@ -81,7 +81,7 @@ const CONTROLS = [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
       help: "Probability each step plays a note. 0% = silence, 100% = every step. This is the rhythmic density." },
     { k: "gateQuant", t: "range", label: "Grid snap", min: 0, max: 100, suffix: "%",
-      help: "Chance a note snaps to the nearest grid line (see Snap grid for the spacing). 0% = fully random rhythm, 100% = every note on the grid. A taken line never deletes the note, so Gate density is preserved." },
+      help: "Chance a note is kept only if it lands on a grid line (spacing set by Snap grid). 0% = the whole random rhythm, 100% = only grid lines. Notes off the grid become rests. Gate still decides how many of those lines fire, so the two controls work together instead of fighting." },
     { k: "snapGrid", t: "select", label: "Snap grid", opts: [2, 3, 4, 6, 8], fmt: (v) => `every ${v} steps`,
       help: "Spacing of the grid lines, in steps. 4 = one beat at 1/16 (quarter notes), 2 = eighth notes, 3 = a lopsided feel because it does not divide the bar evenly." },
     { k: "velocity", t: "range", label: "Velocity", min: 1, max: 127,

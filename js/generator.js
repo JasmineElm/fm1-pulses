@@ -210,24 +210,12 @@ export function generate(params, prevSteps = null) {
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
       : clamp(Math.round(fixedVel + (hum ? (velRng() * 2 - 1) * hum : 0)), 1, 127);
-    // Grid snap: with the slider's probability, land the note on the nearest 4-step
-    // line. A line that is already taken never deletes the gate: the note keeps its
-    // own step instead, so Gate density survives. Only when both are busy does it
-    // take the nearest free step.
-    let t = i;
-    if (gateQuant && snapRng() < gateQuant) t = Math.max(0, Math.min(len - 1, Math.round(i / snapGrid) * snapGrid));
-    if (steps[t].notes.length) {
-      if (!steps[i].notes.length) { t = i; }
-      else {
-        let d = 1;
-        for (; d < len; d++) {
-          if (i - d >= 0 && !steps[i - d].notes.length) { t = i - d; break; }
-          if (i + d < len && !steps[i + d].notes.length) { t = i + d; break; }
-        }
-        if (d >= len) t = -1;
-      }
-    }
-    if (t >= 0) steps[t].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
+    // Grid snap: with the slider's probability, a note survives only if it already
+    // sits on a grid line (spacing = Snap grid). Keeping the line's own note instead
+    // of moving notes onto it means Gate still decides how many lines fire, so
+    // density and grid stop fighting each other. Off-grid notes become rests.
+    if (gateQuant && snapRng() < gateQuant && i % snapGrid !== 0) continue;
+    steps[i].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
 }
