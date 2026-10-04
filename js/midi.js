@@ -2,6 +2,8 @@
 //
 // The pattern write (SysEx 0x20) is refused with status 3 while the FM-1's
 // sequencer is playing, so we read the reply after each message and surface it.
+// We can also READ the device's memory (SysEx 0x11) to check what it stored.
+import { ysum } from "./pattern.js?v=66";
 
 let access = null;
 
@@ -57,11 +59,34 @@ export function decodeReply(sx) {
   if (sx.length < 4 || sx[0] !== 0xF0 || sx[1] !== 0x7D) return null;
   const buf = unpack7(sx.slice(1, -1));
   if (buf[0] !== 0x7D) return null;
+  const len = (buf[7] | (buf[8] << 8)) >>> 0;
   return {
     kind: buf[1],
     status: buf[2],
     arg: (buf[3] | (buf[4] << 8) | (buf[5] << 16) | (buf[6] << 24)) >>> 0,
+    len,
+    data: buf.slice(9, 9 + len),
   };
+}
+
+// Read a block of the FM-1's memory (SysEx 0x11). Used to check what the device
+// actually stored, instead of assuming the write landed.
+//   F0 43 00 7D 11 <addr:5 x 7LE> <len:2 x 7LE> <sum> F7
+export async function readMemory(addr, len) {
+  const out = findFm1();
+  if (!out) throw new Error("FM-1 not found");
+  const input = findFm1Input();
+  if (!input) throw new Error("the FM-1's MIDI input is unavailable, so it cannot be read back");
+  const body = [0x11];
+  for (let i = 0; i < 5; i++) body.push((addr >> (7 * i)) & 0x7F);
+  body.push(len & 0x7F, (len >> 7) & 0x7F);
+  out.send(new Uint8Array([0xF0, 0x43, 0x00, 0x7D, ...body, ysum(body), 0xF7]));
+  const rep = await waitReply(input, 1500);
+  if (!rep) throw new Error("no reply to the read request");
+  const d = decodeReply(rep);
+  if (!d) throw new Error("could not decode the read reply");
+  if (d.status !== 0) throw new Error(`read refused (status ${d.status})`);
+  return d.data;
 }
 
 const STATUS_TEXT = {

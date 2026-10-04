@@ -175,13 +175,34 @@ function scheduleRegen() {
 // --------------------------------------------------------------------------- //
 // Freeze / clear
 // --------------------------------------------------------------------------- //
+// The FM-1 keeps each pattern's tempo in its global settings block, as a
+// little-endian halfword at gset[66 + 2*pattern]. Read it back so a freeze can
+// report what the DEVICE is holding, not just what we sent.
+const GSET_ADDR = 0x01C0E840 + 5816;
+const GSET_LEN = 137;
+async function readBackTempo(pat) {
+  const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
+  if (data.length < 68 + 2 * pat) throw new Error(`short read (${data.length} bytes)`);
+  return data[66 + 2 * pat] | (data[67 + 2 * pat] << 7);
+}
+
 async function doFreeze(slotIndex) {
   if (!bank[slotIndex]) return;
   syncHeader();
   try {
     status(`freezing slot ${slotIndex + 1} · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
     const name = await midi.sendPattern(encodeWrite(bank[slotIndex], slotIndex, true), `slot ${slotIndex + 1}`);
-    status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm ${RATE_NAMES[state.rate]} (${name})`, "ok");
+    // read it back: did the DEVICE store the tempo we just sent?
+    try {
+      const held = await readBackTempo(slotIndex);
+      const want = Math.round(state.tempo);
+      status(held === want
+        ? `slot ${slotIndex + 1} frozen ✓ sent ${want} bpm, device holds ${held} bpm`
+        : `slot ${slotIndex + 1} frozen, but sent ${want} bpm and the device holds ${held} bpm`,
+        held === want ? "ok" : "err");
+    } catch (e) {
+      status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm (read-back: ${e.message || e})`, "ok");
+    }
   } catch (e) { status(String(e.message || e), "err"); }
 }
 
