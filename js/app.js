@@ -61,16 +61,7 @@ function lfoRateLabel(n) {
 }
 
 function refreshLfoRate() {
-  const inp = refs.lfoRate?.inp;
-  if (!inp) return;
-  const cur = inp.value;
-  inp.innerHTML = "";
-  for (const o of LFO_RATE_STEPS) {
-    const op = document.createElement("option");
-    op.value = String(o); op.textContent = lfoRateLabel(o);
-    inp.appendChild(op);
-  }
-  inp.value = cur;
+  refs.lfoRate?.sync();
 }
 
 // --------------------------------------------------------------------------- //
@@ -98,8 +89,10 @@ const CONTROLS = [
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
-    { k: "lfoRate", t: "select", label: "LFO rate", opts: [1, 2, 4, 8, 16, 32, 64], fmt: (v) => "/" + v,
-      help: "Deterministic waves: one cycle every N steps (the label shows that in bars). Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes." },
+    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 1, wide: true,
+      magnets: LFO_RATE_STEPS,
+      readout: (v) => lfoRateLabel(v),
+      help: "Deterministic waves: one cycle every N steps (the label shows that in bars and cycles). Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes. The tick marks are the classic powers of two." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
@@ -141,6 +134,7 @@ function buildControls() {
     const grid = document.createElement("div"); grid.className = "grid";
     for (const it of sec.items) {
       const row = document.createElement("label"); row.className = "ctl";
+      if (it.wide) row.classList.add("wide");
       if (it.help) row.title = it.help;
       const name = document.createElement("span"); name.textContent = it.label;
       if (it.help) name.title = it.help;
@@ -151,7 +145,7 @@ function buildControls() {
         for (const o of it.opts) {
           const op = document.createElement("option");
           op.value = String(o);
-          op.textContent = it.k === "lfoRate" ? lfoRateLabel(o) : it.fmt ? it.fmt(o) : String(o);
+          op.textContent = it.fmt ? it.fmt(o) : String(o);
           inp.appendChild(op);
         }
       } else {
