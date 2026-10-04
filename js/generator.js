@@ -122,7 +122,7 @@ function quantize(note, scale, root, strength, rng) {
 }
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const SNAP_GRID = 4;   // grid-snap lands notes on every 4th step
+const SNAP_GRID = 4;   // default grid-snap spacing, in steps
 
 /**
  * generate(params, prevSteps) -> pattern fields + steps.
@@ -130,7 +130,7 @@ const SNAP_GRID = 4;   // grid-snap lands notes on every 4th step
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
  *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
  *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool),
- *         gateQuant(0-100)
+ *         gateQuant(0-100), snapGrid(steps)
  */
 export function generate(params, prevSteps = null) {
   const rng = mulberry32(params.seed >>> 0);
@@ -162,7 +162,8 @@ export function generate(params, prevSteps = null) {
   const octChance = (params.octave ?? 0) / 100;    // chance a note jumps up one octave
   const gravity = (params.gravity ?? 0) / 100;     // chance a note snaps to the nearest root
   const unipolar = !!params.unipolar;              // range rises from Offset instead of centring on it
-  const gateQuant = (params.gateQuant ?? 0) / 100; // chance a note snaps to the 4-step grid
+  const gateQuant = (params.gateQuant ?? 0) / 100; // chance a note snaps to the grid
+  const snapGrid = Math.max(2, Math.round(params.snapGrid || SNAP_GRID));  // grid spacing in steps
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {
@@ -214,7 +215,7 @@ export function generate(params, prevSteps = null) {
     // own step instead, so Gate density survives. Only when both are busy does it
     // take the nearest free step.
     let t = i;
-    if (gateQuant && snapRng() < gateQuant) t = Math.max(0, Math.min(len - 1, Math.round(i / SNAP_GRID) * SNAP_GRID));
+    if (gateQuant && snapRng() < gateQuant) t = Math.max(0, Math.min(len - 1, Math.round(i / snapGrid) * snapGrid));
     if (steps[t].notes.length) {
       if (!steps[i].notes.length) { t = i; }
       else {
