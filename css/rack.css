@@ -124,10 +124,15 @@ body { padding: 12px; }
   border: 0; padding: 5px 3px 6px; cursor: pointer;
 }
 .sw-arrow:hover { color: var(--fg); }
+/* Fixed width AND height: the value can wrap to two lines (so a long scale name
+   is never clipped) without the box ever changing size, which is what would shove
+   the neighbouring knob around. */
 .sw-val {
   font-size: 9.5px; color: var(--fg); padding: 5px 1px 6px;
-  width: 84px; text-align: center; font-variant-numeric: tabular-nums;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 84px; height: 23px; line-height: 1.1;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; word-break: break-word; overflow: hidden;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- toggle ---- */
