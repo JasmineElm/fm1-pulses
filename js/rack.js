@@ -262,7 +262,8 @@ async function doSendAll() {
       status(`freezing ${i + 1}/${SLOTS} · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
       await midi.sendPattern(encodeWrite(bank[i], i, true), `slot ${i + 1}`);
     }
-    status(`all ${SLOTS} slots frozen ✓`, "ok");
+    const held = await syncDeviceTempo();
+    status(`all ${SLOTS} slots frozen ✓${held ? ` · device holds ${held} bpm` : ""}`, "ok");
   } catch (e) { status(String(e.message || e), "err"); }
   finally { busy = false; }
 }
@@ -277,7 +278,8 @@ async function doClearAll() {
       status(`clearing ${i + 1}/${SLOTS}…`);
       await midi.sendPattern(encodeWrite(blank, i, true), `slot ${i + 1}`);
     }
-    status(`all ${SLOTS} patterns cleared ✓`, "ok");
+    const held = await syncDeviceTempo();
+    status(`all ${SLOTS} patterns cleared ✓${held ? ` · device holds ${held} bpm` : ""}`, "ok");
   } catch (e) { status(String(e.message || e), "err"); }
   finally { busy = false; }
 }
@@ -462,7 +464,12 @@ function buildRack() {
     sect("Rhythm", 2, [
       R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "lg",
         format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
-        tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze." })),
+        onDblClick: () => {
+          syncDeviceTempo().then((held) => {
+            status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
+          });
+        },
+        tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
       R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
         format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
       R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "lg",

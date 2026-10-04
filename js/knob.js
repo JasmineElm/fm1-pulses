@@ -17,7 +17,7 @@ const SIZES = { lg: 62, md: 50, sm: 40 };
 
 let knobSeq = 0;
 
-export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, ticks = 10, majorEvery = 5, smallVal = false, onInput, tip = "" }) {
+export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, ticks = 10, majorEvery = 5, smallVal = false, onInput, tip = "", onDblClick }) {
   const px = SIZES[size] || SIZES.md;
   const el = document.createElement("div");
   el.className = `knob k-${size}` + (smallVal ? " k-smallval" : "");
@@ -144,7 +144,7 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   el.addEventListener("pointercancel", endDrag);
 
   el.addEventListener("wheel", (e) => { e.preventDefault(); set(cur + (e.deltaY < 0 ? 1 : -1) * step); }, { passive: false });
-  el.addEventListener("dblclick", () => { if (def != null) set(def); });
+  el.addEventListener("dblclick", () => { if (onDblClick) onDblClick(); else if (def != null) set(def); });
   el.addEventListener("keydown", (e) => {
     const mult = e.shiftKey ? 10 : 1;
     if (e.key === "ArrowUp" || e.key === "ArrowRight") { e.preventDefault(); set(cur + step * mult); }
