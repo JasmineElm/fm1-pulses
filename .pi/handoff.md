@@ -161,37 +161,64 @@ accent 4.5:1 on the dark screen.
 SIL OFL) so the app still works offline. A condensed grotesk is what a panel
 legend is printed in; the system sans read as a web dashboard.
 
-**Audition timing was up to 16% slow** — the gate floors (`max(12ms note,
-max 3ms release)`) ADDED to each step instead of eating into it, because the loop
-slept relative durations. Measured +5.4% at gate 5% on 1/16 and **+16.1% on
-1/32**; now the loop waits until an **absolute** target time per step, measured
-+0.0%, and re-anchors if it falls >250ms behind. Fixed in BOTH `rack.js` and
-`app.js`.
+**Audition timing had a real bug (but it was NOT the user's complaint).** The
+gate floors (`max(12ms note, max 3ms release)`) ADDED to each step instead of
+eating into it, because the loop slept relative durations: measured +5.4% at gate
+5% on 1/16 and **+16.1% on 1/32**. Now the loop waits until an **absolute** target
+time per step (measured +0.0%) and re-anchors if it falls >250 ms behind. Fixed in
+both `rack.js` and `app.js`.
+**Do not claim this explained the tempo mismatch.** The user's ear was about the
+tempo, not the step length; this was a separate defect found while looking.
 
 **The guide (`guide.html`) documents the rack**: Rhythm / Global / Pitch / Shape
 / Memory, each control tagged knob or switch.
 
-### ⚠ The FM-1 ignores the pattern tempo (Baud Girl 093)
+### ⚠ Tempo does not always reach the FM-1 (Baud Girl 093) — UNRESOLVED
 
-Measured with the in-app read-back, not inferred:
+**The app sends it correctly.** Verified end to end: knob → `state.tempo` →
+`syncHeader()` → `encodeWrite` → `tempoLo`/`tempoHi`; tempo 140 emits `0c 01`
+which decodes back to 140, with `save` on the last of 8 parts. Layout matches the
+reference codec exactly (`0x20, pat, part, save, len, rate, tempoLo, tempoHi,
+gate, swing, voice`), and the reference's own test asserts `tempo = 97` survives.
 
-    gset[34] swing  75 → 60   ✓ landed      (from the 0x20 header)
-    gset[50] rate    4 → 8    ✓ landed      (from the 0x20 header)
-    gset[66] tempo 200 → 200  ✗ IGNORED     (same message, adjacent field)
+**But in two read-back tests the device did not take it:**
 
-- The device's own tempo change wrote **all 16 slots**, so the tempo is a
-  **unit-global** value mirrored per pattern, not a per-pattern field.
-- `gset[66 + 2*pattern]`, little-endian, in plain BPM (device set 200 → `c8 00`),
-  is confirmed correct by the user changing the tempo on the unit.
-- The protocol has **no memory-write**: `0x04` write voice, `0x10` read sound,
-  `0x11` read memory, `0x20` write pattern. So the app cannot poke `gset[66]`.
-- **Therefore the pattern tempo is not settable over MIDI on this firmware**, and
-  Tempo currently drives only the browser player.
-- **The documented fix, not yet built:** the official spec has `F8 Clock → Follow
-  external BPM` and the manual confirms sequencer sync to an external clock. Add
-  a clock source to `midi.js` (`F8` at 24 PPQN + `FA`/`FC`) and have the user turn
-  **BPM sync to external MIDI clock ON** on the unit. That syncs the device to the
-  app, which is what was actually wanted.
+    gset[34] swing  75 → 60   ✓ landed   (from the 0x20 header)
+    gset[50] rate    4 → 8    ✓ landed   (from the 0x20 header)
+    gset[66] tempo 200 → 200  ✗ UNCHANGED (same message, adjacent field)
+
+Sent 61 → device held 127. Sent 174 → device held 127. Same bytes both times.
+
+**Important counter-evidence: the user reports the tempo DID apply ~99% of the
+time before this**, which is why the whole investigation started. So "the
+firmware ignores the pattern tempo" is NOT established and should not be written
+down as fact. What is established: the tempo is written correctly by the app, and
+on at least those two occasions the device kept its old value.
+
+Facts that are solid:
+
+- `gset[66 + 2*pattern]` holds the tempo, little-endian, plain BPM (the user set
+  200 on the unit → `c8 00` at that offset, for **all 16 slots**). So the tempo
+  behaves like a unit-global value mirrored per pattern.
+- `GSET_ADDR = 0x01C0E840 + 5816`, `GSET_LEN = 137`; rate `gset[50+p]`, swing
+  `gset[34+p]`, gate `gset[18+p]`, length `gset[98+p]` all confirmed live.
+- No memory-write exists in the protocol (`0x04` write voice, `0x10` read sound,
+  `0x11` read memory, `0x20` write pattern), so the app cannot poke `gset[66]`.
+- The device's own tempo range goes to 300, so the hardware can hold it.
+
+Next things to try before believing any theory (all cheap, one freeze each):
+
+1. Freeze the **same slot twice** at the same tempo, reading back each time — is
+   it intermittent?
+2. Freeze while the FM-1 is displaying **that same pattern** vs a different one.
+3. Watch `gset[66]` over one write to see if it ever receives the value and is
+   then overwritten by the firmware from its global tempo.
+
+**Fallback that sidesteps the whole problem, not yet built:** the official spec
+has `F8 Clock → Follow external BPM` and the manual confirms sequencer sync to an
+external clock. Adding a clock source to `midi.js` (`F8` at 24 PPQN + `FA`/`FC`)
+and turning **BPM sync to external MIDI clock ON** on the unit makes the FM-1
+follow the app's tempo, which is what was actually wanted.
 
 ### Diagnostics kept in the app
 
