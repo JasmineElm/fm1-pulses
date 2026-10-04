@@ -40,7 +40,17 @@ selected slot and morph it in real time).
 - [x] **Freeze → FM-1** (selected) / **Send all 16**
 - [x] **7 themes** = the FM-1's own (decoded from its firmware)
 - [x] Tooltips on every control + typeable number boxes
-- [x] LFO rate labelled as a duration (`/4 · 4 steps · 1/4 bar · 16 cycles`)
+- [x] LFO rate labelled as a duration (`/4 · 4 steps · 1/4 bar · 16 cycles`); for the
+      `random` wave it reads `every N steps`
+- [x] **`random` wave** — a Marbles-style stochastic source. It draws a fresh value
+      every LFO-rate steps and holds it; `spread` picks the distribution
+      (uniform / bell / extremes / constant) and `bias` is a real monotonic skew.
+      The deterministic waves are unchanged as contours. Verified: `random` gives
+      30 pitches at /1 and 4 at /16 (a sine at /4 is stuck at 3); 16/16 distinct
+      slots even at Gate 100%; DejaVu 0/50/100% → 4/55/100% reuse.
+- [x] **Bias fixed** — it was a second amplitude (positive values were clamped to a
+      no-op). Now `skew(v,bias) = v^(3^-bias)`: measured mean note 53→69 as bias
+      goes −100→+100, range unchanged.
 - [x] Amplitude/offset show the **notes** they produce; magnet snaps at
       root/3rd/5th/octave
 - [x] **Offset is the centre (median) of the pitch range; Amplitude is its
@@ -48,6 +58,17 @@ selected slot and morph it in real time).
       exactly on the Offset note. The Amplitude readout shows that offset-centred
       range, and `generator.js` no longer has the old "Amplitude 0 = scale root"
       special case (it made 0% ignore Offset).
+- [x] **Swing is audible in the browser** — `swingFrac()` delays every offbeat,
+      50% straight → 75% triplet (2:1). Before this the slider only wrote the
+      header byte for the FM-1 and the browser audition ignored it.
+- [x] **Clear all 16** button — writes a full 64-step empty pattern over every slot.
+      ⚠ Unresolved on hardware: a single **Freeze** works (Android Chrome) but
+      Clear fails with SysEx status 3 even with the FM-1's sequencer stopped, so
+      the FM-1 may refuse an all-empty pattern. Probe files made for the verified
+      path: `~/probe-empty64.syx`, `~/probe-empty1.syx`; test with
+      `~/fm1tool.sh write ~/probe-empty64.syx` (a non-empty `~/fm1-mvp/*.syx` is
+      the control). If empty patterns are refused, either find the real erase or
+      drop the button.
 - [x] Defaults: note value 1/16, LFO rate /4
 
 **BLE probe (2026-10-03) — `probe/`**
@@ -95,10 +116,13 @@ selected slot and morph it in real time).
   Android Chrome. Blocked on one binary unknown: **does the FM-1's BLE side accept the
   proprietary `0x20` pattern write, or only SysEx voice dumps?** Run the verification
   ladder (power on → BT scan → small SysEx → the 177-byte write) before writing any code.
-- [ ] **Spread → real randomness.** Today `spread` only reshapes the LFO value; it
-  doesn't inject new values, so a slow LFO rate caps the melody to ~3 pitches and
-  amplitude/offset feel weak. Make it Marbles-style (stochastic source shaped by
-  spread/bias), which is the change that makes the whole pitch section come alive.
+- [ ] **The periodic waves can't use Spread/Bias as distributions.** They are
+      deterministic contours on purpose (kept), so Spread only warps the wave and
+      Bias skews it — the full distribution control only exists in the `random`
+      wave. `shape()`'s `bell` is still the old centre-pushing formula (misnamed);
+      the `random` wave's bell is proper. Decide whether to fix the deterministic
+      `bell` too. Default wave is still `sine` — consider defaulting to `random` so
+      Spread/Bias are live on load.
 - [ ] **Verify a browser freeze against the real device.** The encoder and reply
   parsing are verified, but the Web MIDI freeze has not been confirmed on hardware
   (the phone path uses `mvave-fm1/mvp/fm1tool` over libusb, which IS verified).

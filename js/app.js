@@ -48,6 +48,7 @@ let busy = false;
 // cycle length in bars and how many cycles the sequence runs - so it reads as a
 // duration instead of a cryptic "/16".
 function lfoRateLabel(n) {
+  if (state.lfoWave === "random") return `every ${n} step${n === 1 ? "" : "s"}`;
   const q = RATE_QUARTERS[state.rate] ?? RATE_QUARTERS[6];
   const stepsPerBar = 4 / q;                 // steps in one 4/4 bar at this note value
   const bars = n / stepsPerBar;
@@ -88,7 +89,7 @@ const CONTROLS = [
     { k: "root", t: "range", label: "Root", min: 24, max: 84, fmt: midiName,
       help: "The scale's root note (MIDI number). At LFO amplitude 0 every note sits here." },
     { k: "lfoWave", t: "select", label: "LFO wave", opts: LFO_WAVES,
-      help: "The pitch contour. sine/triangle are smooth; randomWalk and smoothRandom give the most variety." },
+      help: "The pitch source. sine/triangle/saw/square are deterministic contours; random draws a fresh value from the Spread distribution every LFO-rate steps (this is where Spread and Bias really bite); randomWalk/smoothRandom/sampleHold are the older random shapes." },
     { k: "lfoAmp", t: "range", label: "Amplitude", min: 0, max: 100, suffix: "%",
       magnets: AMP_MAGNETS,
       readout: (v) => { const c = centreNote(), s = ampSemi(v); return `${midiName(c - s)}–${midiName(c + s)}`; },
@@ -98,7 +99,7 @@ const CONTROLS = [
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
     { k: "lfoRate", t: "select", label: "LFO rate", opts: [1, 2, 4, 8, 16, 32, 64], fmt: (v) => "/" + v,
-      help: "One LFO cycle every N steps. The label shows that in bars and how many cycles the phrase runs. Slower = longer melodic arcs." },
+      help: "Deterministic waves: one cycle every N steps (the label shows that in bars). Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
@@ -184,7 +185,7 @@ function buildControls() {
         state[it.k] = v;
         if (box) box.value = String(v);
         if (out) out.textContent = label(v);
-        if (it.k === "rate" || it.k === "length") refreshLfoRate();
+        if (it.k === "rate" || it.k === "length" || it.k === "lfoWave") refreshLfoRate();
         if (it.k === "root") { refs.lfoAmp?.sync(); refs.lfoOffset?.sync(); }
         if (it.k === "lfoOffset") refs.lfoAmp?.sync();
       };

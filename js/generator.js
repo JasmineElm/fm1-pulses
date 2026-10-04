@@ -29,7 +29,7 @@ export const SCALES = {
 };
 
 export const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-export const LFO_WAVES = ["sine", "triangle", "saw", "square", "randomWalk", "smoothRandom", "sampleHold"];
+export const LFO_WAVES = ["sine", "triangle", "saw", "square", "random", "randomWalk", "smoothRandom", "sampleHold"];
 
 // deterministic PRNG so a seed reproduces a generation exactly
 export function mulberry32(a) {
@@ -74,9 +74,10 @@ function lfoFactory(wave, rng) {
   };
 }
 
-// ---- distribution shaping (spread: constant/bell/uniform/extremes, bias) ----
-function shape(v, spread, bias) {
-  // v in [0,1] center 0.5
+// ---- distribution shaping (spread: constant/bell/uniform/extremes) ----
+// Maps a periodic LFO value [0,1] through the spread curve. Used by the
+// deterministic waves; the "random" wave draws from `drawRandom` instead.
+function shape(v, spread) {
   switch (spread) {
     case "constant": v = 0.5; break;
     case "bell": v = 0.5 + (v - 0.5) * (v - 0.5) * (v < 0.5 ? -2 : 2) * 0.5 + (v - 0.5) * 0.6; break;
@@ -84,9 +85,26 @@ function shape(v, spread, bias) {
     case "uniform":
     default: break;
   }
-  // bias: skew toward high (>0) or low (<0), probability weight from the center
-  if (bias) v = Math.min(1, Math.max(0, v + bias * (v - 0.5) * 0.8));
   return v;
+}
+
+// Draw one random value in [0,1] from the distribution named by spread.
+// This is the Marbles-style source: spread picks the distribution, not a wave.
+function drawRandom(rng, spread) {
+  switch (spread) {
+    case "constant": return 0.5;                 // no variation, the centre
+    case "bell":     return (rng() + rng()) / 2;  // centre-weighted (triangular)
+    case "extremes": return rng() < 0.5 ? 0 : 1;  // only the two ends
+    case "uniform":
+    default:         return rng();                // flat
+  }
+}
+
+// bias (-1..1): skew the distribution toward high (+) or low (-). A monotonic
+// power curve, so it tilts the odds without changing the range (unlike amplitude).
+function skew(v, bias) {
+  const x = Math.min(1, Math.max(0, v));
+  return bias ? Math.pow(x, Math.pow(3, -bias)) : x;
 }
 
 // ---- quantize a note value to a scale, `strength` = snap probability ----
@@ -119,8 +137,11 @@ export function generate(params, prevSteps = null) {
   const offset = (params.lfoOffset ?? 0) / 100;         // -1..1
   const center = params.root;                            // notes swing around the root
   const span = 36;                                      // semitones of swing
-  const lfo = lfoFactory(params.lfoWave || "sine", rng);
-  const div = params.lfoRate || 4;
+  const wave = params.lfoWave || "sine";
+  const isRandom = wave === "random";
+  const lfo = isRandom ? null : lfoFactory(wave, rng);
+  const div = Math.max(1, params.lfoRate || 4);
+  let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
   const dejaVu = (params.dejaVu ?? 0) / 100;
   const quantStrength = (params.quantSteps ?? 100) / 100;
@@ -137,13 +158,18 @@ export function generate(params, prevSteps = null) {
     const active = i < len && rng() < gateProb;
     if (!active) { steps.push({ rate: params.rate, notes: [] }); continue; }
 
-    const phase = ((i / div) % 1 + 1) % 1;
-    const lfoVal = lfo(phase);
-    // Distribution shapes the LFO itself, then amplitude/offset place it:
-    // Offset is the CENTRE (median) of the range; Amplitude is its half-width,
-    // so notes span [centre - 18*amp, centre + 18*amp] before the MIDI clamp.
-    // At Amplitude 0 the range collapses onto the Offset note.
-    const shaped = shape(clamp(lfoVal, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
+    // Pitch source. Deterministic waves read their periodic shape at `div` steps
+    // per cycle; "random" draws a fresh value every `div` steps and holds it (S&H),
+    // with spread choosing the distribution and bias skewing it.
+    let shaped;
+    if (isRandom) {
+      if (i % div === 0) randVal = drawRandom(rng, params.spread || "uniform");
+      shaped = randVal;
+    } else {
+      const phase = ((i / div) % 1 + 1) % 1;
+      shaped = shape(clamp(lfo(phase), 0, 1), params.spread || "uniform");
+    }
+    shaped = skew(shaped, (params.bias ?? 0) / 100);
     const v = 0.5 + (shaped - 0.5) * amp + offset * 0.5;   // 0.5 = the centre
     const raw = center + (v - 0.5) * span;
     // clamp the NOTE, not the LFO position, so offset shifts the range without
