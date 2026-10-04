@@ -4,6 +4,17 @@
 
 body { padding: 12px; }
 
+/* Legibility pass (rack-only, so the MVP's style.css is untouched). The themes'
+   --dim only reaches ~2:1 on the panel, which makes every knob legend unreadable.
+   These raise labels to 4.5:1 and dividers to 3:1 against the panel. */
+[data-theme="purple"] { --dim: #8d849a; --line: #716876; }
+[data-theme="black"]  { --dim: #888a8d; --line: #6b6d70; }
+[data-theme="grey"]   { --dim: #8d8f8d; --line: #717171; }
+[data-theme="orange"] { --dim: #9e857b; --line: #766b64; }
+[data-theme="green"]  { --dim: #83958f; --line: #637873; }
+[data-theme="blue"]   { --dim: #818a9a; --line: #656e76; }
+[data-theme="brown"]  { --dim: #90877e; --line: #706b64; }
+
 .layout { display: block; }
 .module { display: flex; flex-direction: column; }
 
@@ -64,19 +75,19 @@ body { padding: 12px; }
 .knob.dragging .k-ptr { stroke: var(--accent); }
 .k-end { fill: var(--dim); font-size: 12px; font-family: inherit; }
 .k-lab {
-  font-size: 8px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dim);
-  text-align: center; line-height: 1.2; max-width: 78px; font-weight: 600;
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+  text-align: center; line-height: 1.2; max-width: 78px; font-weight: 700;
 }
 .k-val {
-  font-size: 10px; color: var(--fg); font-variant-numeric: tabular-nums;
-  line-height: 1.2; text-align: center; margin-top: 1px;
+  font-size: 11px; color: var(--fg); font-variant-numeric: tabular-nums;
+  line-height: 1.2; text-align: center; margin-top: 1px; font-weight: 600;
 }
 
 /* ---- encoder switch (replaces native select) ---- */
 .sw { display: flex; flex-direction: column; align-items: center; }
 .sw-lab {
-  font-size: 8px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dim);
-  font-weight: 600; margin-bottom: 3px; text-align: center;
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+  font-weight: 700; margin-bottom: 3px; text-align: center;
 }
 .sw-body {
   display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 3px;
@@ -101,8 +112,8 @@ body { padding: 12px; }
 }
 .sel { display: flex; flex-direction: column; align-items: center; }
 .sel span {
-  font-size: 8px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dim);
-  font-weight: 600; margin-top: 3px;
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+  font-weight: 700; margin-top: 3px;
 }
 .sel input {
   font: inherit; font-size: 10px; color: var(--fg); background: var(--panel2);
