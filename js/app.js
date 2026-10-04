@@ -33,7 +33,7 @@ const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
-  gateProb: 70, velocity: 100, humanize: 0,
+  gateProb: 70, velocity: 100, humanize: 0, gateQuant: 0,
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16, octave: 0, gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
@@ -80,6 +80,8 @@ const CONTROLS = [
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
       help: "Probability each step plays a note. 0% = silence, 100% = every step. This is the rhythmic density." },
+    { k: "gateQuant", t: "range", label: "Grid snap", min: 0, max: 100, suffix: "%",
+      help: "Chance a note snaps to the nearest 4-step grid line (quarter notes at 1/16). 0% = fully random rhythm, 100% = every note on the grid. Two notes landing on the same step: the first keeps it." },
     { k: "velocity", t: "range", label: "Velocity", min: 1, max: 127,
       help: "Base note velocity. Only the browser/live-MIDI audition uses it — the FM-1 plays its own velocity on pattern playback." },
     { k: "humanize", t: "range", label: "Humanize", min: 0, max: 100, suffix: "%",

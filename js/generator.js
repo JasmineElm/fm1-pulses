@@ -122,19 +122,22 @@ function quantize(note, scale, root, strength, rng) {
 }
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const SNAP_GRID = 4;   // grid-snap lands notes on every 4th step
 
 /**
  * generate(params, prevSteps) -> pattern fields + steps.
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
  *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
- *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool)
+ *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool),
+ *         gateQuant(0-100)
  */
 export function generate(params, prevSteps = null) {
   const rng = mulberry32(params.seed >>> 0);
   const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
   const octRng = mulberry32((params.seed ^ 0x85ebca6b) >>> 0);  // separate stream: octave jumps must not shift pitch draws
   const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
+  const snapRng = mulberry32((params.seed ^ 0x165667b1) >>> 0); // separate stream: grid snap must not shift pitch draws
   const scale = SCALES[params.scale] || SCALES.pentMinor;
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
@@ -159,17 +162,19 @@ export function generate(params, prevSteps = null) {
   const octChance = (params.octave ?? 0) / 100;    // chance a note jumps up one octave
   const gravity = (params.gravity ?? 0) / 100;     // chance a note snaps to the nearest root
   const unipolar = !!params.unipolar;              // range rises from Offset instead of centring on it
+  const gateQuant = (params.gateQuant ?? 0) / 100; // chance a note snaps to the 4-step grid
 
-  const steps = [];
+  const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {
-    // Deja Vu: reuse the previous generation's step here
+    // Deja Vu: reuse the previous slot's step here. It is already grid-snapped, so
+    // it is copied as-is and a locked loop stays locked.
     if (prevSteps && i < len && rng() < dejaVu) {
       const p = prevSteps[i];
-      steps.push({ rate: params.rate, notes: p ? p.notes.map((n) => ({ ...n })) : [] });
+      if (p) steps[i].notes = p.notes.map((n) => ({ ...n }));
       continue;
     }
     const active = i < len && rng() < gateProb;
-    if (!active) { steps.push({ rate: params.rate, notes: [] }); continue; }
+    if (!active) continue;
 
     // Pitch source. Deterministic waves read their periodic shape at `div` steps
     // per cycle; "random" draws a fresh value every `div` steps and holds it (S&H),
@@ -204,7 +209,11 @@ export function generate(params, prevSteps = null) {
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
       : clamp(Math.round(fixedVel + (hum ? (velRng() * 2 - 1) * hum : 0)), 1, 127);
-    steps.push({ rate: params.rate, notes: [{ note: clamp(Math.round(note), 0, 127), vel }] });
+    // Grid snap: with the slider's probability, land the note on the nearest
+    // 4-step line (quarter notes at 1/16). A step already taken keeps its note.
+    let t = i;
+    if (gateQuant && snapRng() < gateQuant) t = Math.max(0, Math.min(len - 1, Math.round(i / SNAP_GRID) * SNAP_GRID));
+    if (!steps[t].notes.length) steps[t].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
 }
@@ -235,6 +244,7 @@ export function generateBank(base, driftPct = 50) {
     humanize: r() < 0.5 ? -1 : 1,
     octave: r() < 0.5 ? -1 : 1,
     gravity: r() < 0.5 ? -1 : 1,
+    gateQuant: r() < 0.5 ? -1 : 1,
   };
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
 
@@ -257,6 +267,7 @@ export function generateBank(base, driftPct = 50) {
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
       octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
       gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
+      gateQuant: clamp((base.gateQuant ?? 0) + dir.gateQuant * t * 25, 0, 100),   // gentle
     };
     bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
   }
