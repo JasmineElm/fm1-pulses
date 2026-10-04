@@ -17,10 +17,10 @@ const SIZES = { lg: 62, md: 50, sm: 40 };
 
 let knobSeq = 0;
 
-export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, onInput }) {
+export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, ticks = 10, majorEvery = 5, smallVal = false, onInput }) {
   const px = SIZES[size] || SIZES.md;
   const el = document.createElement("div");
-  el.className = `knob k-${size}`;
+  el.className = `knob k-${size}` + (smallVal ? " k-smallval" : "");
   el.tabIndex = 0;
   el.setAttribute("role", "slider");
 
@@ -29,11 +29,12 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   svg.setAttribute("width", px);
   svg.setAttribute("height", px);
 
-  // printed tick ring: 11 marks, every 5th a long one
+  // printed tick ring. A rotary switch passes ticks = positions-1 and majorEvery 0
+  // so there is exactly one detent per position.
   const ring = document.createElementNS(NS, "g");
-  for (let k = 0; k <= 10; k++) {
-    const a = A0 + (k / 10) * SWEEP;
-    const major = k % 5 === 0;
+  for (let k = 0; k <= ticks; k++) {
+    const a = A0 + (k / ticks) * SWEEP;
+    const major = majorEvery > 0 && k % majorEvery === 0;
     const [x1, y1] = polar(50, 50, 34, a);
     const [x2, y2] = polar(50, 50, major ? 42 : 38, a);
     const l = document.createElementNS(NS, "line");

@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=59";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=59";
-import * as midi from "./midi.js?v=59";
-import * as audio from "./audio.js?v=59";
-import { knob, sw, toggle } from "./knob.js?v=59";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=60";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=60";
+import * as midi from "./midi.js?v=60";
+import * as audio from "./audio.js?v=60";
+import { knob } from "./knob.js?v=60";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -388,30 +388,30 @@ function buildRack() {
     sect("Global", 2, [
       R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
         format: (v) => `${Math.round(v)}%`, onInput: setState("drift") })),
-      R("seed", num("Seed", state.seed, (v) => { state.seed = v | 0; scheduleRegen(); })),
-      R("rate", sel("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, setState("rate", Number))),
+      R("seed", num("Seed", state.seed, (v) => { state.seed = v | 0; scheduleRegen(); }, { size: "sm" })),
+      R("rate", rotary("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, (v) => { state.rate = Number(v); refreshLoopRanges(); scheduleRegen(); }, "sm")),
       R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
         format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); } })),
       R("quantSteps", knob({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps, size: "sm",
         format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps") })),
-      R("unipolar", toggle({ label: "Unipolar", value: state.unipolar, onInput: setState("unipolar") })),
+      R("unipolar", rotary("Unipolar", [{ v: false, t: "off" }, { v: true, t: "on" }], state.unipolar, (v) => { state.unipolar = !!v; scheduleRegen(); }, "sm")),
     ]),
 
     sect("Pitch", 2, [
-      R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w, title: w })), state.lfoWave, setState("lfoWave"))),
+      R("lfoWave", rotary("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w })), state.lfoWave, (v) => { state.lfoWave = v; scheduleRegen(); }, "sm")),
       R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
         format: (v) => `${v}`, onInput: setState("lfoRate") })),
       R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "lg",
         format: (v) => `${Math.round(v)}%`, onInput: setState("lfoAmp") })),
       R("lfoOffset", knob({ label: "Offset", min: -100, max: 100, value: state.lfoOffset, def: DEFAULT.lfoOffset, size: "lg",
         format: (v) => `${Math.round(v)}`, onInput: setState("lfoOffset") })),
-      R("scale", sel("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, setState("scale"))),
+      R("scale", rotary("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, (v) => { state.scale = v; scheduleRegen(); }, "sm")),
       R("root", knob({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root, size: "md",
         format: (v) => midiName(v), onInput: setState("root") })),
     ]),
 
     sect("Shape", 6, [
-      R("spread", sel("Spread", ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), state.spread, setState("spread"))),
+      R("spread", rotary("Spread", ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), state.spread, (v) => { state.spread = v; scheduleRegen(); }, "sm")),
       R("bias", knob({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias, size: "md",
         format: (v) => `${Math.round(v)}`, onInput: setState("bias") })),
       R("humanize", knob({ label: "Humanize", min: 0, max: 100, value: state.humanize, def: DEFAULT.humanize, size: "sm",
@@ -442,18 +442,33 @@ const WAVE_SHORT = {
   random: "random", randomWalk: "walk", smoothRandom: "smooth", sampleHold: "hold",
 };
 
-// panel switch (encoder-style) instead of a native <select>
-function sel(label, opts, value, onInput) { return sw({ label, options: opts, value, onInput }); }
+// A ROTARY SWITCH: a knob over a list of options, one detent per position, with
+// the chosen name printed underneath. This is what hardware does with a discrete
+// setting — no text box anywhere on the panel.
+function rotary(label, opts, value, onInput, size = "md") {
+  const el = knob({
+    label, min: 0, max: opts.length - 1, step: 1,
+    value: Math.max(0, opts.findIndex((o) => String(o.v) === String(value))),
+    def: 0, size, ticks: Math.max(1, opts.length - 1), majorEvery: 0, smallVal: true,
+    format: (v) => opts[Math.min(opts.length - 1, Math.max(0, Math.round(v)))]?.t ?? "",
+    onInput: (v) => { const o = opts[Math.round(v)]; if (o) onInput(o.v); },
+  });
+  const setIdx = el.setValue;
+  el.setValue = (v) => {
+    const i = opts.findIndex((o) => String(o.v) === String(v));
+    if (i >= 0) setIdx(i, false);
+  };
+  return el;
+}
 
-function num(label, value, onInput) {
-  const wrap = document.createElement("label"); wrap.className = "sel";
-  const inp = document.createElement("input");
-  inp.type = "number"; inp.className = "seedbox"; inp.value = String(value);
-  inp.addEventListener("input", () => { const v = Number(inp.value); if (Number.isFinite(v)) onInput(v); });
-  const l = document.createElement("span"); l.textContent = label;
-  wrap.append(inp, l);
-  wrap.setValue = (v) => { inp.value = String(v); };
-  return wrap;
+function num(label, value, onInput, extra = {}) {
+  const el = knob({
+    label, min: 0, max: 999999999, step: 1, value: Math.max(0, Math.round(value) % 1000000000),
+    def: 0, size: "sm", onInput: (v) => onInput(v | 0),
+    format: (v) => String(Math.round(v)),
+    ...extra,
+  });
+  return el;
 }
 
 // register a control under its state key; set(..., false) keeps it silent on sync

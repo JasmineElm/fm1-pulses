@@ -44,6 +44,8 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .knob.k-md svg { max-width: 52px; }
 .knob.k-sm svg { max-width: 44px; }
 .k-lab { max-width: 100%; }
+/* a rotary switch shows a name, not a number, and names are longer */
+.k-smallval .k-val { font-size: 8.5px; font-weight: 700; letter-spacing: .2px; }
 /* Every control must fit ONE rail. The fixed pixel widths here were tuned for the
    old font and are what overflowed, so they are all rail-relative now. */
 .sel { width: calc(100% - 8px); min-width: 0; margin-inline: auto; }
