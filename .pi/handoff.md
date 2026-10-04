@@ -173,7 +173,7 @@ tempo, not the step length; this was a separate defect found while looking.
 **The guide (`guide.html`) documents the rack**: Rhythm / Global / Pitch / Shape
 / Memory, each control tagged knob or switch.
 
-### ⚠ Tempo does not always reach the FM-1 (Baud Girl 093) — UNRESOLVED
+### ⚠ Tempo does not reach the FM-1 (Baud Girl 093) — RESOLVED (2026-10-04): the firmware ignores the 0x20 tempo bytes
 
 **The app sends it correctly.** Verified end to end: knob → `state.tempo` →
 `syncHeader()` → `encodeWrite` → `tempoLo`/`tempoHi`; tempo 140 emits `0c 01`
@@ -181,19 +181,51 @@ which decodes back to 140, with `save` on the last of 8 parts. Layout matches th
 reference codec exactly (`0x20, pat, part, save, len, rate, tempoLo, tempoHi,
 gate, swing, voice`), and the reference's own test asserts `tempo = 97` survives.
 
-**But in two read-back tests the device did not take it:**
+**But the device never takes it. This is now deterministic, not intermittent.**
+Full battery on the live unit (single USB session, every write acked `status 0`):
 
-    gset[34] swing  75 → 60   ✓ landed   (from the 0x20 header)
-    gset[50] rate    4 → 8    ✓ landed   (from the 0x20 header)
-    gset[66] tempo 200 → 200  ✗ UNCHANGED (same message, adjacent field)
+    freeze slot10 tempo=137  8/8 acked  → gset identical, tempo stays 200
+    freeze slot10 tempo=137  8/8 acked  → gset identical
+    freeze slot10 tempo=163  part-by-part, gset read after each part → never moves
+    freeze slot 3 tempo=201  8/8 acked  → gset identical
+    freeze slot10 tempo=45   8/8 acked  → gset identical (programmatic diff)
+    freeze slot10 tempo=250  8/8 acked  → gset identical (programmatic diff)
 
-Sent 61 → device held 127. Sent 174 → device held 127. Same bytes both times.
+while in the SAME messages, on the SAME device:
 
-**Important counter-evidence: the user reports the tempo DID apply ~99% of the
-time before this**, which is why the whole investigation started. So "the
-firmware ignores the pattern tempo" is NOT established and should not be written
-down as fact. What is established: the tempo is written correctly by the app, and
-on at least those two occasions the device kept its old value.
+    swing gset[34+p] 75 → 50   ✓ landed (slots 3 and 10)
+    rate  gset[50+p]  4 → 8    ✓ landed
+
+So the 0x20 header fields work — except tempo. The firmware acks the write and
+discards the tempo bytes. The unit's global tempo (currently 200, mirrored across
+all 16 slots at `gset[66 + 2*p]`) is only changed by the unit's own controls so
+far. The earlier "~99% worked" impression is superseded: with read-back
+instrumentation, tempo never lands.
+
+**Tooling built for the battery (phone-local, outside the repo):** `fm1batch`
+(runs a whole test script in ONE USB session — repeated `termux-usb` claim/release
+cycles make the FM-1 go deaf until replug, which cost an hour of false "device
+dead" readings), `fm1-tempo-test.py` (patch .syx tempo/slot + checksum — checksum
+is at byte 175, F7 at 176), `fm1param` (single-parameter write `F0 43 10 pp qq vv
+F7`), `fm1clock` (F8 @ 24 PPQN stream).
+
+**Quirk worth encoding in the app:** the FIRST `0x11` read of a USB session
+returns 0 bytes; every later one works. Retry reads once before reporting failure.
+
+**Remaining untested paths that COULD set the global BPM over MIDI:**
+1. Single-param write `F0 43 10 pp qq vv F7` (params 0–155) — sweep them looking
+   for the one that moves `gset[66]`. Not yet run (writes 156 unknown params).
+2. `F8` MIDI Clock while the unit's sync mode is ON — streams tempo while the
+   app is connected; the unit's stored BPM is untouched.
+
+**Design consequence (what the app should do):**
+- The device is the source of truth for BPM. Read `gset[66]` on connect and show
+  "FM-1 holds N BPM"; sync the Tempo knob to it.
+- The Tempo knob drives the browser player and is *attempted* at freeze, but the
+  UI must say the device's own tempo governs standalone playback (caveat on the
+  knob + in the freeze status line).
+- Keep sending the tempo bytes in the header (acked, harmless) in case a firmware
+  update honours them.
 
 Facts that are solid:
 
@@ -202,23 +234,11 @@ Facts that are solid:
   behaves like a unit-global value mirrored per pattern.
 - `GSET_ADDR = 0x01C0E840 + 5816`, `GSET_LEN = 137`; rate `gset[50+p]`, swing
   `gset[34+p]`, gate `gset[18+p]`, length `gset[98+p]` all confirmed live.
-- No memory-write exists in the protocol (`0x04` write voice, `0x10` read sound,
-  `0x11` read memory, `0x20` write pattern), so the app cannot poke `gset[66]`.
+- The only memory opcodes: `0x04` write voice, `0x10` read sound, `0x11` read
+  memory, `0x20` write pattern — plus the documented single-parameter write
+  `F0 43 10 pp qq vv F7` (params 0–155), which is the one remaining candidate
+  for a MIDI-side global-tempo write.
 - The device's own tempo range goes to 300, so the hardware can hold it.
-
-Next things to try before believing any theory (all cheap, one freeze each):
-
-1. Freeze the **same slot twice** at the same tempo, reading back each time — is
-   it intermittent?
-2. Freeze while the FM-1 is displaying **that same pattern** vs a different one.
-3. Watch `gset[66]` over one write to see if it ever receives the value and is
-   then overwritten by the firmware from its global tempo.
-
-**Fallback that sidesteps the whole problem, not yet built:** the official spec
-has `F8 Clock → Follow external BPM` and the manual confirms sequencer sync to an
-external clock. Adding a clock source to `midi.js` (`F8` at 24 PPQN + `FA`/`FC`)
-and turning **BPM sync to external MIDI clock ON** on the unit makes the FM-1
-follow the app's tempo, which is what was actually wanted.
 
 ### Diagnostics kept in the app
 
