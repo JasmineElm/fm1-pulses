@@ -106,7 +106,9 @@ body { padding: 12px; }
 }
 
 /* ---- encoder switch (replaces native select) ---- */
-.sw { display: flex; flex-direction: column; align-items: center; }
+/* Fixed width on purpose: the value area must not resize with the option name,
+   or a long one like 'smoothRandom' shoves the neighbouring knob sideways. */
+.sw { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 .sw-lab {
   font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
   font-weight: 700; margin-bottom: 3px; text-align: center;
@@ -119,12 +121,13 @@ body { padding: 12px; }
 .sw-body:focus-within { border-color: var(--accent); }
 .sw-arrow {
   font: inherit; font-size: 11px; line-height: 1; color: var(--dim); background: none;
-  border: 0; padding: 5px 5px 6px; cursor: pointer;
+  border: 0; padding: 5px 4px 6px; cursor: pointer;
 }
 .sw-arrow:hover { color: var(--fg); }
 .sw-val {
-  font-size: 10px; color: var(--fg); padding: 5px 4px 6px; min-width: 52px; text-align: center;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: 9.5px; color: var(--fg); padding: 5px 2px 6px;
+  width: 76px; text-align: center; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ---- toggle ---- */
