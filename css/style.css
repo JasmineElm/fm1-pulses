@@ -93,6 +93,7 @@ input[type=number] {
   font-variant-numeric: tabular-nums;
 }
 input[type=number]:focus { outline: none; border-color: var(--accent); }
+input[type=checkbox].chk { width: 18px; height: 18px; accent-color: var(--accent); justify-self: start; margin: 0; cursor: pointer; }
 select { width: 100%; }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }

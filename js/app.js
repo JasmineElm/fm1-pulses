@@ -35,7 +35,7 @@ const DEFAULT = {
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, humanize: 0,
   scale: "pentMinor", root: 60,
-  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16, octave: 0,
+  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16, octave: 0, gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
 };
 const state = { ...DEFAULT };
@@ -62,8 +62,10 @@ const CONTROLS = [
       help: "The pitch source. sine/triangle/saw/square are deterministic contours; random draws a fresh value from the Spread distribution every (length ÷ cycles) steps — this is where Spread and Bias really bite; randomWalk/smoothRandom/sampleHold are the older random shapes." },
     { k: "lfoAmp", t: "range", label: "Amplitude", min: 0, max: 100, suffix: "%",
       magnets: AMP_MAGNETS,
-      readout: (v) => { const c = centreNote(), s = ampSemi(v); return `${midiName(c - s)}–${midiName(c + s)}`; },
-      help: "Pitch spread, shown as the note range it produces, centred on Offset. 0% = every note is the Offset note; 100% = ±18 semitones. Snaps to root/3rd/5th/octave." },
+      readout: (v) => { const c = centreNote(), s = ampSemi(v); return state.unipolar ? `${midiName(c)}–${midiName(c + s)}` : `${midiName(c - s)}–${midiName(c + s)}`; },
+      help: "Pitch spread, shown as the note range it produces, centred on Offset. 0% = every note is the Offset note; 100% = ±18 semitones (or 0 to +18 with Unipolar on). Snaps to root/3rd/5th/octave." },
+    { k: "unipolar", t: "check", label: "Unipolar",
+      help: "Off: notes spread both ways around the Offset note. On: the Offset note becomes the floor and notes only rise from it, which keeps the melody grounded." },
     { k: "lfoOffset", t: "range", label: "Offset", min: -100, max: 100,
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
@@ -72,6 +74,8 @@ const CONTROLS = [
       help: "How many LFO cycles fit across the pattern (higher = faster). Whole numbers land exactly on the phrase and repeat; fractional values drift, so every pass differs. Random wave: a new value every (pattern length ÷ cycles) steps." },
     { k: "octave", t: "range", label: "Octave up", min: 0, max: 100, suffix: "%",
       help: "Chance a note jumps up one octave. Since the jump is 12 semitones it keeps the same scale degree, so it never breaks the key. 0% = never. The jump is in the note, so the FM-1 plays it too." },
+    { k: "gravity", t: "range", label: "Root gravity", min: 0, max: 100, suffix: "%",
+      help: "Chance a note is pulled to the nearest root note. It keeps the register, so the melody stays grounded instead of collapsing onto one pitch. 0% = off." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
@@ -120,7 +124,10 @@ function buildControls() {
       if (it.help) name.title = it.help;
       const numSel = it.t === "select" && it.opts.every((o) => typeof o === "number");
       let inp, box = null;
-      if (it.t === "select") {
+      if (it.t === "check") {
+        inp = document.createElement("input");
+        inp.type = "checkbox"; inp.className = "chk";
+      } else if (it.t === "select") {
         inp = document.createElement("select");
         for (const o of it.opts) {
           const op = document.createElement("option");
@@ -142,7 +149,8 @@ function buildControls() {
         }
       }
       const out = it.t === "range" ? document.createElement("b") : null;
-      const read = () => (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
+      const read = () => it.t === "check" ? inp.checked
+        : (it.t === "range" || it.t === "num" || numSel) ? Number(inp.value) : inp.value;
       // magnet tick marks on the slider (datalist renders as ticks in Chrome)
       if (it.magnets && it.t === "range") {
         const dl = document.createElement("datalist"); dl.id = "mag-" + it.k;
@@ -161,8 +169,10 @@ function buildControls() {
         if (out) out.textContent = label(v);
         if (it.k === "root") { refs.lfoAmp?.sync(); refs.lfoOffset?.sync(); }
         if (it.k === "lfoOffset") refs.lfoAmp?.sync();
+        if (it.k === "unipolar") refs.lfoAmp?.sync();
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
+      if (it.t === "check") inp.addEventListener("change", () => { sync(); scheduleRegen(); });
       // soft magnet: on release, snap to a nearby interval mark
       if (it.magnets && it.t === "range") {
         inp.addEventListener("change", () => {
@@ -182,9 +192,13 @@ function buildControls() {
           sync(); scheduleRegen();
         });
       }
-      inp.value = String(state[it.k]); sync();
-      if (it.t === "select" || it.t === "num") { inp.classList.add("span2"); row.append(name, inp); }
-      else row.append(name, inp, box, out);
+      inp.value = it.t === "check" ? "" : String(state[it.k]);
+      if (it.t === "check") { inp.checked = !!state[it.k]; row.append(name, inp); sync(); }
+      else {
+        sync();
+        if (it.t === "select" || it.t === "num") { inp.classList.add("span2"); row.append(name, inp); }
+        else row.append(name, inp, box, out);
+      }
       grid.appendChild(row);
       refs[it.k] = { inp, sync };
     }

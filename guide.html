@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — guide</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=9">
 <style>
   main.guide { max-width: 760px; }
   .intro { color: var(--dim); max-width: 60ch; }
@@ -67,6 +67,11 @@
     <p class="try">Try: set Offset first, then open Amplitude until the range feels right.</p>
   </div>
   <div class="param">
+    <h3>Unipolar <span class="rng">checkbox</span></h3>
+    <p>Off, notes spread both ways around the Offset note. On, the Offset note becomes the floor and notes only rise from it.</p>
+    <p class="try">Try: unipolar with a high Amplitude turns a wandering line into one that always moves upward.</p>
+  </div>
+  <div class="param">
     <h3>Offset <span class="rng">−100 to +100%</span></h3>
     <p>The centre of the pitch range. Amplitude spreads evenly around this note. This is where the melody lives.</p>
     <p class="try">Try: leave Root on C, move Offset up an octave, hear the same idea climb.</p>
@@ -80,6 +85,11 @@
     <h3>Octave up <span class="rng">0–100%</span></h3>
     <p>Chance a note jumps up one octave. The jump is 12 semitones, which is the same scale degree, so it stays in key. The jump is written into the note, so the FM-1 plays it too.</p>
     <p class="try">Try: 25% with Amplitude 0 for an octave pulse on a single note.</p>
+  </div>
+  <div class="param">
+    <h3>Root gravity <span class="rng">0–100%</span></h3>
+    <p>Chance a note is pulled to the nearest root note. It keeps its register, so the melody gets grounded instead of flattened onto a single pitch.</p>
+    <p class="try">Try: 40–60% when the random wave is throwing notes around and you want it to settle down.</p>
   </div>
 
   <h2>Density</h2>

@@ -128,12 +128,13 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
  *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
- *         humanize(0-100), octave(0-100)
+ *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool)
  */
 export function generate(params, prevSteps = null) {
   const rng = mulberry32(params.seed >>> 0);
   const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
   const octRng = mulberry32((params.seed ^ 0x85ebca6b) >>> 0);  // separate stream: octave jumps must not shift pitch draws
+  const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
   const scale = SCALES[params.scale] || SCALES.pentMinor;
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
@@ -156,6 +157,8 @@ export function generate(params, prevSteps = null) {
   const fixedVel = params.velocity;
   const hum = (params.humanize ?? 0) / 100 * 40;   // velocity deviation, +/- 40 max
   const octChance = (params.octave ?? 0) / 100;    // chance a note jumps up one octave
+  const gravity = (params.gravity ?? 0) / 100;     // chance a note snaps to the nearest root
+  const unipolar = !!params.unipolar;              // range rises from Offset instead of centring on it
 
   const steps = [];
   for (let i = 0; i < 64; i++) {
@@ -181,11 +184,19 @@ export function generate(params, prevSteps = null) {
       shaped = shape(clamp(lfo(phase), 0, 1), params.spread || "uniform");
     }
     shaped = skew(shaped, (params.bias ?? 0) / 100);
-    const v = 0.5 + (shaped - 0.5) * amp + offset * 0.5;   // 0.5 = the centre
-    const raw = center + (v - 0.5) * span;
+    // Offset is the centre of the range and Amplitude its reach. Bipolar spreads
+    // both ways; unipolar keeps the Offset note as the floor and rises from it.
+    const centreNote = center + offset * (span / 2);
+    const dev = amp * (span / 2);
+    const raw = unipolar
+      ? centreNote + shaped * dev
+      : centreNote + (shaped - 0.5) * 2 * dev;
     // clamp the NOTE, not the LFO position, so offset shifts the range without
     // collapsing the swing (it only pins once the note hits the MIDI limits)
     let note = quantize(clamp(raw, 0, 127), scale, params.root, quantStrength, rng);
+    // Root gravity: snap to the nearest root note, keeping the register, so the
+    // melody is grounded rather than flattened onto one pitch.
+    if (gravity && gravRng() < gravity) note = params.root + Math.round((note - params.root) / 12) * 12;
     // Octave up: +12 keeps the same scale degree, so the note stays in key. Skipped
     // when it would leave the MIDI range, rather than pinning to 127.
     if (octChance && octRng() < octChance && note + 12 <= 127) note += 12;
@@ -223,6 +234,7 @@ export function generateBank(base, driftPct = 50) {
     spread: r() < 0.5 ? -1 : 1,
     humanize: r() < 0.5 ? -1 : 1,
     octave: r() < 0.5 ? -1 : 1,
+    gravity: r() < 0.5 ? -1 : 1,
   };
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
 
@@ -244,6 +256,7 @@ export function generateBank(base, driftPct = 50) {
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
       octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
+      gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
     };
     bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
   }
