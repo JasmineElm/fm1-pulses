@@ -166,7 +166,8 @@ export function generate(params, prevSteps = null) {
     // with spread choosing the distribution and bias skewing it.
     let shaped;
     if (isRandom) {
-      if (i % div === 0) randVal = drawRandom(rng, params.spread || "uniform");
+      // floor-based so fractional `div` works: a draw each time the block index ticks
+      if (Math.floor(i / div) !== Math.floor((i - 1) / div)) randVal = drawRandom(rng, params.spread || "uniform");
       shaped = randVal;
     } else {
       const phase = ((i / div) % 1 + 1) % 1;
@@ -212,7 +213,6 @@ export function generateBank(base, driftPct = 50) {
     spread: r() < 0.5 ? -1 : 1,
     humanize: r() < 0.5 ? -1 : 1,
   };
-  const rateIdx0 = Math.max(0, LFO_RATES.indexOf(base.lfoRate));
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
 
   const bank = [];
@@ -229,7 +229,7 @@ export function generateBank(base, driftPct = 50) {
       lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
-      lfoRate: LFO_RATES[clamp(rateIdx0 + Math.round(dir.lfoRate * t * 2), 0, LFO_RATES.length - 1)],
+      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 64),
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
     };

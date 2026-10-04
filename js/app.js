@@ -9,7 +9,6 @@ const SLOTS = 16;
 
 // rate index -> duration in quarter notes (1/32 = a quarter/8, etc.)
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
-const LFO_RATE_STEPS = [1, 2, 4, 8, 16, 32, 64];
 
 // Triplet swing: 50% = straight, 75% = the offbeat lands 1/3 of a step late (2:1).
 // The pair keeps its length; the first step stretches and the second shortens.
@@ -69,9 +68,8 @@ const CONTROLS = [
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
-    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 1,
-      magnets: LFO_RATE_STEPS,
-      help: "Deterministic waves: one cycle every N steps. Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes. The tick marks are the classic powers of two." },
+    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 0.5,
+      help: "Steps per LFO cycle. Continuous, and fractional values are the point: an integer that divides the pattern repeats, a fractional or odd rate drifts, so every bar lands somewhere new. Random wave: a new value is drawn every N steps." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
