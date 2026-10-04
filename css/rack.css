@@ -21,11 +21,10 @@ body { padding: 12px; }
      blue    off-white case       + navy keys      case #e8e4df  keys #607e9a
      brown   off-white case       + brown keys     case #e8e4df  keys #96714f
    Case and key colours were read off M-VAVE's own product photos (white studio
-   background masked out). 'blue' was then calibrated against a photo of a real
-   unit: its buttons measure #59718e and the shell #ede8e4, which is within a few
-   points of the product shot, so only the accent needed a nudge (the raw button
-   colour only clears 3.9:1 on this background, too low for a lit step, so it is
-   lifted along the same hue to 5.1:1).
+   background masked out), then calibrated against photos of real units for
+   'blue' (buttons #59718e, shell #ede8e4) and 'brown' (keys #91613d at the 75th
+   percentile, shell #eee9e5). Both landed within a few points of the product
+   shots, which is why the product-shot values are trusted for the rest.
    Surfaces are tinted from each variant's signature colour; accents are lifted
    until they clear 4.5:1 on the background they sit on, legends 4.5:1 on the
    panel, and dividers 3:1. */
@@ -35,7 +34,7 @@ body { padding: 12px; }
 [data-theme="orange"] { --bg: #0e0806; --panel: #190f0a; --panel2: #2d1b12; --line: #7a5a4a; --fg: #fbf7f4; --dim: #9f725e; --accent: #c27450; --accent2: #b08063; }
 [data-theme="green"]  { --bg: #090f0e; --panel: #111c1b; --panel2: #1f322f; --line: #446d68; --fg: #f8fdfc; --dim: #5d9890; --accent: #85d9cd; --accent2: #5f9c94; }
 [data-theme="blue"]   { --bg: #06080a; --panel: #0c0f12; --panel2: #141a21; --line: #56606c; --fg: #f5f6f8; --dim: #707d8c; --accent: #6d829c; --accent2: #ede8e4; }
-[data-theme="brown"]  { --bg: #0b0906; --panel: #15100b; --panel2: #251c14; --line: #6e5e4e; --fg: #f9f7f5; --dim: #8e7964; --accent: #a07a55; --accent2: #e8e4df; }
+[data-theme="brown"]  { --bg: #0a0704; --panel: #130d08; --panel2: #21160e; --line: #6e5b4d; --fg: #f8f6f3; --dim: #8f7664; --accent: #a07758; --accent2: #eee9e5; }
 
 .layout { display: block; }
 .module { display: flex; flex-direction: column; }
