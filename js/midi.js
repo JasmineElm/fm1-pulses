@@ -3,7 +3,7 @@
 // The pattern write (SysEx 0x20) is refused with status 3 while the FM-1's
 // sequencer is playing, so we read the reply after each message and surface it.
 // We can also READ the device's memory (SysEx 0x11) to check what it stored.
-import { ysum } from "./pattern.js?v=67";
+import { ysum } from "./pattern.js?v=68";
 
 let access = null;
 

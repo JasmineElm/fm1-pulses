@@ -187,6 +187,23 @@ async function readBack(pat) {
 }
 const hex = (a) => Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join(" ");
 
+// Diagnostic: dump the whole settings block. Change ONE thing on the FM-1 itself
+// (e.g. its tempo), read again, and the bytes that moved are that setting — which
+// pins the true offset for this firmware instead of trusting another version's map.
+async function dumpGset() {
+  try {
+    status("reading the device's settings block…");
+    const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
+    const rows = [];
+    for (let i = 0; i < data.length; i += 16) {
+      rows.push(String(i).padStart(3, "0") + ": " +
+        Array.from(data.slice(i, i + 16)).map((b) => b.toString(16).padStart(2, "0")).join(" "));
+    }
+    alert(`FM-1 global settings, ${data.length} bytes\n\n${rows.join("\n")}`);
+    status(`read ${data.length} bytes from the device`, "ok");
+  } catch (e) { status("read failed: " + (e.message || e), "err"); }
+}
+
 async function doFreeze(slotIndex) {
   if (!bank[slotIndex]) return;
   syncHeader();
@@ -580,6 +597,7 @@ function buildTransport() {
   document.getElementById("freeze").addEventListener("click", () => doFreeze(selected));
   document.getElementById("fill").addEventListener("click", doSendAll);
   document.getElementById("clearall").addEventListener("click", doClearAll);
+  document.getElementById("diag")?.addEventListener("click", dumpGset);
 }
 
 function buildEditor() {
