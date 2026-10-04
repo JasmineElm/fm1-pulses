@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=56";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=56";
-import * as midi from "./midi.js?v=56";
-import * as audio from "./audio.js?v=56";
-import { knob, sw, toggle } from "./knob.js?v=56";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=57";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=57";
+import * as midi from "./midi.js?v=57";
+import * as audio from "./audio.js?v=57";
+import { knob, sw, toggle } from "./knob.js?v=57";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -375,7 +375,7 @@ function buildRack() {
         format: (v) => `${Math.round(v)}`, onInput: setState("tempo") })),
       R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
         format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
-      R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "md",
+      R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "lg",
         format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
       R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
         format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
@@ -401,9 +401,9 @@ function buildRack() {
       R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w, title: w })), state.lfoWave, setState("lfoWave"))),
       R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
         format: (v) => `${v}`, onInput: setState("lfoRate") })),
-      R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "md",
+      R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "lg",
         format: (v) => `${Math.round(v)}%`, onInput: setState("lfoAmp") })),
-      R("lfoOffset", knob({ label: "Offset", min: -100, max: 100, value: state.lfoOffset, def: DEFAULT.lfoOffset, size: "md",
+      R("lfoOffset", knob({ label: "Offset", min: -100, max: 100, value: state.lfoOffset, def: DEFAULT.lfoOffset, size: "lg",
         format: (v) => `${Math.round(v)}`, onInput: setState("lfoOffset") })),
       R("scale", sel("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, setState("scale"))),
       R("root", knob({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root, size: "md",
