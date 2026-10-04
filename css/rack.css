@@ -4,6 +4,10 @@
 
 body { padding: 12px; }
 
+/* portrait: the module sits on top of the display, both inside the same case */
+.layout { display: block; }
+.module { display: flex; flex-direction: column; }
+
 .case {
   width: 100%;
   max-width: 460px;
@@ -111,6 +115,22 @@ body { padding: 12px; }
 .display .cell { font-size: 9px; }
 .display .bank { gap: 4px; }
 .display .bankcell { padding: 4px 2px; border-radius: 6px; }
+
+/* landscape: split the case, module on the left and the pattern display on the right,
+   so a phone on its side and a desktop window both use the horizontal space. */
+@media (min-aspect-ratio: 1/1) {
+  body { padding: 10px; }
+  .case { max-width: 1080px; }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 12px;
+    align-items: start;
+  }
+  .display { margin-top: 0; }
+  .display .steps { grid-template-columns: repeat(16, 1fr); }
+  .display .bank { grid-template-columns: repeat(16, 1fr); }
+}
 
 @media (max-width: 400px) {
   .display .steps { grid-template-columns: repeat(8, 1fr); gap: 5px; }

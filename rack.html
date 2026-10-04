@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — rack</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=21">
-<link rel="stylesheet" href="css/rack.css?v=21">
+<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/rack.css?v=22">
 </head>
 <body>
 <div class="case">
@@ -18,40 +18,44 @@
     <span id="status" class="status">loading…</span>
   </div>
 
-  <div class="rack">
-    <div class="col" id="colL"></div>
-    <div class="col" id="colC"></div>
-    <div class="col" id="colR"></div>
-  </div>
-  <div class="band" id="band"></div>
+  <div class="layout">
+    <div class="module">
+      <div class="rack">
+        <div class="col" id="colL"></div>
+        <div class="col" id="colC"></div>
+        <div class="col" id="colR"></div>
+      </div>
+      <div class="band" id="band"></div>
 
-  <div class="transport">
-    <button id="gen" class="primary" title="Derive a fresh bank from a new seed (G)">Generate</button>
-    <button id="rand" title="Random parameters + a new seed">Randomize</button>
-    <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
-    <button id="mute" title="Mute the browser preview">🔊</button>
-    <button id="freeze" title="Write the selected slot into the FM-1 (F)">Freeze</button>
-    <button id="fill" title="Write all 16 slots into the FM-1">Send 16</button>
-    <button id="clearall" title="Erase all 16 patterns on the FM-1">Clear</button>
-    <span class="swatches" id="themes"></span>
-  </div>
+      <div class="transport">
+        <button id="gen" class="primary" title="Derive a fresh bank from a new seed (G)">Generate</button>
+        <button id="rand" title="Random parameters + a new seed">Randomize</button>
+        <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
+        <button id="mute" title="Mute the browser preview">🔊</button>
+        <button id="freeze" title="Write the selected slot into the FM-1 (F)">Freeze</button>
+        <button id="fill" title="Write all 16 slots into the FM-1">Send 16</button>
+        <button id="clearall" title="Erase all 16 patterns on the FM-1">Clear</button>
+        <span class="swatches" id="themes"></span>
+      </div>
+    </div>
 
-  <div class="display">
-    <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small></h2>
-    <div id="bank" class="bank"></div>
-    <div id="steps" class="steps"></div>
-    <div id="editor" class="editor">
-      <span class="elab">Step <b id="estep">—</b></span>
-      <span id="enote" class="enote">tap a step</span>
-      <button id="edown" title="Lower this step a semitone (locks it)">−</button>
-      <button id="eup" title="Raise this step a semitone (locks it)">+</button>
-      <button id="eclear" title="Empty this step and lock it">✕</button>
-      <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
-      <button id="eclearlocks" title="Forget every locked step">clear locks</button>
-      <span id="lockcount" class="lockcount"></span>
+    <div class="display">
+      <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small></h2>
+      <div id="bank" class="bank"></div>
+      <div id="steps" class="steps"></div>
+      <div id="editor" class="editor">
+        <span class="elab">Step <b id="estep">—</b></span>
+        <span id="enote" class="enote">tap a step</span>
+        <button id="edown" title="Lower this step a semitone (locks it)">−</button>
+        <button id="eup" title="Raise this step a semitone (locks it)">+</button>
+        <button id="eclear" title="Empty this step and lock it">✕</button>
+        <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
+        <button id="eclearlocks" title="Forget every locked step">clear locks</button>
+        <span id="lockcount" class="lockcount"></span>
+      </div>
     </div>
   </div>
 </div>
-<script type="module" src="js/rack.js?v=21"></script>
+<script type="module" src="js/rack.js?v=22"></script>
 </body>
 </html>
