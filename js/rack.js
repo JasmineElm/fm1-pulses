@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=55";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=55";
-import * as midi from "./midi.js?v=55";
-import * as audio from "./audio.js?v=55";
-import { knob, sw, toggle } from "./knob.js?v=55";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=56";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=56";
+import * as midi from "./midi.js?v=56";
+import * as audio from "./audio.js?v=56";
+import { knob, sw, toggle } from "./knob.js?v=56";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -344,9 +344,10 @@ function buildTheme() {
 // The rack
 // --------------------------------------------------------------------------- //
 // A section occupies `span` rails of the panel grid. Its controls are laid out on
-// the SAME rail width, so every control in the panel lines up on one column
-// regardless of which section it is in. A section with fewer controls than rails
-// centres its sub-grid, which keeps the rail width identical.
+// the SAME rail width, so every control in the panel lines up on one column.
+// A section with fewer controls than rails places them on WHOLE columns (an
+// integer offset), never by centring on width — centring lands on half-rails and
+// breaks the alignment.
 function sect(title, span, kids) {
   const s = document.createElement("section");
   s.className = "sect";
@@ -355,9 +356,11 @@ function sect(title, span, kids) {
   h.textContent = title;
   const g = document.createElement("div");
   g.className = "sgrid";
-  const cols = Math.min(span, kids.length);
-  g.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-  if (cols < span) { g.style.width = `${(cols / span) * 100}%`; g.style.margin = "0 auto"; }
+  g.style.gridTemplateColumns = `repeat(${span}, minmax(0, 1fr))`;
+  const off = Math.floor((span - Math.min(span, kids.length)) / 2);
+  kids.forEach((k, i) => {
+    if (off) k.style.gridColumn = `${off + i + 1}`;
+  });
   g.append(...kids);
   s.append(h, g);
   return s;
