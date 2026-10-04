@@ -377,3 +377,22 @@ correct checksum at 175 / F7 at 176), `fm1-tempo-battery.sh`.
 
 **Still open:** the audible F8 follow test (unit Timing→Sync=On, app streams
 clock) — gset proves nothing, needs ears on the device.
+
+**F8 clock following — tested 2026-10-04, verdict: REAL BUT BROKEN on Baud Girl 093.**
+The unit audibly slows when F8 streams (user confirmed by ear) and the change is
+measurable in the note stream, but the resulting tempo does NOT match the streamed
+BPM by any consistent factor:
+
+    no clock (control)       step ≈ 125 ms   (internal 120 BPM, 1/16)  ✓ exact
+    F8 @ 90, 24 PPQN         step ≈ 216 ms
+    F8 @ 120, 24 PPQN        step ≈ 297-300 ms   (≈50 BPM, 2.4× off)
+    F8 @ 120, 48 PPQN        step ≈ 241 ms
+    F8 @ 120, CIN 0x05       step ≈ 300 ms (same)
+
+So it is not a PPQN (24 vs 48) issue and not a USB-MIDI CIN issue — the firmware's
+clock follower is just wrong. Transport over MIDI also does nothing useful in
+slave mode: FA does not arm the sequencer (it only plays when started from the
+unit's own PLAY button), FC seems ignored. The device must be armed from the
+unit, then it follows the clock — badly.
+**Decision: no clock-sync feature in the app.** The WYSIWYG tempo read (gset) is
+the correct and only reliable path; the unit's own knob is the tempo setter.
