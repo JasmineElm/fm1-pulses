@@ -119,8 +119,12 @@
 
   <h2>Memory</h2>
   <div class="param">
+    <h3>Loop <span class="rng">2–32 steps</span></h3>
+    <p>Motif length. The first N steps repeat across the phrase, filling up to Length. The slider reaches half the pattern length, and odd values are allowed, so you can loop 7 or 9 steps. If Loop is half of Length or more there is nothing to fill, so it does nothing.</p>
+  </div>
+  <div class="param">
     <h3>Deja Vu <span class="rng">0–100%</span></h3>
-    <p>How much each slot reuses the previous slot's notes. 0% is fresh each time. 100% locks all 16 slots to the same loop.</p>
+    <p>Chance a step past the motif copies the motif instead of playing its own note. 0% plays the phrase as generated, 100% repeats the motif to the end. In between, fresh notes bleed in.</p>
   </div>
 
   <h2>Pattern header <span style="font-weight:400;color:var(--dim)">(written into the FM-1)</span></h2>

@@ -10,7 +10,7 @@ selected slot and morph it in real time).
 
 - **Live:** https://mene311.github.io/fm1-pulses/
 - **Repo:** `github.com/mene311/fm1-pulses` (public) — Pages deploys from `main` / root
-- **Local:** `~/Projects/fm1-pulses/`
+- **Local:** `~/fm1-pulses/` (phone — it is phone-local, no SSH needed)
 - **Device notes / tools:** `~/Projects/mvave-fm1/` (see its README)
 - **Bluetooth:** the FM-1 has native **BLE MIDI** (documented + the standard BLE-MIDI
   GATT UUIDs are in its firmware). Plan, evidence, risks and the verification ladder live
@@ -40,20 +40,17 @@ selected slot and morph it in real time).
 - [x] **Freeze → FM-1** (selected) / **Send all 16**
 - [x] **7 themes** = the FM-1's own (decoded from its firmware)
 - [x] Tooltips on every control + typeable number boxes
-- [x] **LFO rate is "LFO cycles": cycles across the pattern** (1–24, 0.5 step,
-      continuous, no snapping). Flipped from steps-per-cycle because the inverse is
-      counter-intuitive without the formula. `div = len / cycles`; periodic waves are
-      floored at div 2.5 so a sine can't collapse (it degenerates at div 1 and 2 —
-      phase 0 and ½ both read 0). Whole cycles that are multiples of the bar count
-      repeat; fractional ones drift: 16 cycles = old default (repeats every 4 steps),
-      16.5 = 4/4 distinct bars, 26 pitches. Random wave uses a floor-based draw so
-      fractional cycles work. Default `lfoRate` is 16 (= the old 4 steps/cycle sound).
+- [x] **LFO rate is "LFO cycles": cycles across the pattern** (1–16, 0.5 step,
+      continuous, no snapping — capped at 16 after listening tests; at 1/32 the high
+      rates just read as jitter). `div = len / cycles`; periodic waves are floored at
+      div 2.5 so a sine cannot collapse (it degenerates at div 1 and 2 — phase 0 and ½
+      both read 0). Multiples of the bar count repeat, fractional ones drift. Default 4.
 - [x] **`random` wave** — a Marbles-style stochastic source. It draws a fresh value
       every LFO-rate steps and holds it; `spread` picks the distribution
       (uniform / bell / extremes / constant) and `bias` is a real monotonic skew.
       The deterministic waves are unchanged as contours. Verified: `random` gives
       30 pitches at /1 and 4 at /16 (a sine at /4 is stuck at 3); 16/16 distinct
-      slots even at Gate 100%; DejaVu 0/50/100% → 4/55/100% reuse.
+      slots even at Gate 100%.
 - [x] **Bias fixed** — it was a second amplitude (positive values were clamped to a
       no-op). Now `skew(v,bias) = v^(3^-bias)`: measured mean note 53→69 as bias
       goes −100→+100, range unchanged.
@@ -75,7 +72,26 @@ selected slot and morph it in real time).
       `~/fm1tool.sh write ~/probe-empty64.syx` (a non-empty `~/fm1-mvp/*.syx` is
       the control). If empty patterns are refused, either find the real erase or
       drop the button.
-- [x] Defaults: note value 1/16, LFO rate /4
+- [x] **Unipolar** checkbox — Off: notes spread both ways around the Offset note.
+      On: the Offset note is the floor and notes only rise from it.
+- [x] **Octave up** (0–100%) — chance a note jumps +12. Same scale degree, so it
+      stays in key. Own RNG stream, so moving it never reshuffles the melody.
+- [x] **Root gravity** (0–100%) — chance a note is pulled to the nearest root note,
+      keeping its register. Own RNG stream.
+- [x] **Humanize** (0–100%) — per-note velocity jitter, ±40. Own RNG stream. Velocity
+      and Humanize only affect the browser / live MIDI; the FM-1 plays its own
+      velocity on pattern playback.
+- [x] **Grid snap** (0–100%) + **Snap grid** (slider 2–8 steps, odd values allowed).
+      Snap keeps only notes that already sit on a grid line, so Gate still decides how
+      many lines fire — density and grid no longer fight. Off-grid notes become rests.
+- [x] **Loop** (2 → Length÷2 steps, odd allowed) + **Deja Vu** (0–100%). Deja Vu's old
+      cross-slot memory is gone: it now repeats the first N steps of the pattern
+      itself, filling up to Length, with Deja Vu as the chance each later step loops
+      back. This also un-broke Drift (cross-slot reuse used to make all 16 slots
+      identical at Deja Vu 100%).
+- [x] **`bell` fixed** — it used to push values *away* from the centre; now
+      centre-weighted in both the periodic and random paths.
+- [x] Defaults: note value 1/16, LFO cycles 4, Loop 8, Deja Vu 0 (so the loop is off on load)
 
 **BLE probe (2026-10-03) — `probe/`**
 - [x] `probe/encode.js` — DOM/Bluetooth-free byte layer: BLE-MIDI `packetize`,
@@ -122,13 +138,10 @@ selected slot and morph it in real time).
   Android Chrome. Blocked on one binary unknown: **does the FM-1's BLE side accept the
   proprietary `0x20` pattern write, or only SysEx voice dumps?** Run the verification
   ladder (power on → BT scan → small SysEx → the 177-byte write) before writing any code.
-- [ ] **The periodic waves can't use Spread/Bias as distributions.** They are
-      deterministic contours on purpose (kept), so Spread only warps the wave and
-      Bias skews it — the full distribution control only exists in the `random`
-      wave. `shape()`'s `bell` is still the old centre-pushing formula (misnamed);
-      the `random` wave's bell is proper. Decide whether to fix the deterministic
-      `bell` too. Default wave is still `sine` — consider defaulting to `random` so
-      Spread/Bias are live on load.
+- [ ] **The periodic waves can't use Spread/Bias as full distributions.** They are
+      deterministic contours on purpose (kept). `bell` is now centre-weighted in both
+      paths. Default wave is still `sine`, so Spread/Bias are inert until you pick the
+      `random` wave — consider defaulting to `random`.
 - [ ] **Verify a browser freeze against the real device.** The encoder and reply
   parsing are verified, but the Web MIDI freeze has not been confirmed on hardware
   (the phone path uses `mvave-fm1/mvp/fm1tool` over libusb, which IS verified).
@@ -150,6 +163,12 @@ git add -A && git commit -m "..." && git push    # Pages rebuilds in ~1 min
 python3 -m http.server 8099                      # local (Web MIDI needs localhost/https)
 ```
 
-GitHub Pages caches assets `max-age=600`, so a stale `index.html` + new `app.js`
-(or vice-versa) can briefly disagree after a push — hard-refresh if something
-looks half-updated.
+GitHub Pages caches assets `max-age=600`. **Every asset is versioned through the
+imports**: `index.html` loads `app.js?v=N`, and `app.js` imports
+`generator.js?v=N`, `midi.js?v=N`, `pattern.js?v=N`, `audio.js?v=N`.
+**When you change any JS, bump N in BOTH places** (`index.html` and the import
+block at the top of `app.js`) or the browser will keep serving the stale module.
+This bit once: the modules were unversioned, so `generator.js` changes never
+reached the phone even though `app.js` did. `guide.html` carries its own `?v=N`
+on `css/style.css`. To force a one-off refresh, open the page in Incognito or append
+`?v=N` to the page URL.
