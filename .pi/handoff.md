@@ -110,48 +110,112 @@ selected slot and morph it in real time).
 - [ ] **Run the ladder on the phone (Chrome, FM-1 paired to the phone).**
       Hardware is the last gate; nothing else stays blocked on it.
 
-## Rack UI (knob version) — 2026-10-04
+## Rack UI (the app now) — session 2026-10-04
 
-**2026-10-04: the rack is now the root app.** `index.html` is the rack UI;
-the slider version is archived as **`sliders.html`** (still live, still built from
-`app.js` + `style.css`) and frozen at tag **`mvp-1`**. `rack.html` is gone.
+**`index.html` IS the rack UI.** The slider version is archived as
+**`sliders.html`** (still live, built from `app.js` + `style.css`) and frozen at
+tag **`mvp-1`**. `rack.html` no longer exists. Files: `index.html`, `js/rack.js`,
+`js/knob.js`, `css/rack.css`, `css/fonts/*.woff2`.
 
+**Layout: a 6-rail grid.** `.rack` is `grid-template-columns: repeat(6, 1fr)`;
+sections span 2 rails (Rhythm / Global / Pitch, 3 rows each) or 6 (Shape,
+Memory). Every control is exactly **one rail wide** so nothing drifts. Two traps
+that broke alignment, both fixed:
+- Section boxes must NOT use a border or horizontal padding — a 2-rail box and a
+  6-rail box then resolve to different cell widths. Draw the box with
+  `box-shadow: inset 0 0 0 1px` instead (costs no layout), and keep the internal
+  grid gap equal to the panel gap.
+- A short section must be centred on **whole columns** (`gridColumn = off + i`),
+  never by width (`width: 50%; margin: auto`), which lands on half-rails.
+  Verified: rail centres 152/238/324/410/496/582 at a constant 86px pitch.
 
-A second UI beside the MVP, sharing the same engine. `rack.html` + `js/rack.js`
-+ `js/knob.js` + `css/rack.css`. `app.js` and `style.css` are untouched.
+**Control types: no text boxes on the panel at all.** `knob()` (tick ring, domed
+cap, drag/wheel/keys, shift for fine, double-click resets) and `rotary()` (a knob
+over an option list, `ticks = positions-1, majorEvery: 0` so there is one detent
+per position). Wave/Scale/Note/Spread/Unipolar are rotaries; the seed is a knob
+that rolls. Short panel legends for the waves (`randomWalk` → `walk`), full name
+in the tooltip. `sw()` still exists in `knob.js` but is unused.
 
-- **One panel, not a rack.** Portrait case: transport on top, then a three-column
-  Marbles-style split (rhythm left, globals centre, notes right), a full-width
-  band, the theme strip, then the pattern display inside the same case.
-  Landscape (`@media (min-aspect-ratio: 1/1)`) splits module / display.
-- **Controls** are `knob()` (tick ring, domed cap, drag/wheel/keys) and `sw()`
-  (encoder switch with a **fixed-width, fixed-height, wrapping** value so a long
-  option name can never resize the box or shove the neighbour). Wave names use
-  short panel legends (`randomWalk` → `walk`), full name in the tooltip.
-- **THE PANEL IS THE CASE COLOUR.** This was the big fix. Painting every surface
-  near-black with a small accent measured **79% near-black / 19% coloured** on
-  screen and read as dull; the FM-1 is a *coloured case with dark knobs and a
-  dark screen*, so `--panel` is the case colour, the knobs are dark, and
-  `.display` carries its **own local dark palette** so steps stay a dark TFT.
-  After: 32% near-black / 66% coloured.
-- **Ink is chosen per theme by comparing dark vs light**, not by a lightness
-  guess — orange needs dark ink (5.4:1) where light ink only got 3.6:1.
-- **Themes are calibrated off real hardware**, not invented. Colourway case/key
-  pairs came from M-VAVE product photos, then five were re-derived by **k-means
-  clustering the user's own close-up photos into 4 colours** and reading the two
-  dominant non-shadow clusters as case and keys (the shadow falls out as its own
-  cluster, which is what fixed purple's secondary). Tools:
-  `~/fm1-colours.py` (k-means palettes) and `~/fm1-calib.py` (single photo →
-  proposed theme line + contrast checks). **`black` and `grey` are still
-  product-shot estimates** — both are near-neutral, so a close-up gives two
-  greys clustering can't separate from shadow.
-- **Contrast is enforced numerically**: legends 4.5:1 on the panel, dividers 3:1,
-  accent 4.5:1 against the dark screen.
-- Verification habit: `thum.io` never executes module JS and `microlink` races
-  it (pin with `waitFor=#steps .cell`); the DeepSeek vision model **downscales
-  the screenshot** so it cannot see 1px grain, 4px screws or 2px shadows and
-  will say "no texture, no screws". Verify geometry and colour with PIL against
-  the pixels, not with the model's eye.
+**THE PANEL IS THE CASE COLOUR.** Painting every surface near-black with a small
+accent measured **79% near-black / 19% coloured** and read as dull. The FM-1 is a
+*coloured case with dark knobs and a dark screen*, so `--panel` is the case
+colour, the knobs are dark, and `.display` carries its **own local dark palette**
+so steps stay a dark TFT. After: 32% near-black / 66% coloured.
+**Ink is chosen per theme by comparing dark vs light**, never by a lightness
+guess: orange needs dark ink (5.4:1) where light ink only managed 3.6:1.
+
+**Themes are calibrated off real hardware.** Case/key pairs came from M-VAVE
+product photos, then five were re-derived by **k-means clustering the user's own
+close-up photos into 4 colours** and reading the two dominant non-shadow clusters
+as case and keys — the shadow falls out as its own cluster, which is what fixed
+purple's secondary. Tools: `~/fm1-colours.py` (k-means palettes) and
+`~/fm1-calib.py` (one photo → proposed theme line + contrast checks).
+Take the **75th percentile**, not the mean: the mean drags toward the shadowed
+gaps between keys and read the brown unit too dark. **`black` and `grey` are
+still product-shot estimates** — both are near-neutral, so a close-up gives two
+greys clustering cannot separate from shadow.
+Contrast is enforced numerically: legends 4.5:1 on the panel, dividers 3:1,
+accent 4.5:1 on the dark screen.
+
+**Typeface:** Barlow Semi Condensed, self-hosted (`css/fonts/`, 3 weights, 68KB,
+SIL OFL) so the app still works offline. A condensed grotesk is what a panel
+legend is printed in; the system sans read as a web dashboard.
+
+**Audition timing was up to 16% slow** — the gate floors (`max(12ms note,
+max 3ms release)`) ADDED to each step instead of eating into it, because the loop
+slept relative durations. Measured +5.4% at gate 5% on 1/16 and **+16.1% on
+1/32**; now the loop waits until an **absolute** target time per step, measured
++0.0%, and re-anchors if it falls >250ms behind. Fixed in BOTH `rack.js` and
+`app.js`.
+
+**The guide (`guide.html`) documents the rack**: Rhythm / Global / Pitch / Shape
+/ Memory, each control tagged knob or switch.
+
+### ⚠ The FM-1 ignores the pattern tempo (Baud Girl 093)
+
+Measured with the in-app read-back, not inferred:
+
+    gset[34] swing  75 → 60   ✓ landed      (from the 0x20 header)
+    gset[50] rate    4 → 8    ✓ landed      (from the 0x20 header)
+    gset[66] tempo 200 → 200  ✗ IGNORED     (same message, adjacent field)
+
+- The device's own tempo change wrote **all 16 slots**, so the tempo is a
+  **unit-global** value mirrored per pattern, not a per-pattern field.
+- `gset[66 + 2*pattern]`, little-endian, in plain BPM (device set 200 → `c8 00`),
+  is confirmed correct by the user changing the tempo on the unit.
+- The protocol has **no memory-write**: `0x04` write voice, `0x10` read sound,
+  `0x11` read memory, `0x20` write pattern. So the app cannot poke `gset[66]`.
+- **Therefore the pattern tempo is not settable over MIDI on this firmware**, and
+  Tempo currently drives only the browser player.
+- **The documented fix, not yet built:** the official spec has `F8 Clock → Follow
+  external BPM` and the manual confirms sequencer sync to an external clock. Add
+  a clock source to `midi.js` (`F8` at 24 PPQN + `FA`/`FC`) and have the user turn
+  **BPM sync to external MIDI clock ON** on the unit. That syncs the device to the
+  app, which is what was actually wanted.
+
+### Diagnostics kept in the app
+
+- **`read device`** (status row) dumps the whole 137-byte settings block as hex,
+  read-only. Change ONE thing on the FM-1, read again, and the bytes that move are
+  that setting. This is how the tempo offset was pinned.
+- **Freeze reports what the DEVICE holds**: `sent 140 bpm, device holds 140 bpm`,
+  or on disagreement `sent 61 but the device holds 127 · gset[60..72] = …`.
+  Implemented with `midi.readMemory(GSET_ADDR, 137)` (SysEx `0x11`), which needed
+  `decodeReply` to return `len` + `data`.
+- `GSET_ADDR = 0x01C0E840 + 5816`, `GSET_LEN = 137`.
+
+### Verification habits (learned the hard way)
+
+- `thum.io` never executes module JS. `microlink` races it, pin with
+  `waitFor=#steps .cell` — and it has a **daily free-tier limit**; when exhausted,
+  ask the user for a screenshot instead (analysis with PIL still works).
+- The DeepSeek vision model **downscales the screenshot**, so it cannot see 1px
+  grain, 4px screws or 2px shadows and will flatly say "no texture, no screws".
+  It also misread a photo of the panel as "an aircraft cockpit". Trust PIL
+  measurements against the pixels; use the model for prose, not geometry.
+- **Run the edit, then commit, in SEPARATE tool calls.** Twice a file edit and the
+  `git commit` ran in parallel and a CSS change silently never got committed,
+  which then looked like "the fix did nothing".
 
 ## Key device facts (hard-won — do not re-learn)
 
