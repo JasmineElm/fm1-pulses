@@ -343,6 +343,11 @@ function toggleLive() {
   const btn = document.getElementById("audition");
   btn.textContent = "■ Stop"; btn.classList.add("playing");
   status("playing (loop)");
+  // WYSIWYG: re-read the device's BPM on Play so the loop matches the unit
+  // even if its tempo knob moved since the last sync.
+  syncDeviceTempo().then((held) => {
+    if (held) status(`playing · device holds ${held} BPM — Tempo synced`, "ok");
+  });
   liveLoop(liveToken);
 }
 
