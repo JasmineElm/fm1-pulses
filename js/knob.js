@@ -69,7 +69,7 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   const hs = document.createElementNS(NS, "stop");
   hs.setAttribute("offset", "0%"); hs.style.stopColor = "rgba(255,255,255,.22)";
   const ms = document.createElementNS(NS, "stop");
-  ms.setAttribute("offset", "52%"); ms.style.stopColor = "var(--panel2)";
+  ms.setAttribute("offset", "52%"); ms.style.stopColor = "#2c2c31";
   const ls = document.createElementNS(NS, "stop");
   ls.setAttribute("offset", "100%"); ls.style.stopColor = "rgba(0,0,0,.5)";
   grad.append(hs, ms, ls);
