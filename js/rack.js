@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=53";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=53";
-import * as midi from "./midi.js?v=53";
-import * as audio from "./audio.js?v=53";
-import { knob, sw, toggle } from "./knob.js?v=53";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=54";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=54";
+import * as midi from "./midi.js?v=54";
+import * as audio from "./audio.js?v=54";
+import { knob, sw, toggle } from "./knob.js?v=54";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -343,14 +343,93 @@ function buildTheme() {
 // --------------------------------------------------------------------------- //
 // The rack
 // --------------------------------------------------------------------------- //
-function cluster(title, ...kids) {
-  const c = document.createElement("section");
-  c.className = "cluster";
-  const h = document.createElement("h3"); h.textContent = title;
-  const row = document.createElement("div"); row.className = "crow";
-  row.append(...kids);
-  c.append(h, row);
-  return c;
+// A section occupies `span` rails of the panel grid. Its controls are laid out on
+// the SAME rail width, so every control in the panel lines up on one column
+// regardless of which section it is in. A section with fewer controls than rails
+// centres its sub-grid, which keeps the rail width identical.
+function sect(title, span, kids) {
+  const s = document.createElement("section");
+  s.className = "sect";
+  s.style.gridColumn = `span ${span}`;
+  const h = document.createElement("h3");
+  h.textContent = title;
+  const g = document.createElement("div");
+  g.className = "sgrid";
+  const cols = Math.min(span, kids.length);
+  g.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  if (cols < span) { g.style.width = `${(cols / span) * 100}%`; g.style.margin = "0 auto"; }
+  g.append(...kids);
+  s.append(h, g);
+  return s;
+}
+
+function buildRack() {
+  const panel = document.getElementById("panel");
+
+  panel.append(
+    sect("Rhythm", 2, [
+      R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "lg",
+        format: (v) => `${Math.round(v)}`, onInput: setState("tempo") })),
+      R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
+      R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "md",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
+      R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
+      R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
+        format: (v) => `${Math.round(v)}`, onInput: setState("snapGrid") })),
+      R("gate", knob({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("gate") })),
+    ]),
+
+    sect("Global", 2, [
+      R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("drift") })),
+      R("seed", num("Seed", state.seed, (v) => { state.seed = v | 0; scheduleRegen(); })),
+      R("rate", sel("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, setState("rate", Number))),
+      R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
+        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); } })),
+      R("quantSteps", knob({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps") })),
+      R("unipolar", toggle({ label: "Unipolar", value: state.unipolar, onInput: setState("unipolar") })),
+    ]),
+
+    sect("Pitch", 2, [
+      R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w, title: w })), state.lfoWave, setState("lfoWave"))),
+      R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
+        format: (v) => `${v}`, onInput: setState("lfoRate") })),
+      R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "md",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("lfoAmp") })),
+      R("lfoOffset", knob({ label: "Offset", min: -100, max: 100, value: state.lfoOffset, def: DEFAULT.lfoOffset, size: "md",
+        format: (v) => `${Math.round(v)}`, onInput: setState("lfoOffset") })),
+      R("scale", sel("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, setState("scale"))),
+      R("root", knob({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root, size: "md",
+        format: (v) => midiName(v), onInput: setState("root") })),
+    ]),
+
+    sect("Shape", 6, [
+      R("spread", sel("Spread", ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), state.spread, setState("spread"))),
+      R("bias", knob({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias, size: "md",
+        format: (v) => `${Math.round(v)}`, onInput: setState("bias") })),
+      R("humanize", knob({ label: "Humanize", min: 0, max: 100, value: state.humanize, def: DEFAULT.humanize, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("humanize") })),
+      R("velocity", knob({ label: "Velocity", min: 1, max: 127, value: state.velocity, def: DEFAULT.velocity, size: "sm",
+        format: (v) => `${Math.round(v)}`, onInput: setState("velocity") })),
+      R("octave", knob({ label: "Octave up", min: 0, max: 100, value: state.octave, def: DEFAULT.octave, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("octave") })),
+      R("gravity", knob({ label: "Root grav", min: 0, max: 100, value: state.gravity, def: DEFAULT.gravity, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("gravity") })),
+    ]),
+
+    sect("Memory", 6, [
+      R("loopFrom", knob({ label: "Loop from", min: 1, max: Math.max(1, state.length - 2), step: 1, value: state.loopFrom, def: DEFAULT.loopFrom, size: "md",
+        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loopFrom = Math.round(v); refreshLoopRanges(); scheduleRegen(); } })),
+      R("loop", knob({ label: "Loop len", min: 2, max: Math.max(2, state.length - 1), step: 1, value: state.loop, def: DEFAULT.loop, size: "md",
+        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loop = Math.round(v); refreshLoopInfo(); scheduleRegen(); } })),
+      R("dejaVu", knob({ label: "Deja Vu", min: 0, max: 100, value: state.dejaVu, def: DEFAULT.dejaVu, size: "md",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("dejaVu") })),
+    ]),
+  );
 }
 
 // Short panel legends for the LFO waves: a real panel would not print
@@ -377,85 +456,6 @@ function num(label, value, onInput) {
 // register a control under its state key; set(..., false) keeps it silent on sync
 function R(key, el) { refs[key] = el; return el; }
 const setState = (key, fn) => (v) => { state[key] = fn ? fn(v) : v; scheduleRegen(); };
-
-// ---- the rack: rhythm down the left, globals in the middle, notes down the right ----
-function column(id) { return document.getElementById(id); }
-
-function buildRack() {
-  const L = column("colL"), C = column("colC"), Rr = column("colR"), B = column("band");
-
-  // LEFT — the clock and the rhythm it drives
-  L.append(cluster("Clock",
-    R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "lg",
-      format: (v) => `${Math.round(v)}`, onInput: setState("tempo") })),
-    R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
-  ));
-  L.append(cluster("Rhythm",
-    R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
-    R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
-    R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: setState("snapGrid") })),
-    R("gate", knob({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gate") })),
-  ));
-
-  // CENTER — everything global: the bank, the phrase, the output
-  C.append(cluster("Bank",
-    R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("drift") })),
-    R("seed", num("Seed", state.seed, (v) => { state.seed = v | 0; scheduleRegen(); })),
-  ));
-  C.append(cluster("Pattern",
-    R("rate", sel("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, setState("rate", Number))),
-    R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); } })),
-    R("quantSteps", knob({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps") })),
-  ));
-
-  // RIGHT — pitch and scale
-  Rr.append(cluster("Pitch",
-    R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w, title: w })), state.lfoWave, setState("lfoWave"))),
-    R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
-      format: (v) => `${v}`, onInput: setState("lfoRate") })),
-    R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("lfoAmp") })),
-    R("lfoOffset", knob({ label: "Offset", min: -100, max: 100, value: state.lfoOffset, def: DEFAULT.lfoOffset, size: "md",
-      format: (v) => `${Math.round(v)}`, onInput: setState("lfoOffset") })),
-    R("unipolar", toggle({ label: "Unipolar", value: state.unipolar, onInput: setState("unipolar") })),
-  ));
-  Rr.append(cluster("Scale",
-    R("scale", sel("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, setState("scale"))),
-    R("root", knob({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root, size: "md",
-      format: (v) => midiName(v), onInput: setState("root") })),
-  ));
-
-  // BAND — shaping, applied on top of everything above
-  B.append(cluster("Character",
-    R("spread", sel("Spread", ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), state.spread, setState("spread"))),
-    R("bias", knob({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias, size: "md",
-      format: (v) => `${Math.round(v)}`, onInput: setState("bias") })),
-    R("humanize", knob({ label: "Humanize", min: 0, max: 100, value: state.humanize, def: DEFAULT.humanize, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("humanize") })),
-    R("velocity", knob({ label: "Velocity", min: 1, max: 127, value: state.velocity, def: DEFAULT.velocity, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: setState("velocity") })),
-    R("octave", knob({ label: "Octave up", min: 0, max: 100, value: state.octave, def: DEFAULT.octave, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("octave") })),
-    R("gravity", knob({ label: "Root grav", min: 0, max: 100, value: state.gravity, def: DEFAULT.gravity, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gravity") })),
-  ));
-  B.append(cluster("Memory",
-    R("loopFrom", knob({ label: "Loop from", min: 1, max: Math.max(1, state.length - 2), step: 1, value: state.loopFrom, def: DEFAULT.loopFrom, size: "md",
-      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loopFrom = Math.round(v); refreshLoopRanges(); scheduleRegen(); } })),
-    R("loop", knob({ label: "Loop len", min: 2, max: Math.max(2, state.length - 1), step: 1, value: state.loop, def: DEFAULT.loop, size: "md",
-      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loop = Math.round(v); refreshLoopInfo(); scheduleRegen(); } })),
-    R("dejaVu", knob({ label: "Deja Vu", min: 0, max: 100, value: state.dejaVu, def: DEFAULT.dejaVu, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("dejaVu") })),
-  ));
-}
 
 // The loop region is [Loop from, Loop from + Loop len - 1]; neither knob may push the
 // region past Length, so their ranges follow each other. The guard stops the clamp in
