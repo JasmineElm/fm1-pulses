@@ -139,15 +139,21 @@ body { padding: 12px; }
 .display h2 { margin: 0 0 6px; font-size: 8px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .display h2 small { color: var(--fg); letter-spacing: .4px; font-weight: 400; text-transform: none; }
 
-/* two unambiguous states: a step is lit or it is not. The grid is 8 wide so every
-   row is two beats at 1/16, i.e. 8x8 for the 64 steps. */
+/* two unambiguous states: a step is lit or it is not. The circle lives INSIDE the
+   cell, so the grid can stretch to any shape while every step stays round. */
 .display .steps { padding: 8px; border-radius: 3px; gap: 6px; grid-template-columns: repeat(8, 1fr); }
-.display .cell { background: transparent; border: 1px solid var(--line); color: transparent; font-size: 9px; }
-.display .cell.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
-.display .cell.off { border-color: transparent; opacity: .25; }
-.display .cell.now { box-shadow: 0 0 0 2px var(--fg); }
-.display .cell.locked { border-color: var(--fg); border-style: dashed; border-width: 2px; }
-.display .cell.edit { box-shadow: 0 0 0 2px var(--accent); }
+.display .cell { display: grid; place-items: center; background: none; border: 0; padding: 0; }
+.display .cell > .dot {
+  aspect-ratio: 1; height: 100%; max-width: 100%;
+  border-radius: 50%; border: 1px solid var(--line);
+  display: grid; place-items: center; line-height: 1;
+  font-size: 9px; color: transparent; font-variant-numeric: tabular-nums;
+}
+.display .cell.on > .dot { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.display .cell.off > .dot { border-color: transparent; opacity: .25; }
+.display .cell.now > .dot { box-shadow: 0 0 0 2px var(--fg); }
+.display .cell.locked > .dot { border-color: var(--fg); border-style: dashed; border-width: 2px; }
+.display .cell.edit > .dot { box-shadow: 0 0 0 2px var(--accent); }
 
 .display .bank { gap: 4px; }
 .display .bankcell { padding: 4px 2px; border-radius: 3px; background: transparent; }
@@ -166,12 +172,10 @@ body { padding: 12px; }
     gap: 11px;
     align-items: stretch;   /* both panels end on the same line */
   }
-  /* the screen keeps its own square grid — step cells stay circular. The module
-     follows the screen's height instead, so the two panels still line up. */
-  .display { display: flex; flex-direction: column; }
-  .display .steps { flex: 0 0 auto; }
-  .display .steps .cell { aspect-ratio: 1; }
-  .display { margin-top: 0; }
+  /* the screen fills its column; the step circles stay round because each one is
+     inscribed in its cell rather than being the cell */
+  .display { display: flex; flex-direction: column; margin-top: 0; }
+  .display .steps { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr; }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
 
