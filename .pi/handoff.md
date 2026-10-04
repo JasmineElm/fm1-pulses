@@ -138,10 +138,12 @@ selected slot and morph it in real time).
   Android Chrome. Blocked on one binary unknown: **does the FM-1's BLE side accept the
   proprietary `0x20` pattern write, or only SysEx voice dumps?** Run the verification
   ladder (power on → BT scan → small SysEx → the 177-byte write) before writing any code.
-- [ ] **The periodic waves can't use Spread/Bias as full distributions.** They are
-      deterministic contours on purpose (kept). `bell` is now centre-weighted in both
-      paths. Default wave is still `sine`, so Spread/Bias are inert until you pick the
-      `random` wave — consider defaulting to `random`.
+- [ ] **Spread/Bias behave differently per wave, but neither is inert.** Both run on
+      the periodic waves: Bias is a monotonic skew applied after the branch (sine mean
+      note 53.3 → 67.5 across bias −100 → +100, range unchanged), and Spread reshapes
+      the contour (sine: constant → 1 pitch, extremes → 2, bell/uniform → 9). The
+      `random` wave is just where Spread's modes act as true probability
+      distributions. Default wave is `sine`.
 - [ ] **Verify a browser freeze against the real device.** The encoder and reply
   parsing are verified, but the Web MIDI freeze has not been confirmed on hardware
   (the phone path uses `mvave-fm1/mvp/fm1tool` over libusb, which IS verified).
