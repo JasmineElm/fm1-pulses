@@ -7,7 +7,8 @@ body { padding: 12px; }
 /* The panel grain: an SVG fractal-noise tile, blended over the panel colour at low
    strength. This is what stops the surface reading as a flat CSS rectangle. */
 :root {
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.36 0.36 0.36 0 -0.44'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.36 0.36 0.36 0 -0.34'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23d)'/%3E%3C/svg%3E");
 }
 
 /* Legibility pass (rack-only, so the MVP's style.css is untouched). The themes'
@@ -31,15 +32,15 @@ body { padding: 12px; }
   margin: 0 auto;
   background-color: var(--panel);
   background-image:
-    radial-gradient(circle at 13px 13px, rgba(255,255,255,.20) 0 1.1px, rgba(0,0,0,.6) 1.5px 2.4px, transparent 2.9px),
-    radial-gradient(circle at calc(100% - 13px) 13px, rgba(255,255,255,.20) 0 1.1px, rgba(0,0,0,.6) 1.5px 2.4px, transparent 2.9px),
-    radial-gradient(circle at 13px calc(100% - 13px), rgba(255,255,255,.20) 0 1.1px, rgba(0,0,0,.6) 1.5px 2.4px, transparent 2.9px),
-    radial-gradient(circle at calc(100% - 13px) calc(100% - 13px), rgba(255,255,255,.20) 0 1.1px, rgba(0,0,0,.6) 1.5px 2.4px, transparent 2.9px),
+    radial-gradient(circle at 15px 15px, rgba(255,255,255,.30) 0 1.5px, rgba(0,0,0,.8) 2.1px 3.4px, rgba(255,255,255,.07) 3.8px, transparent 4.4px),
+    radial-gradient(circle at calc(100% - 15px) 15px, rgba(255,255,255,.30) 0 1.5px, rgba(0,0,0,.8) 2.1px 3.4px, rgba(255,255,255,.07) 3.8px, transparent 4.4px),
+    radial-gradient(circle at 15px calc(100% - 15px), rgba(255,255,255,.30) 0 1.5px, rgba(0,0,0,.8) 2.1px 3.4px, rgba(255,255,255,.07) 3.8px, transparent 4.4px),
+    radial-gradient(circle at calc(100% - 15px) calc(100% - 15px), rgba(255,255,255,.30) 0 1.5px, rgba(0,0,0,.8) 2.1px 3.4px, rgba(255,255,255,.07) 3.8px, transparent 4.4px),
     var(--grain),
+    var(--grain-dark),
     linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.16));
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-size: auto, auto, auto, auto, 180px 180px, auto;
-  background-blend-mode: normal, normal, normal, normal, overlay, normal;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat;
+  background-size: auto, auto, auto, auto, 180px 180px, 180px 180px, auto;
   border: 1px solid var(--line);
   border-radius: 5px;
   box-shadow:
