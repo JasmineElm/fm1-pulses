@@ -181,7 +181,7 @@ async function doFreeze(slotIndex) {
   try {
     status(`freezing slot ${slotIndex + 1}…`);
     const name = await midi.sendPattern(encodeWrite(bank[slotIndex], slotIndex, true), `slot ${slotIndex + 1}`);
-    status(`slot ${slotIndex + 1} frozen ✓ (${name})`, "ok");
+    status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm ${RATE_NAMES[state.rate]} (${name})`, "ok");
   } catch (e) { status(String(e.message || e), "err"); }
 }
 
@@ -191,7 +191,7 @@ async function doSendAll() {
   try {
     syncHeader();
     for (let i = 0; i < SLOTS; i++) {
-      status(`freezing ${i + 1}/${SLOTS}…`);
+      status(`freezing ${i + 1}/${SLOTS} · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
       await midi.sendPattern(encodeWrite(bank[i], i, true), `slot ${i + 1}`);
     }
     status(`all ${SLOTS} slots frozen ✓`, "ok");
