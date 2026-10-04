@@ -172,10 +172,11 @@ body { padding: 12px; }
     gap: 11px;
     align-items: stretch;   /* both panels end on the same line */
   }
-  /* the screen is square: its height follows its width, so the 8x8 grid gives
-     square cells (round steps) and the panel height lands near the module's. */
+  /* the screen fills its column, so both panels end on the same line. The 8x8 grid
+     stretches to any shape and every step stays round because the circle is
+     inscribed in its cell rather than being the cell. */
   .display { display: flex; flex-direction: column; margin-top: 0; }
-  .display .steps { aspect-ratio: 1; width: 100%; flex: 0 0 auto; grid-auto-rows: 1fr; }
+  .display .steps { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr; }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
 
