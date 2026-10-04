@@ -1,28 +1,19 @@
-// knob.js — rotary knob + toggle for the rack panel. Pure DOM/SVG, no deps.
+// knob.js — physical-feeling controls for the rack panel: a pot with a printed tick
+// ring, and an encoder-style panel switch. Pure DOM/SVG, no deps.
 //
-// A knob is an SVG dial with a 270° sweep, a pointer, a value readout and a label.
 // Interaction: drag vertically, mouse wheel, arrow keys, double-click to reset,
-// hold shift while dragging for fine control. touch-action:none keeps the page
-// from scrolling under a finger drag.
+// hold shift for fine control. touch-action:none keeps a finger drag from scrolling.
 
 const NS = "http://www.w3.org/2000/svg";
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
 const polar = (cx, cy, r, deg) => {
   const a = (deg - 90) * Math.PI / 180;
   return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
 };
-const arc = (cx, cy, r, a0, a1) => {
-  const [x0, y0] = polar(cx, cy, r, a0);
-  const [x1, y1] = polar(cx, cy, r, a1);
-  const large = Math.abs(a1 - a0) > 180 ? 1 : 0;
-  return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
-};
-
 const SWEEP = 270;
 const A0 = -SWEEP / 2;
 const A1 = SWEEP / 2;
-const SIZES = { lg: 66, md: 52, sm: 40 };
+const SIZES = { lg: 62, md: 50, sm: 40 };
 
 export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, onInput }) {
   const px = SIZES[size] || SIZES.md;
@@ -36,37 +27,61 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   svg.setAttribute("width", px);
   svg.setAttribute("height", px);
 
-  const track = document.createElementNS(NS, "path");
-  track.setAttribute("d", arc(50, 50, 40, A0, A1));
-  track.setAttribute("class", "k-track");
-  const fill = document.createElementNS(NS, "path");
-  fill.setAttribute("class", "k-fill");
+  // printed tick ring: 11 marks, every 5th a long one
+  const ring = document.createElementNS(NS, "g");
+  for (let k = 0; k <= 10; k++) {
+    const a = A0 + (k / 10) * SWEEP;
+    const major = k % 5 === 0;
+    const [x1, y1] = polar(50, 50, 34, a);
+    const [x2, y2] = polar(50, 50, major ? 42 : 38, a);
+    const l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", x1.toFixed(2)); l.setAttribute("y1", y1.toFixed(2));
+    l.setAttribute("x2", x2.toFixed(2)); l.setAttribute("y2", y2.toFixed(2));
+    l.setAttribute("class", major ? "k-tick major" : "k-tick");
+    ring.appendChild(l);
+  }
+  svg.appendChild(ring);
+
+  // min/max only where there is room to read them
+  if (size === "lg") {
+    const fmtEnds = format || ((v) => String(Math.round(v)));
+    for (const deg of [A0, A1]) {
+      const [x, y] = polar(50, 50, 47, deg);
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", x.toFixed(2));
+      t.setAttribute("y", (y + 3.4).toFixed(2));
+      t.setAttribute("class", "k-end");
+      t.setAttribute("text-anchor", "middle");
+      t.textContent = fmtEnds(deg === A0 ? min : max);
+      svg.appendChild(t);
+    }
+  }
+
+  // the pot itself: solid cap + pointer, no progress arc
+  const cap = document.createElementNS(NS, "circle");
+  cap.setAttribute("cx", 50); cap.setAttribute("cy", 50); cap.setAttribute("r", 26);
+  cap.setAttribute("class", "k-cap");
   const ptr = document.createElementNS(NS, "line");
   ptr.setAttribute("class", "k-ptr");
-  const hub = document.createElementNS(NS, "circle");
-  hub.setAttribute("cx", 50); hub.setAttribute("cy", 50); hub.setAttribute("r", 4.5);
-  hub.setAttribute("class", "k-hub");
-  svg.append(track, fill, ptr, hub);
+  svg.append(cap, ptr);
 
-  const val = document.createElement("div");
-  val.className = "k-val";
   const lab = document.createElement("div");
   lab.className = "k-lab";
   lab.textContent = label;
-
-  el.append(svg, val, lab);
+  const val = document.createElement("div");
+  val.className = "k-val";
+  el.append(lab, svg, val);
 
   const fmt = format || ((v) => (step < 1 ? String(Math.round(v * 100) / 100) : String(Math.round(v))));
   let cur = clamp(value, min, max);
-  let drag = null;
+  let dragging = null;
 
   function paint() {
-    const t = (cur - min) / (max - min);
+    const t = max === min ? 0 : (cur - min) / (max - min);
     const ang = A0 + t * SWEEP;
-    fill.setAttribute("d", t <= 0.001 ? "" : arc(50, 50, 40, A0, ang));
-    const [x, y] = polar(50, 50, 29, ang);
+    const [x, y] = polar(50, 50, 25, ang);
     ptr.setAttribute("x1", 50); ptr.setAttribute("y1", 50);
-    ptr.setAttribute("x2", x); ptr.setAttribute("y2", y);
+    ptr.setAttribute("x2", x.toFixed(2)); ptr.setAttribute("y2", y.toFixed(2));
     val.textContent = fmt(cur);
     el.title = `${label}: ${fmt(cur)}`;
     el.setAttribute("aria-valuemin", String(min));
@@ -85,19 +100,19 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
 
   el.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    drag = { y: e.clientY, v: cur };
+    dragging = { y: e.clientY, v: cur };
     el.setPointerCapture(e.pointerId);
     el.classList.add("dragging");
   });
   el.addEventListener("pointermove", (e) => {
-    if (!drag) return;
+    if (!dragging) return;
     const range = max - min;
     const sens = e.shiftKey ? 900 : 180;   // px of travel for the full range
-    set(drag.v + (drag.y - e.clientY) / sens * range);
+    set(dragging.v + (dragging.y - e.clientY) / sens * range);
   });
   const endDrag = (e) => {
-    if (!drag) return;
-    drag = null;
+    if (!dragging) return;
+    dragging = null;
     el.classList.remove("dragging");
     try { el.releasePointerCapture(e.pointerId); } catch { /* already released */ }
   };
@@ -124,16 +139,49 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
   return el;
 }
 
-export function toggle({ label, value = false, onInput }) {
-  const el = document.createElement("button");
-  el.type = "button";
-  el.className = "toggle" + (value ? " on" : "");
-  el.textContent = label;
-  el.addEventListener("click", () => {
-    const on = !el.classList.contains("on");
-    el.classList.toggle("on", on);
-    if (onInput) onInput(on);
+// An encoder-style panel switch: ‹ value › . Replaces native <select> so nothing
+// in the panel looks like browser chrome.
+export function sw({ label, options, value, onInput }) {
+  const el = document.createElement("div");
+  el.className = "sw";
+  el.tabIndex = 0;
+  el.setAttribute("role", "listbox");
+
+  const lab = document.createElement("div");
+  lab.className = "sw-lab";
+  lab.textContent = label;
+  const body = document.createElement("div");
+  body.className = "sw-body";
+  const prev = document.createElement("button");
+  prev.type = "button"; prev.className = "sw-arrow"; prev.textContent = "‹";
+  const val = document.createElement("span");
+  val.className = "sw-val";
+  const next = document.createElement("button");
+  next.type = "button"; next.className = "sw-arrow"; next.textContent = "›";
+  body.append(prev, val, next);
+  el.append(lab, body);
+
+  let idx = Math.max(0, options.findIndex((o) => String(o.v) === String(value)));
+  const paint = () => {
+    val.textContent = options[idx]?.t ?? "";
+    el.title = `${label}: ${options[idx]?.t ?? ""}`;
+  };
+  const move = (d) => {
+    idx = (idx + d + options.length) % options.length;
+    paint();
+    if (onInput) onInput(options[idx].v);
+  };
+  prev.addEventListener("click", () => move(-1));
+  next.addEventListener("click", () => move(1));
+  el.addEventListener("wheel", (e) => { e.preventDefault(); move(e.deltaY < 0 ? -1 : 1); }, { passive: false });
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); move(-1); }
+    else if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); move(1); }
   });
-  el.setValue = (v) => el.classList.toggle("on", !!v);
+  el.setValue = (v) => {
+    const i = options.findIndex((o) => String(o.v) === String(v));
+    if (i >= 0) { idx = i; paint(); }
+  };
+  paint();
   return el;
 }

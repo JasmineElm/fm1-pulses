@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=22";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=22";
-import * as midi from "./midi.js?v=22";
-import * as audio from "./audio.js?v=22";
-import { knob, toggle } from "./knob.js?v=22";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=23";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=23";
+import * as midi from "./midi.js?v=23";
+import * as audio from "./audio.js?v=23";
+import { knob, sw, toggle } from "./knob.js?v=23";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -85,7 +85,7 @@ function renderEditor() {
   const noteEl = document.getElementById("enote");
   const lockBtn = document.getElementById("elock");
   if (!has) {
-    noteEl.textContent = "tap a step";
+    noteEl.textContent = "—";
     lockBtn.textContent = "🔓"; lockBtn.classList.remove("on");
     return;
   }
@@ -350,21 +350,8 @@ function cluster(title, ...kids) {
   return c;
 }
 
-function sel(label, opts, value, onInput) {
-  const wrap = document.createElement("label"); wrap.className = "sel";
-  const s = document.createElement("select");
-  for (const o of opts) {
-    const op = document.createElement("option");
-    op.value = String(o.v); op.textContent = o.t;
-    s.appendChild(op);
-  }
-  s.value = String(value);
-  s.addEventListener("change", () => onInput(s.value));
-  const l = document.createElement("span"); l.textContent = label;
-  wrap.append(s, l);
-  wrap.setValue = (v) => { s.value = String(v); };
-  return wrap;
-}
+// panel switch (encoder-style) instead of a native <select>
+function sel(label, opts, value, onInput) { return sw({ label, options: opts, value, onInput }); }
 
 function num(label, value, onInput) {
   const wrap = document.createElement("label"); wrap.className = "sel";
@@ -535,6 +522,8 @@ async function initMidi() {
       selEl.appendChild(op);
     }
     if (!outs.length) selEl.innerHTML = "<option>— no MIDI —</option>";
+    const led = document.getElementById("led");
+    if (led) led.className = "led" + (fm1 ? " ok" : "");
     status(fm1 ? `FM-1: ${fm1.name}` : "FM-1 not found", fm1 ? "ok" : "");
   };
   try {

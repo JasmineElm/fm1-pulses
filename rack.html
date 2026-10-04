@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — rack</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=22">
-<link rel="stylesheet" href="css/rack.css?v=22">
+<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/rack.css?v=23">
 </head>
 <body>
 <div class="case">
@@ -15,6 +15,7 @@
     <h1>FM-1 <b>PULSES</b></h1>
     <span class="spacer"></span>
     <select id="device" title="MIDI output. Pick the FM-1; it is auto-selected when found."><option>— no MIDI —</option></select>
+    <span class="led" id="led"></span>
     <span id="status" class="status">loading…</span>
   </div>
 
@@ -28,7 +29,7 @@
       <div class="band" id="band"></div>
 
       <div class="transport">
-        <button id="gen" class="primary" title="Derive a fresh bank from a new seed (G)">Generate</button>
+        <button id="gen" title="Derive a fresh bank from a new seed (G)">Generate</button>
         <button id="rand" title="Random parameters + a new seed">Randomize</button>
         <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
         <button id="mute" title="Mute the browser preview">🔊</button>
@@ -45,7 +46,7 @@
       <div id="steps" class="steps"></div>
       <div id="editor" class="editor">
         <span class="elab">Step <b id="estep">—</b></span>
-        <span id="enote" class="enote">tap a step</span>
+        <span id="enote" class="enote">—</span>
         <button id="edown" title="Lower this step a semitone (locks it)">−</button>
         <button id="eup" title="Raise this step a semitone (locks it)">+</button>
         <button id="eclear" title="Empty this step and lock it">✕</button>
@@ -56,6 +57,6 @@
     </div>
   </div>
 </div>
-<script type="module" src="js/rack.js?v=22"></script>
+<script type="module" src="js/rack.js?v=23"></script>
 </body>
 </html>
