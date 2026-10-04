@@ -81,7 +81,7 @@ export async function readMemory(addr, len) {
   for (let i = 0; i < 5; i++) body.push((addr >> (7 * i)) & 0x7F);
   body.push(len & 0x7F, (len >> 7) & 0x7F);
   out.send(new Uint8Array([0xF0, 0x43, 0x00, 0x7D, ...body, ysum(body), 0xF7]));
-  const rep = await waitReply(input, 1500);
+  const rep = await waitReply(input, 2500);
   if (!rep) throw new Error("no reply to the read request");
   const d = decodeReply(rep);
   if (!d) throw new Error("could not decode the read reply");
@@ -125,7 +125,7 @@ export async function sendPattern(msgs, label = "") {
   const sendOne = async (bytes) => {
     out.send(new Uint8Array(bytes));
     if (!input) return;
-    const rep = await waitReply(input, 1500);
+    const rep = await waitReply(input, 2500);
     if (!rep) return;
     const d = decodeReply(rep);
     if (d && d.status !== 0) {

@@ -210,7 +210,7 @@ async function dumpGset() {
 // header tempo is acked but ignored by the firmware, so the DEVICE is the source
 // of truth: read it and snap the Tempo knob to it — what you see is what plays.
 // `data` skips the read when a caller already has the settings block.
-async function syncDeviceTempo(data = null, retries = 1) {
+async function syncDeviceTempo(data = null, retries = 2) {
   try {
     if (!data) data = await midi.readMemory(GSET_ADDR, GSET_LEN);
     const held = data[66 + 2 * selected] | (data[67 + 2 * selected] << 7);
@@ -686,7 +686,16 @@ async function initMidi() {
   try {
     await midi.initMidi();
     fill();
-    midi.onStateChange(fill);
+    // Re-sync whenever the device (re)connects or drops: the FM-1's tempo is
+    // device-global and the device is the source of truth.
+    midi.onStateChange(() => {
+      fill();
+      if (midi.findFm1()) {
+        syncDeviceTempo().then((held) => {
+          if (held) status(`FM-1 connected · device holds ${held} BPM — Tempo synced`, "ok");
+        });
+      }
+    });
     // WYSIWYG tempo: snap the knob to the device's real (unit-global) BPM.
     const held = await syncDeviceTempo();
     if (held) status(`FM-1: ${midi.findFm1()?.name ?? ""} · device holds ${held} BPM — Tempo synced`, "ok");
@@ -704,6 +713,12 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "g") doGenerate(true);
   if (e.key === "ArrowRight") { selected = (selected + 1) % SLOTS; renderBank(); renderBuffer(); }
   if (e.key === "ArrowLeft") { selected = (selected + SLOTS - 1) % SLOTS; renderBank(); renderBuffer(); }
+});
+
+// Coming back to the tab re-syncs the Tempo knob to the device's real BPM —
+// the user may have turned the tempo knob on the unit while we were away.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && midi.hasAccess() && midi.findFm1()) syncDeviceTempo();
 });
 
 buildTheme();
