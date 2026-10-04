@@ -180,11 +180,12 @@ function scheduleRegen() {
 // report what the DEVICE is holding, not just what we sent.
 const GSET_ADDR = 0x01C0E840 + 5816;
 const GSET_LEN = 137;
-async function readBackTempo(pat) {
+async function readBack(pat) {
   const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
   if (data.length < 68 + 2 * pat) throw new Error(`short read (${data.length} bytes)`);
-  return data[66 + 2 * pat] | (data[67 + 2 * pat] << 7);
+  return { tempo: data[66 + 2 * pat] | (data[67 + 2 * pat] << 7), data };
 }
+const hex = (a) => Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join(" ");
 
 async function doFreeze(slotIndex) {
   if (!bank[slotIndex]) return;
@@ -194,11 +195,12 @@ async function doFreeze(slotIndex) {
     const name = await midi.sendPattern(encodeWrite(bank[slotIndex], slotIndex, true), `slot ${slotIndex + 1}`);
     // read it back: did the DEVICE store the tempo we just sent?
     try {
-      const held = await readBackTempo(slotIndex);
+      const { tempo: held, data } = await readBack(slotIndex);
       const want = Math.round(state.tempo);
+      const off = 66 + 2 * slotIndex;
       status(held === want
         ? `slot ${slotIndex + 1} frozen ✓ sent ${want} bpm, device holds ${held} bpm`
-        : `slot ${slotIndex + 1} frozen, but sent ${want} bpm and the device holds ${held} bpm`,
+        : `sent ${want} bpm but the device holds ${held} bpm · gset[${off - 6}..${off + 6}] = ${hex(data.slice(off - 6, off + 7))}`,
         held === want ? "ok" : "err");
     } catch (e) {
       status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm (read-back: ${e.message || e})`, "ok");
