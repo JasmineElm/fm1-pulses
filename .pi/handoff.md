@@ -112,6 +112,11 @@ selected slot and morph it in real time).
 
 ## Rack UI (knob version) — 2026-10-04
 
+**2026-10-04: the rack is now the root app.** `index.html` is the rack UI;
+the slider version is archived as **`sliders.html`** (still live, still built from
+`app.js` + `style.css`) and frozen at tag **`mvp-1`**. `rack.html` is gone.
+
+
 A second UI beside the MVP, sharing the same engine. `rack.html` + `js/rack.js`
 + `js/knob.js` + `css/rack.css`. `app.js` and `style.css` are untouched.
 
