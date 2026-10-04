@@ -166,11 +166,11 @@ body { padding: 12px; }
     gap: 11px;
     align-items: stretch;   /* both panels end on the same line */
   }
-  /* the display follows the module's height instead of driving it: let the step
-     grid absorb the slack so the panel never overshoots or leaves a void */
+  /* the screen keeps its own square grid — step cells stay circular. The module
+     follows the screen's height instead, so the two panels still line up. */
   .display { display: flex; flex-direction: column; }
-  .display .steps { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr; }
-  .display .steps .cell { aspect-ratio: auto; }
+  .display .steps { flex: 0 0 auto; }
+  .display .steps .cell { aspect-ratio: 1; }
   .display { margin-top: 0; }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
