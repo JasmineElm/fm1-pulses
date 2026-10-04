@@ -128,7 +128,7 @@ const SNAP_GRID = 4;   // default grid-snap spacing, in steps
  * generate(params) -> pattern fields + steps.
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
- *         spread, bias(-100..100), quantSteps(0-100), loop(steps), dejaVu(0-100), velocity,
+ *         spread, bias(-100..100), quantSteps(0-100), loop(steps), loopFrom(1-based step), dejaVu(0-100), velocity,
  *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool),
  *         gateQuant(0-100), snapGrid(steps)
  */
@@ -156,6 +156,7 @@ export function generate(params) {
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
+  const loopStart = Math.max(0, Math.round(params.loopFrom ?? 1) - 1);  // 1-based in the UI, 0-based here
   const loopLen = Math.round(params.loop || 0);                 // motif length in steps (0 = off)
   const loopSlip = (params.dejaVu ?? 0) / 100;                  // chance a later step loops back
   const quantStrength = (params.quantSteps ?? 100) / 100;
@@ -212,12 +213,14 @@ export function generate(params) {
     if (gateQuant && snapRng() < gateQuant && i % snapGrid !== 0) continue;
     steps[i].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
   }
-  // Loop: keep the first `loopLen` steps as a motif and repeat it to the end of the
-  // phrase. loopSlip is the chance each later step actually loops back, so below
-  // 100% fresh notes still bleed in. Fills up to Length, not the whole 64-step buffer.
-  if (loopLen >= 2 && loopLen < len) {
-    for (let i = loopLen; i < len; i++) {
-      if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[i % loopLen].notes.map((n) => ({ ...n }));
+  // Loop: everything before `loopStart` is an intro and plays once. From there the
+  // region [loopStart, loopStart+loopLen) tiles to the end of the phrase, so you can
+  // keep steps 1-12 and repeat steps 13-29. loopSlip is the chance each later step
+  // actually loops back, so below 100% fresh notes still bleed in. Fills up to Length.
+  if (loopLen >= 2 && loopStart + loopLen <= len) {
+    for (let i = loopStart + loopLen; i < len; i++) {
+      const src = loopStart + ((i - loopStart) % loopLen);
+      if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[src].notes.map((n) => ({ ...n }));
     }
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
