@@ -17,7 +17,7 @@ const SIZES = { lg: 62, md: 50, sm: 40 };
 
 let knobSeq = 0;
 
-export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, ticks = 10, majorEvery = 5, smallVal = false, onInput }) {
+export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, ticks = 10, majorEvery = 5, smallVal = false, onInput, tip = "" }) {
   const px = SIZES[size] || SIZES.md;
   const el = document.createElement("div");
   el.className = `knob k-${size}` + (smallVal ? " k-smallval" : "");
@@ -107,7 +107,7 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
     ptr.setAttribute("x1", 50); ptr.setAttribute("y1", 50);
     ptr.setAttribute("x2", x.toFixed(2)); ptr.setAttribute("y2", y.toFixed(2));
     val.textContent = fmt(cur);
-    el.title = `${label}: ${fmt(cur)}`;
+    el.title = `${label}: ${fmt(cur)}${tip ? " — " + tip : ""}`;
     el.setAttribute("aria-valuemin", String(min));
     el.setAttribute("aria-valuemax", String(max));
     el.setAttribute("aria-valuenow", String(cur));

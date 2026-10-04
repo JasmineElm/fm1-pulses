@@ -335,3 +335,45 @@ This bit once: the modules were unversioned, so `generator.js` changes never
 reached the phone even though `app.js` did. `guide.html` carries its own `?v=N`
 on `css/style.css`. To force a one-off refresh, open the page in Incognito or append
 `?v=N` to the page URL.
+
+## Session 2026-10-04 (evening) — euclid, perlin, Shape knob, tempo WYSIWYG
+
+**The tempo verdict is now deterministic** (see the RESOLVED section above): the
+firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
+changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
+F7`, params 0–155) is ALSO dead on this firmware — swept all 156, zero gset
+moves, no replies. F8 clock streams cleanly but changes nothing stored. So the
+device's own tempo is the only tempo.
+
+**App changes for WYSIWYG tempo (rack only):**
+- `syncDeviceTempo()` — reads the device's BPM (gset[66+2*slot]) and snaps the
+  Tempo knob to it. Runs on connect, on "read device", and after every freeze
+  (reusing the read-back data). The freeze status says plainly when the device
+  ignored the sent tempo.
+- Tempo knob tooltip + guide now state: BPM is device-global, freezing cannot
+  change it, the app re-syncs to the device.
+
+**New generator features (rack only; the slider app is frozen):**
+- **Euclid gate mode** — Gate mode rotary `random`/`euclid`. In euclid mode the
+  Gate % is the DENSITY: N = round(gate%×M) hits spread as evenly as possible
+  (Bjorklund, rotated so rot 0 hits the downbeat) over M = Loop length (or 16 if
+  the loop is off). Rotate knob (0–15, wraps) turns the mask. The loop info line
+  shows `E(N,M) rot R`. Drift moves euclidRot ±6 across the bank.
+- **Perlin wave** — 1D gradient noise contour (24 points per LFO cycle,
+  smoothstep interpolation). Long evolving arcs; at 1 cycle it's one 64-step
+  contour.
+- **Shape knob (0–100)** — per-wave morph: sine = wavefold amount, triangle/saw
+  = exponential bend, square = pulse width 50→5%, perlin = detuned octave
+  shimmer, randomWalk = step size, smoothRandom = slew. Drift moves it ±30.
+- knob.js gained a `tip` option: a persistent tooltip suffix (caveat text) that
+  survives repaints.
+- Guide updated: Tempo caveat, Gate mode, Rotate, Wave (perlin), Shape entries.
+
+**Test tools now on the phone (outside the repo):** `fm1batch` (one-USB-session
+scripted ops: read/write/param/sweep/clock/sleep — the ONLY reliable way to
+drive the FM-1: repeated termux-usb claim/release cycles make the device deaf
+until replug), `fm1param`, `fm1clock`, `fm1-tempo-test.py` (syx patcher with
+correct checksum at 175 / F7 at 176), `fm1-tempo-battery.sh`.
+
+**Still open:** the audible F8 follow test (unit Timing→Sync=On, app streams
+clock) — gset proves nothing, needs ears on the device.

@@ -67,7 +67,7 @@
   <h2>Rhythm</h2>
   <div class="param">
     <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
-    <p>Playback speed. Written into the pattern and used by the browser player.</p>
+    <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
   </div>
   <div class="param">
     <h3>Swing <span class="rng">50–75%</span><span class="kind">knob</span></h3>
@@ -75,7 +75,15 @@
   </div>
   <div class="param">
     <h3>Gate <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance each step plays a note. 0% is silence, 100% is every step. This is the rhythm.</p>
+    <p><b>Random mode:</b> the chance each step plays a note — 0% silence, 100% every step. <b>Euclid mode:</b> the same knob becomes <i>density</i>: Gate % becomes N hits spread as evenly as possible over the cycle (the Loop length, or 16 steps if the loop is off). E(5,8) = <code>x.xx.xx.</code> (cinquillo), E(4,8) = <code>x.x.x.x.</code>, E(3,8) is a tresillo-family pattern. The loop info line shows the current <code>E(N,M)</code>.</p>
+  </div>
+  <div class="param">
+    <h3>Gate mode <span class="kind">switch</span></h3>
+    <p><code>random</code> rolls the Gate chance per step (white noise — no structure). <code>euclid</code> places the hits at the evenest positions instead, which is the maths behind clave, tresillo and most world-music rhythms. Deterministic: the same seed always gives the same rhythm.</p>
+  </div>
+  <div class="param">
+    <h3>Rotate <span class="rng">0–15</span><span class="kind">knob</span></h3>
+    <p>Euclid mode: turns the hit pattern within its cycle, like rotating a clave. Wraps when the cycle is shorter than 16.</p>
   </div>
   <div class="param">
     <h3>Grid snap <span class="rng">0–100%</span><span class="kind">knob</span></h3>
@@ -119,7 +127,11 @@
   <h2>Pitch</h2>
   <div class="param">
     <h3>Wave <span class="kind">switch</span></h3>
-    <p>What makes the pitch move. <code>sine</code>, <code>tri</code>, <code>saw</code> and <code>sqr</code> are fixed contours. <code>random</code> draws a fresh value from the Spread distribution. <code>walk</code>, <code>smooth</code> and <code>hold</code> are the older random shapes.</p>
+    <p>What makes the pitch move. <code>sine</code>, <code>tri</code>, <code>saw</code> and <code>sqr</code> are fixed contours. <code>perlin</code> is a smooth coherent contour — long evolving arcs, not white noise. <code>random</code> draws a fresh value from the Spread distribution. <code>walk</code>, <code>smooth</code> and <code>hold</code> are the older random shapes.</p>
+  </div>
+  <div class="param">
+    <h3>Shape <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Morphs the wave. On <code>sine</code> it drives the sine into a wavefolder (harmonically richer arcs); on <code>tri</code> and <code>saw</code> it bends the ramp into a curve; on <code>sqr</code> it narrows the pulse width from 50% to 5%; on <code>perlin</code> it adds a detuned octave shimmer; on <code>walk</code> it widens the step size; on <code>smooth</code> it speeds the slew. At 0% every wave is its classic self.</p>
   </div>
   <div class="param">
     <h3>Cycles <span class="rng">1–16</span><span class="kind">knob</span></h3>

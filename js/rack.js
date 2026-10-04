@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=62";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=62";
-import * as midi from "./midi.js?v=62";
-import * as audio from "./audio.js?v=62";
-import { knob } from "./knob.js?v=62";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=63";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=63";
+import * as midi from "./midi.js?v=63";
+import * as audio from "./audio.js?v=63";
+import { knob } from "./knob.js?v=63";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -16,8 +16,9 @@ const DEFAULT = {
   drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, humanize: 0, gateQuant: 0, snapGrid: 4,
+  gateMode: "random", euclidRot: 0,
   scale: "pentMinor", root: 60,
-  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, gravity: 0, unipolar: false,
+  lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
 };
 const state = { ...DEFAULT };
@@ -194,14 +195,35 @@ async function dumpGset() {
   try {
     status("reading the device's settings block…");
     const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
+    await syncDeviceTempo(data);
     const rows = [];
     for (let i = 0; i < data.length; i += 16) {
       rows.push(String(i).padStart(3, "0") + ": " +
         Array.from(data.slice(i, i + 16)).map((b) => b.toString(16).padStart(2, "0")).join(" "));
     }
     alert(`FM-1 global settings, ${data.length} bytes\n\n${rows.join("\n")}`);
-    status(`read ${data.length} bytes from the device`, "ok");
+    status(`read ${data.length} bytes · Tempo synced to the device's BPM`, "ok");
   } catch (e) { status("read failed: " + (e.message || e), "err"); }
+}
+
+// The FM-1's tempo is unit-global (mirrored across all 16 slots) and the 0x20
+// header tempo is acked but ignored by the firmware, so the DEVICE is the source
+// of truth: read it and snap the Tempo knob to it — what you see is what plays.
+// `data` skips the read when a caller already has the settings block.
+async function syncDeviceTempo(data = null, retries = 1) {
+  try {
+    if (!data) data = await midi.readMemory(GSET_ADDR, GSET_LEN);
+    const held = data[66 + 2 * selected] | (data[67 + 2 * selected] << 7);
+    if (held >= 30 && held <= 300) {
+      state.tempo = held;
+      refs.tempo?.setValue(held, false);
+      return held;
+    }
+    return null;
+  } catch (e) {
+    if (retries > 0) return syncDeviceTempo(null, retries - 1);
+    return null;
+  }
 }
 
 async function doFreeze(slotIndex) {
@@ -210,17 +232,23 @@ async function doFreeze(slotIndex) {
   try {
     status(`freezing slot ${slotIndex + 1} · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
     const name = await midi.sendPattern(encodeWrite(bank[slotIndex], slotIndex, true), `slot ${slotIndex + 1}`);
-    // read it back: did the DEVICE store the tempo we just sent?
+    // read it back: did the DEVICE store the tempo we just sent? (Spoiler on
+    // Baud Girl 093: never. The tempo bytes are acked and discarded, so we
+    // re-sync the knob to the device's real BPM instead of pretending.)
     try {
       const { tempo: held, data } = await readBack(slotIndex);
       const want = Math.round(state.tempo);
       const off = 66 + 2 * slotIndex;
-      status(held === want
-        ? `slot ${slotIndex + 1} frozen ✓ sent ${want} bpm, device holds ${held} bpm`
-        : `sent ${want} bpm but the device holds ${held} bpm · gset[${off - 6}..${off + 6}] = ${hex(data.slice(off - 6, off + 7))}`,
-        held === want ? "ok" : "err");
+      if (held !== want) {
+        await syncDeviceTempo(data);
+        status(`slot ${slotIndex + 1} frozen ✓ · FM-1 holds ${held} bpm (sent ${want}) — tempo is device-global on this firmware, so Tempo now shows the device's BPM`,
+          "err");
+      } else {
+        status(`slot ${slotIndex + 1} frozen ✓ · sent ${want} bpm, device holds ${held} bpm`, "ok");
+      }
     } catch (e) {
-      status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm (read-back: ${e.message || e})`, "ok");
+      await syncDeviceTempo();
+      status(`slot ${slotIndex + 1} frozen ✓ (read-back: ${e.message || e})`, "ok");
     }
   } catch (e) { status(String(e.message || e), "err"); }
 }
@@ -428,11 +456,20 @@ function buildRack() {
   panel.append(
     sect("Rhythm", 2, [
       R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "lg",
-        format: (v) => `${Math.round(v)}`, onInput: setState("tempo") })),
+        format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
+        tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze." })),
       R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
         format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
       R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "lg",
-        format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
+        format: (v) => `${Math.round(v)}%`,
+        onInput: (v) => { state.gateProb = v; refreshLoopInfo(); scheduleRegen(); },
+        tip: "random mode: chance each step fires. euclid mode: the DENSITY — Gate % becomes N hits evenly spaced over the cycle (see the loop info line)." })),
+      R("gateMode", rotary("Gate mode", [{ v: "random", t: "random" }, { v: "euclid", t: "euclid" }], state.gateMode,
+        (v) => { state.gateMode = v; refreshLoopInfo(); scheduleRegen(); }, "sm")),
+      R("euclidRot", knob({ label: "Rotate", min: 0, max: 15, step: 1, value: state.euclidRot, def: DEFAULT.euclidRot, size: "sm",
+        format: (v) => `${Math.round(v)}`,
+        onInput: (v) => { state.euclidRot = v; refreshLoopInfo(); scheduleRegen(); },
+        tip: "euclid mode: rotates the hit pattern within its cycle (wraps)." })),
       R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
         format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
       R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
@@ -455,6 +492,9 @@ function buildRack() {
 
     sect("Pitch", 2, [
       R("lfoWave", rotary("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w })), state.lfoWave, (v) => { state.lfoWave = v; scheduleRegen(); }, "sm")),
+      R("lfoShape", knob({ label: "Shape", min: 0, max: 100, value: state.lfoShape, def: DEFAULT.lfoShape, size: "sm",
+        format: (v) => `${Math.round(v)}%`, onInput: setState("lfoShape"),
+        tip: "wave morph — sine: fold amount; triangle/saw: curve bend; square: pulse width 50→5%; perlin: octave shimmer; randomWalk: step size; smoothRandom: slew." })),
       R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
         format: (v) => `${v}`, onInput: setState("lfoRate") })),
       R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "lg",
@@ -494,7 +534,7 @@ function buildRack() {
 // Short panel legends for the LFO waves: a real panel would not print
 // "smoothRandom" on a 6mm switch. The full name stays in the tooltip.
 const WAVE_SHORT = {
-  sine: "sine", triangle: "tri", saw: "saw", square: "sqr",
+  sine: "sine", triangle: "tri", saw: "saw", square: "sqr", perlin: "perlin",
   random: "random", randomWalk: "walk", smoothRandom: "smooth", sampleHold: "hold",
 };
 
@@ -556,7 +596,13 @@ function refreshLoopInfo() {
   const a = Math.round(refs.loopFrom?.value ?? 1);
   const n = Math.round(refs.loop?.value ?? 8);
   const reps = (L - a + 1) / n;
-  el.textContent = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
+  const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
+  if (state.gateMode === "euclid") {
+    const M = Math.max(2, n >= 2 ? n : 16);
+    const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
+    const rot = ((state.euclidRot ?? 0) % M + M) % M;
+    el.textContent = `${loopTxt} · E(${N},${M})${rot ? " rot " + rot : ""}`;
+  } else el.textContent = loopTxt;
 }
 
 // push state back into every control (used after Randomize)
@@ -573,11 +619,13 @@ function randomize() {
   Object.assign(state, {
     scale: Object.keys(SCALES)[(Math.random() * Object.keys(SCALES).length) | 0],
     lfoWave: LFO_WAVES[(Math.random() * LFO_WAVES.length) | 0],
+    lfoShape: (Math.random() * 100) | 0,
     lfoAmp: (Math.random() * 100) | 0, lfoOffset: ((Math.random() * 200) - 100) | 0,
     gateProb: (Math.random() * 100) | 0, bias: ((Math.random() * 200) - 100) | 0,
     spread: ["constant", "bell", "uniform", "extremes"][(Math.random() * 4) | 0],
     quantSteps: (Math.random() * 100) | 0, dejaVu: (Math.random() * 100) | 0,
     gateQuant: (Math.random() * 100) | 0, humanize: (Math.random() * 100) | 0,
+    gateMode: Math.random() < 0.5 ? "random" : "euclid", euclidRot: (Math.random() * 16) | 0,
   });
   syncRack();
   doGenerate(true);
@@ -639,6 +687,9 @@ async function initMidi() {
     await midi.initMidi();
     fill();
     midi.onStateChange(fill);
+    // WYSIWYG tempo: snap the knob to the device's real (unit-global) BPM.
+    const held = await syncDeviceTempo();
+    if (held) status(`FM-1: ${midi.findFm1()?.name ?? ""} · device holds ${held} BPM — Tempo synced`, "ok");
   } catch (e) {
     status(String(e.message || e), "err");
     const n = nameEl();

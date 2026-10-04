@@ -29,7 +29,7 @@ export const SCALES = {
 };
 
 export const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-export const LFO_WAVES = ["sine", "triangle", "saw", "square", "random", "randomWalk", "smoothRandom", "sampleHold"];
+export const LFO_WAVES = ["sine", "triangle", "saw", "square", "perlin", "random", "randomWalk", "smoothRandom", "sampleHold"];
 
 // deterministic PRNG so a seed reproduces a generation exactly
 export function mulberry32(a) {
@@ -47,23 +47,58 @@ export const midiName = (n) => {
 };
 
 // ---- LFO: value in [0,1] for phase in [0,1), with state for random shapes ----
-function lfoFactory(wave, rng) {
+// `shape` (0..1) is the Shape knob; each wave spends it differently (see the
+// guide): sine folds, triangle/saw bend, square narrows its pulse width, the
+// random family uses it as slew/step size, perlin adds a detuned octave.
+function makePerlin(rng) {
+  const N = 24;                          // gradient points around the cycle
+  const grads = Array.from({ length: N }, () => rng() * 2 - 1);
+  return (phase) => {
+    const x = phase * N;
+    const i0 = Math.floor(x) % N;
+    const i1 = (i0 + 1) % N;
+    const f = x - Math.floor(x);
+    const u = f * f * (3 - 2 * f);       // smoothstep
+    const n0 = grads[i0] * f;            // dot with distance to i0
+    const n1 = grads[i1] * (f - 1);      // dot with distance to i1
+    return n0 * (1 - u) + n1 * u;        // range ≈ [-1, 1]
+  };
+}
+
+function lfoFactory(wave, rng, shape) {
   let walk = rng();
   let target = rng();
   let cur = rng();
+  const perlin = wave === "perlin" ? makePerlin(rng) : null;
+  const fold = (x) => {                  // wavefolder, x in [-1,1]
+    const f = ((x + 1) / 2) % 1;
+    return Math.abs(f * 2 - 1) * 2 - 1;
+  };
   return (phase) => {
     switch (wave) {
-      case "sine": return 0.5 + 0.5 * Math.sin(2 * Math.PI * phase);
-      case "triangle": return 1 - Math.abs(2 * phase - 1);
-      case "saw": return phase;
-      case "square": return phase < 0.5 ? 1 : 0;
+      case "sine": {
+        const s = Math.sin(2 * Math.PI * phase);
+        const f = fold(s * (1 + shape * 4));        // shape drives the sine into the folder
+        return 0.5 + 0.5 * (s * (1 - shape) + f * shape);
+      }
+      case "triangle": {
+        const t = 1 - Math.abs(2 * phase - 1);
+        return Math.pow(t, 1 + shape * 3);          // bends the ramp toward the floor
+      }
+      case "saw": return Math.pow(phase, 1 + shape * 3);
+      case "square": return phase < 0.5 - shape * 0.45 ? 1 : 0;  // pulse width 50% → 5%
+      case "perlin": {
+        const base = perlin(phase);
+        const det = shape ? perlin(phase * 2 + 0.37) : 0;        // octave shimmer
+        return 0.5 + (base * (1 - shape) + det * shape) / 2;
+      }
       case "randomWalk": {
-        walk += (rng() < 0.5 ? -1 : 1) * 0.15;
+        walk += (rng() < 0.5 ? -1 : 1) * (0.04 + shape * 0.28);  // step size follows Shape
         if (walk < 0) walk = 0.15; if (walk > 1) walk = 0.85;
         return walk;
       }
       case "smoothRandom": {
-        const t = 0.15;
+        const t = 0.03 + shape * 0.45;                          // slew rate follows Shape
         cur += (target - cur) * t;
         if (Math.abs(target - cur) < 0.01) target = rng();
         return cur;
@@ -72,6 +107,23 @@ function lfoFactory(wave, rng) {
       default: return Math.floor(phase * 4) % 2 ? cur : (cur = rng());
     }
   };
+}
+
+// Bjorklund: N onsets spread as evenly as possible over M steps, then rotated
+// so the first hit lands on the downbeat (rot 0 reads like the classic rhythms:
+// E(5,8)=x.xx.xx. E(7,16)=x.x.x..x.x.x..)
+export function euclid(n, m) {
+  const mask = new Array(m).fill(0);
+  if (n >= m) return mask.fill(1);
+  if (n <= 0) return mask;
+  let bucket = 0;
+  for (let i = 0; i < m; i++) {
+    bucket += n;
+    if (bucket >= m) { mask[i] = 1; bucket -= m; }
+  }
+  const first = mask.indexOf(1);
+  if (first > 0) return [...mask.slice(first), ...mask.slice(0, first)];
+  return mask;
 }
 
 // ---- distribution shaping (spread: constant/bell/uniform/extremes) ----
@@ -147,7 +199,8 @@ export function generate(params) {
   const span = 36;                                      // semitones of swing
   const wave = params.lfoWave || "sine";
   const isRandom = wave === "random";
-  const lfo = isRandom ? null : lfoFactory(wave, rng);
+  const shapeAmt = Math.min(1, Math.max(0, (params.lfoShape ?? 0) / 100));
+  const lfo = isRandom ? null : lfoFactory(wave, rng, shapeAmt);
   // lfoRate is CYCLES ACROSS THE PATTERN; `div` (steps per cycle) is what the
   // phase math needs. Whole cycles repeat on the phrase, fractional ones drift.
   // A periodic wave degenerates when sampled at 1-2 phases (a sine at div 2 reads
@@ -156,6 +209,20 @@ export function generate(params) {
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
+  // Euclid mode: the Gate % is the DENSITY (N/M hits) instead of a per-step
+  // chance, and the hits sit at the evenest positions of an M-step cycle. The
+  // cycle follows the Loop length when the loop is on (default 8 steps), else
+  // one bar of sixteenths. Rotation turns the whole mask.
+  const euclidMode = params.gateMode === "euclid";
+  const loopLen0 = Math.round(params.loop || 0);
+  const M = Math.max(2, euclidMode && loopLen0 >= 2 ? loopLen0 : 16);
+  const N = euclidMode ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
+  let eMask = null;
+  if (euclidMode) {
+    eMask = euclid(N, M);
+    const rot = ((params.euclidRot ?? 0) % M + M) % M;
+    if (rot) eMask = [...eMask.slice(rot), ...eMask.slice(0, rot)];
+  }
   const loopStart = Math.max(0, Math.round(params.loopFrom ?? 1) - 1);  // 1-based in the UI, 0-based here
   const loopLen = Math.round(params.loop || 0);                 // motif length in steps (0 = off)
   const loopSlip = (params.dejaVu ?? 0) / 100;                  // chance a later step loops back
@@ -170,7 +237,7 @@ export function generate(params) {
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {
-    const active = i < len && rng() < gateProb;
+    const active = i < len && (euclidMode ? eMask[i % M] === 1 : rng() < gateProb);
     if (!active) continue;
 
     // Pitch source. Deterministic waves read their periodic shape at `div` steps
@@ -248,11 +315,13 @@ export function generateBank(base, driftPct = 50) {
     bias: r() < 0.5 ? -1 : 1,
     lfoOffset: r() < 0.5 ? -1 : 1,
     lfoRate: r() < 0.5 ? -1 : 1,
+    lfoShape: r() < 0.5 ? -1 : 1,
     spread: r() < 0.5 ? -1 : 1,
     humanize: r() < 0.5 ? -1 : 1,
     octave: r() < 0.5 ? -1 : 1,
     gravity: r() < 0.5 ? -1 : 1,
     gateQuant: r() < 0.5 ? -1 : 1,
+    euclidRot: r() < 0.5 ? -1 : 1,
   };
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
 
@@ -271,11 +340,13 @@ export function generateBank(base, driftPct = 50) {
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
       lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 16),
+      lfoShape: clamp((base.lfoShape ?? 0) + dir.lfoShape * t * 30, 0, 100),
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
       octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
       gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
       gateQuant: clamp((base.gateQuant ?? 0) + dir.gateQuant * t * 25, 0, 100),   // gentle
+      euclidRot: (base.euclidRot ?? 0) + Math.round(dir.euclidRot * t * 6),
     };
     bank.push(generate(p));
   }
