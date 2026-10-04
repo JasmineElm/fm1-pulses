@@ -12,25 +12,25 @@ body { padding: 12px; }
 }
 
 /* Rack-only themes, rebuilt from the REAL hardware (the MVP's style.css is left
-   alone). The hero colour of each theme was sampled from M-VAVE's own product
-   photos of the FM-1 colourways, with the white studio background masked out:
-     purple  fm-1-purple    #bb91ce lavender body
-     black   fm-1-blackgreen #1e1e1e charcoal shell, white legends
-     grey    fm-1-coolgray  #ded4cc warm light grey body
-     orange  fm-1-orange    #bd6e4c terracotta body
-     green   fm-1-blackgreen #8cd8cd mint key pads
-     blue    fm-1-whiteblue #577694 slate blue body
-     brown   (no FM-1 brown colourway exists; muted brown, kept close to the rest)
-   Everything else is derived from that hero: --bg/--panel/--panel2 are mixes
-   toward black, and accents/legends are lifted until they clear 4.5:1 against
-   the surface they sit on and dividers clear 3:1. */
-[data-theme="purple"] { --bg: #151017; --panel: #221a25; --panel2: #382c3e; --line: #75607e; --fg: #faf6fb; --dim: #937d9d; --accent: #bc92ce; --accent2: #d5bbe1; }
-[data-theme="black"]  { --bg: #030303; --panel: #050505; --panel2: #090909; --line: #5c5c5c; --fg: #ededed; --dim: #777777; --accent: #f0eef2; --accent2: #f6f4f7; }
-[data-theme="grey"]   { --bg: #181716; --panel: #282625; --panel2: #43403d; --line: #7b7671; --fg: #fcfcfb; --dim: #928c87; --accent: #ded4cd; --accent2: #ebe4e0; }
-[data-theme="orange"] { --bg: #150c08; --panel: #22140e; --panel2: #392117; --line: #805c4c; --fg: #faf3f1; --dim: #9d7867; --accent: #be6f4e; --accent2: #d7a691; }
-[data-theme="green"]  { --bg: #0f1817; --panel: #192725; --panel2: #2a413e; --line: #4f7872; --fg: #f6fcfb; --dim: #66948e; --accent: #8dd8ce; --accent2: #b8e7e1; }
-[data-theme="blue"]   { --bg: #0a0d10; --panel: #10151b; --panel2: #1a232c; --line: #576572; --fg: #f2f4f6; --dim: #72818e; --accent: #64819d; --accent2: #9fb1c2; }
-[data-theme="brown"]  { --bg: #130e09; --panel: #20160f; --panel2: #352619; --line: #79614c; --fg: #f9f5f1; --dim: #957c68; --accent: #b17e54; --accent2: #cfaf95; }
+   alone). The seven FM-1 variants, per the seven body colourways:
+     purple  pink-lavender case   + purple keys    case #c5a1da  keys #8567a8
+     black   dark grey case       + black keys     case #4a4a4a  keys #222222
+     grey    off-white case       + black keys     case #e3ded4  keys #4b4d4f
+     orange  terracotta case      + brown keys     case #b86948  keys #b08063
+     green   black case           + bright teal keys case #1e1e1e keys #85d9cd
+     blue    off-white case       + navy keys      case #e8e4df  keys #607e9a
+     brown   off-white case       + brown keys     case #e8e4df  keys #96714f
+   Case and key colours were read off M-VAVE's own product photos (white studio
+   background masked out). Surfaces are tinted from each variant's signature
+   colour; accents are lifted until they clear 4.5:1 on the background they sit
+   on, legends 4.5:1 on the panel, and dividers 3:1. */
+[data-theme="purple"] { --bg: #0e0b0f; --panel: #1a151c; --panel2: #2d2532; --line: #6f5e79; --fg: #fcf9fd; --dim: #8f779d; --accent: #c5a1da; --accent2: #9d7bc0; }
+[data-theme="black"]  { --bg: #0f0f10; --panel: #1d1d1d; --panel2: #333333; --line: #6e6e6f; --fg: #fdfdfd; --dim: #9a9a9b; --accent: #dcdcde; --accent2: #686868; }
+[data-theme="grey"]   { --bg: #10100f; --panel: #1e1d1c; --panel2: #343331; --line: #726f6a; --fg: #fdfdfc; --dim: #9f9b94; --accent: #e3ded4; --accent2: #8e8c88; }
+[data-theme="orange"] { --bg: #0e0806; --panel: #190f0a; --panel2: #2d1b12; --line: #7a5a4a; --fg: #fbf7f4; --dim: #9f725e; --accent: #c27450; --accent2: #b08063; }
+[data-theme="green"]  { --bg: #090f0e; --panel: #111c1b; --panel2: #1f322f; --line: #446d68; --fg: #f8fdfc; --dim: #5d9890; --accent: #85d9cd; --accent2: #5f9c94; }
+[data-theme="blue"]   { --bg: #080a0c; --panel: #0e1216; --panel2: #192027; --line: #54626f; --fg: #f6f8fa; --dim: #6c7f90; --accent: #6d8dab; --accent2: #e8e4df; }
+[data-theme="brown"]  { --bg: #0b0906; --panel: #15100b; --panel2: #251c14; --line: #6e5e4e; --fg: #f9f7f5; --dim: #8e7964; --accent: #a07a55; --accent2: #e8e4df; }
 
 .layout { display: block; }
 .module { display: flex; flex-direction: column; }
