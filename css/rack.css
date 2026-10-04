@@ -18,18 +18,22 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   gap: 7px;
   align-items: start;
 }
+/* Sections draw their box with an inset shadow, NOT a border/padding: a real
+   border would consume width, and a 2-rail box and a 6-rail box then produce
+   different cell widths so the rails would not line up. Shadows cost no layout. */
 .sect {
-  border: 1px solid var(--line); border-radius: 3px;
-  background-color: rgba(0, 0, 0, .08);
-  box-shadow: 0 1px 0 rgba(255,255,255,.10) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
-  padding: 6px 7px 8px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, .07);
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255,255,255,.06);
+  padding: 5px 0 7px;   /* horizontal padding must be 0 or the rails drift */
   min-width: 0;
 }
 .sect > h3 {
-  margin: 0 0 7px; font-size: 8.5px; letter-spacing: 2.2px; text-transform: uppercase;
+  margin: 0 2px 6px; font-size: 8.5px; letter-spacing: 2.2px; text-transform: uppercase;
   color: var(--dim); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 3px;
 }
-.sgrid { display: grid; gap: 7px 2px; align-items: start; }
+/* the internal gap MUST equal the panel gap, or the rails drift */
+.sgrid { display: grid; gap: 8px 7px; align-items: start; }
 
 /* controls scale with the rail so 6 columns fit a phone too */
 .knob { min-width: 0; }
@@ -37,7 +41,7 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .knob.k-lg svg { max-width: 60px; }
 .knob.k-md svg { max-width: 52px; }
 .knob.k-sm svg { max-width: 44px; }
-.sw { max-width: 100%; }
+.sw { max-width: calc(100% - 4px); margin: 0 auto; }
 .sw-val {
   width: auto; min-width: 52px; max-width: 100%;
   height: 23px; line-height: 1.1;
