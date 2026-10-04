@@ -127,10 +127,12 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * generate(params, prevSteps) -> pattern fields + steps.
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(div),
- *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity
+ *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
+ *         humanize(0-100)
  */
 export function generate(params, prevSteps = null) {
   const rng = mulberry32(params.seed >>> 0);
+  const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
   const scale = SCALES[params.scale] || SCALES.pentMinor;
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
@@ -146,6 +148,7 @@ export function generate(params, prevSteps = null) {
   const dejaVu = (params.dejaVu ?? 0) / 100;
   const quantStrength = (params.quantSteps ?? 100) / 100;
   const fixedVel = params.velocity;
+  const hum = (params.humanize ?? 0) / 100 * 40;   // velocity deviation, +/- 40 max
 
   const steps = [];
   for (let i = 0; i < 64; i++) {
@@ -178,7 +181,7 @@ export function generate(params, prevSteps = null) {
 
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
-      : clamp(Math.round(fixedVel), 1, 127);
+      : clamp(Math.round(fixedVel + (hum ? (velRng() * 2 - 1) * hum : 0)), 1, 127);
     steps.push({ rate: params.rate, notes: [{ note: clamp(Math.round(note), 0, 127), vel }] });
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
@@ -207,6 +210,7 @@ export function generateBank(base, driftPct = 50) {
     lfoOffset: r() < 0.5 ? -1 : 1,
     lfoRate: r() < 0.5 ? -1 : 1,
     spread: r() < 0.5 ? -1 : 1,
+    humanize: r() < 0.5 ? -1 : 1,
   };
   const rateIdx0 = Math.max(0, LFO_RATES.indexOf(base.lfoRate));
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
@@ -227,6 +231,7 @@ export function generateBank(base, driftPct = 50) {
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
       lfoRate: LFO_RATES[clamp(rateIdx0 + Math.round(dir.lfoRate * t * 2), 0, LFO_RATES.length - 1)],
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
+      humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
     };
     bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
   }
