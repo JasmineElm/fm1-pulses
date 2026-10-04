@@ -80,7 +80,7 @@ function lfoFactory(wave, rng) {
 function shape(v, spread) {
   switch (spread) {
     case "constant": v = 0.5; break;
-    case "bell": v = 0.5 + (v - 0.5) * (v - 0.5) * (v < 0.5 ? -2 : 2) * 0.5 + (v - 0.5) * 0.6; break;
+    case "bell": v = 0.5 + 4 * Math.pow(v - 0.5, 3); break;   // centre-weighted: pulls toward the middle
     case "extremes": v = v < 0.5 ? 0 : 1; break;
     case "uniform":
     default: break;
