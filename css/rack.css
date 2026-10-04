@@ -124,10 +124,11 @@ body { padding: 12px; }
   color: var(--fg); font-weight: 700; padding: 6px 16px; border-color: var(--dim);
 }
 .transport button#audition.playing { color: var(--bg); background: var(--accent); border-color: var(--accent); }
-.transport .swatches { display: flex; gap: 4px; align-items: center; margin-left: 4px; }
-.transport .swatches::before { content: "THEME"; font-size: 8px; letter-spacing: 1.1px; color: var(--dim); margin-right: 2px; }
-.transport .swatch { width: 15px; height: 15px; padding: 0; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
-.transport .swatch.active { border-color: var(--fg); }
+.themebar { display: flex; justify-content: center; margin-top: 9px; }
+.themebar .swatches { display: flex; gap: 4px; align-items: center; }
+.themebar .swatches::before { content: "THEME"; font-size: 8px; letter-spacing: 1.1px; color: var(--dim); margin-right: 5px; }
+.themebar .swatch { width: 15px; height: 15px; padding: 0; border-radius: 2px; border: 1px solid var(--line); cursor: pointer; }
+.themebar .swatch.active { border-color: var(--fg); }
 
 /* ---- pattern display: the screen inside the case ---- */
 .display {
