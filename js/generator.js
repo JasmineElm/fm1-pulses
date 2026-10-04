@@ -125,18 +125,19 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const SNAP_GRID = 4;   // default grid-snap spacing, in steps
 
 /**
- * generate(params, prevSteps) -> pattern fields + steps.
+ * generate(params) -> pattern fields + steps.
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
- *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
+ *         spread, bias(-100..100), quantSteps(0-100), loop(steps), dejaVu(0-100), velocity,
  *         humanize(0-100), octave(0-100), gravity(0-100), unipolar(bool),
  *         gateQuant(0-100), snapGrid(steps)
  */
-export function generate(params, prevSteps = null) {
+export function generate(params) {
   const rng = mulberry32(params.seed >>> 0);
   const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
   const octRng = mulberry32((params.seed ^ 0x85ebca6b) >>> 0);  // separate stream: octave jumps must not shift pitch draws
   const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
+  const loopRng = mulberry32((params.seed ^ 0x2545f491) >>> 0); // separate stream: the loop must not shift pitch draws
   const snapRng = mulberry32((params.seed ^ 0x165667b1) >>> 0); // separate stream: grid snap must not shift pitch draws
   const scale = SCALES[params.scale] || SCALES.pentMinor;
   const len = clamp(params.length || 64, 1, 64);
@@ -155,7 +156,8 @@ export function generate(params, prevSteps = null) {
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
-  const dejaVu = (params.dejaVu ?? 0) / 100;
+  const loopLen = Math.round(params.loop || 0);                 // motif length in steps (0 = off)
+  const loopSlip = (params.dejaVu ?? 0) / 100;                  // chance a later step loops back
   const quantStrength = (params.quantSteps ?? 100) / 100;
   const fixedVel = params.velocity;
   const hum = (params.humanize ?? 0) / 100 * 40;   // velocity deviation, +/- 40 max
@@ -167,13 +169,6 @@ export function generate(params, prevSteps = null) {
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {
-    // Deja Vu: reuse the previous slot's step here. It is already grid-snapped, so
-    // it is copied as-is and a locked loop stays locked.
-    if (prevSteps && i < len && rng() < dejaVu) {
-      const p = prevSteps[i];
-      if (p) steps[i].notes = p.notes.map((n) => ({ ...n }));
-      continue;
-    }
     const active = i < len && rng() < gateProb;
     if (!active) continue;
 
@@ -216,6 +211,14 @@ export function generate(params, prevSteps = null) {
     // density and grid stop fighting each other. Off-grid notes become rests.
     if (gateQuant && snapRng() < gateQuant && i % snapGrid !== 0) continue;
     steps[i].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
+  }
+  // Loop: keep the first `loopLen` steps as a motif and repeat it to the end of the
+  // phrase. loopSlip is the chance each later step actually loops back, so below
+  // 100% fresh notes still bleed in. Fills up to Length, not the whole 64-step buffer.
+  if (loopLen >= 2 && loopLen < len) {
+    for (let i = loopLen; i < len; i++) {
+      if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[i % loopLen].notes.map((n) => ({ ...n }));
+    }
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
 }
@@ -271,7 +274,7 @@ export function generateBank(base, driftPct = 50) {
       gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
       gateQuant: clamp((base.gateQuant ?? 0) + dir.gateQuant * t * 25, 0, 100),   // gentle
     };
-    bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
+    bank.push(generate(p));
   }
   return bank;
 }

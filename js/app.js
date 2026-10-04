@@ -1,8 +1,8 @@
 // app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=18";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=18";
-import * as midi from "./midi.js?v=18";
-import * as audio from "./audio.js?v=18";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=19";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=19";
+import * as midi from "./midi.js?v=19";
+import * as audio from "./audio.js?v=19";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
@@ -36,7 +36,7 @@ const DEFAULT = {
   gateProb: 70, velocity: 100, humanize: 0, gateQuant: 0, snapGrid: 4,
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, gravity: 0, unipolar: false,
-  spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
+  spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8,
 };
 const state = { ...DEFAULT };
 let bank = [];          // 16 patterns
@@ -98,8 +98,10 @@ const CONTROLS = [
       help: "Snap strength to the scale. 100% = always in scale, lower lets chromatic passing notes through." },
   ] },
   { sec: "Memory", items: [
+    { k: "loop", t: "range", label: "Loop", min: 2, max: 32, step: 1, suffix: " steps",
+      help: "Motif length. The first N steps repeat across the phrase, filling up to Length. The slider reaches half the pattern length, and odd values are allowed, so you can loop 7 or 9 steps." },
     { k: "dejaVu", t: "range", label: "Deja Vu", min: 0, max: 100, suffix: "%",
-      help: "How much each slot reuses the previous slot's notes. 0% = fully fresh, 100% = a locked loop. Applied across the bank." },
+      help: "Chance a step past the motif copies the motif instead of playing its own note. 0% = the phrase plays as generated, 100% = the motif repeats to the end." },
   ] },
   { sec: "Pattern", items: [
     { k: "rate", t: "select", label: "Note value", opts: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], fmt: (v) => RATE_NAMES[v],
@@ -116,6 +118,17 @@ const CONTROLS = [
 ];
 
 const refs = {};
+// The Loop slider can only go to half the pattern length, so its range follows Length.
+function refreshLoopMax() {
+  const r = refs.loop;
+  if (!r) return;
+  const max = Math.max(2, Math.floor((state.length || 64) / 2));
+  r.inp.max = max;
+  if (r.box) r.box.max = max;
+  if (Number(r.inp.value) > max) r.inp.value = String(max);
+  if (r.box) r.box.value = r.inp.value;
+  r.sync();
+}
 function buildControls() {
   const el = document.getElementById("controls");
   for (const sec of CONTROLS) {
@@ -174,6 +187,7 @@ function buildControls() {
         if (it.k === "root") { refs.lfoAmp?.sync(); refs.lfoOffset?.sync(); }
         if (it.k === "lfoOffset") refs.lfoAmp?.sync();
         if (it.k === "unipolar") refs.lfoAmp?.sync();
+        if (it.k === "length") refreshLoopMax();
       };
       inp.addEventListener("input", () => { sync(); scheduleRegen(); });
       if (it.t === "check") inp.addEventListener("change", () => { sync(); scheduleRegen(); });
@@ -204,7 +218,7 @@ function buildControls() {
         else row.append(name, inp, box, out);
       }
       grid.appendChild(row);
-      refs[it.k] = { inp, sync };
+      refs[it.k] = { inp, sync, box };
     }
     el.appendChild(grid);
   }
@@ -630,6 +644,7 @@ function buildFooter() {
 
 buildTheme();
 buildControls();
+refreshLoopMax();
 buildEditor();
 buildFooter();
 doGenerate(true);
