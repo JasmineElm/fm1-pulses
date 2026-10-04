@@ -11,6 +11,13 @@ const SLOTS = 16;
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
 const LFO_RATE_STEPS = [1, 2, 4, 8, 16, 32, 64];
 
+// Triplet swing: 50% = straight, 75% = the offbeat lands 1/3 of a step late (2:1).
+// The pair keeps its length; the first step stretches and the second shortens.
+function swingFrac() {
+  const s = Math.min(75, Math.max(50, state.swing ?? 50));
+  return ((s - 50) / 25) / 3;
+}
+
 // Pitch mapping (must match generator.js): Offset is the centre of the range and
 // Amplitude is its half-width, so notes swing +/- SPAN/2 semitones around Offset.
 const SPAN = 36;
@@ -119,7 +126,7 @@ const CONTROLS = [
     { k: "gate", t: "range", label: "Gate length", min: 5, max: 100, suffix: "%",
       help: "How much of each step a note holds. Low = staccato, high = legato. Written into the pattern header." },
     { k: "swing", t: "range", label: "Swing", min: 50, max: 75, suffix: "%",
-      help: "Delays every other step for a shuffle feel. 50% = straight. Written into the pattern header." },
+      help: "Delays every other step for a shuffle feel. 50% = straight, 75% = triplet (2:1). Applied in the browser audition and written into the pattern for the FM-1." },
     { k: "length", t: "range", label: "Length", min: 1, max: 64, suffix: " steps",
       help: "How many of the 64 steps the pattern plays. Written into the pattern header." },
   ] },
@@ -435,12 +442,15 @@ async function playOnce() {
     if (token !== onceToken || live) return;
     const st = p.steps[i];
     const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+    const late = i % 2 === 1 ? stepMs * swingFrac() : 0;   // swing the offbeat
+    const sDur = stepMs - late;
+    if (late) await sleep(late);
     if (st.notes.length) {
       for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
-      await sleep(Math.max(12, stepMs * gate));
+      await sleep(Math.max(12, sDur * gate));
       for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
-      await sleep(Math.max(3, stepMs * (1 - gate)));
-    } else await sleep(stepMs);
+      await sleep(Math.max(3, sDur * (1 - gate)));
+    } else await sleep(sDur);
   }
 }
 
@@ -483,18 +493,21 @@ async function liveLoop(token) {
       const p = bank[selected];
       if (!p || !p.length) { await sleep(100); continue; }
       if (i >= p.length) i = 0;
-      markStep(i);
       const st = p.steps[i];
       const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
       const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+      const late = i % 2 === 1 ? stepMs * swingFrac() : 0;   // swing the offbeat
+      const sDur = stepMs - late;
+      if (late) await sleep(late);
+      markStep(i);
       if (st.notes.length) {
         for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
-        await sleep(Math.max(12, stepMs * gate));
+        await sleep(Math.max(12, sDur * gate));
         for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
-        await sleep(Math.max(3, stepMs * (1 - gate)));
+        await sleep(Math.max(3, sDur * (1 - gate)));
       } else {
-        await sleep(stepMs);
+        await sleep(sDur);
       }
       i++;
     } catch (e) {
