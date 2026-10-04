@@ -46,12 +46,12 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .k-lab { max-width: 100%; }
 /* Every control must fit ONE rail. The fixed pixel widths here were tuned for the
    old font and are what overflowed, so they are all rail-relative now. */
-.sel { max-width: calc(100% - 8px); min-width: 0; margin-inline: auto; }
-.sw { max-width: calc(100% - 8px); margin: 0 auto; }
-.sw-body { max-width: 100%; }
+.sel { width: calc(100% - 8px); min-width: 0; margin-inline: auto; }
+.sw { width: calc(100% - 8px); margin: 0 auto; }
+.sw-body { max-width: 100%; width: 100%; }
 .sw-arrow { flex: 0 0 auto; padding: 5px 2px 6px; }
 .toggle {
-  max-width: calc(100% - 8px); margin-inline: auto;
+  width: calc(100% - 8px); margin-inline: auto;
   font-size: 8.5px; letter-spacing: .7px; padding: 6px 7px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
