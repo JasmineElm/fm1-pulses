@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=61";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=61";
-import * as midi from "./midi.js?v=61";
-import * as audio from "./audio.js?v=61";
-import { knob } from "./knob.js?v=61";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=62";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=62";
+import * as midi from "./midi.js?v=62";
+import * as audio from "./audio.js?v=62";
+import { knob } from "./knob.js?v=62";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -278,29 +278,45 @@ function toggleLive() {
   liveLoop(liveToken);
 }
 
+// Scheduled against an ABSOLUTE clock, not by accumulating relative sleeps.
+// The gate floors below (max 12ms note, max 3ms release) otherwise ADD to each
+// step instead of eating into it, which measured up to 16% slow at low gate on
+// short steps. Every step now waits until its own target time, so overhead and
+// the floors cannot accumulate.
 async function liveLoop(token) {
+  const t0 = performance.now();
+  let elapsed = 0;      // ms into the phrase, on the absolute clock
   let i = 0;
   while (live && token === liveToken) {
     try {
       const p = bank[selected];
-      if (!p || !p.length) { await sleep(100); continue; }
+      if (!p || !p.length) { await sleep(100); t0 += 100; continue; }
       if (i >= p.length) i = 0;
+      // if we fell a long way behind (throttled tab), re-anchor instead of bursting
+      if (performance.now() - (t0 + elapsed) > 250) t0 = performance.now() - elapsed;
+
       const st = p.steps[i];
       const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
       const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
       const late = i % 2 === 1 ? stepMs * swingFrac() : 0;
       const sDur = stepMs - late;
-      if (late) await sleep(late);
+
+      const startAt = t0 + elapsed + late;
+      let w = startAt - performance.now();
+      if (w > 0) await sleep(w);
       markStep(i);
       if (st.notes.length) {
         for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
-        await sleep(Math.max(12, sDur * gate));
+        const offAt = startAt + Math.max(12, sDur * gate);
+        w = offAt - performance.now(); if (w > 0) await sleep(w);
         for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
-        await sleep(Math.max(3, sDur * (1 - gate)));
-      } else await sleep(sDur);
+      }
+      w = (t0 + elapsed + stepMs) - performance.now();
+      if (w > 0) await sleep(w);
+      elapsed += stepMs;
       i++;
-    } catch (e) { status("play error: " + (e.message || e), "err"); await sleep(200); }
+    } catch (e) { status("play error: " + (e.message || e), "err"); await sleep(200); t0 += 200; }
   }
   clearPlayhead();
 }
