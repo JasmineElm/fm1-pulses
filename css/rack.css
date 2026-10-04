@@ -138,17 +138,27 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 }
 
 .brand {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 1px 7px; border-bottom: 1px solid var(--line); margin-bottom: 8px;
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 0 2px 6px; border-bottom: 1px solid var(--line);
 }
-.brand h1 { font-size: 11px; margin: 0; letter-spacing: 2.4px; font-weight: 700; color: var(--dim); }
-.brand h1 b { color: var(--fg); }
-.brand .spacer { flex: 1; }
-.brand .status { font-size: 9px; letter-spacing: .4px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-.brand .status.ok { color: var(--fg); }
-.brand .status.err { color: var(--err); }
-.brand .led { width: 6px; height: 6px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
-.brand .led.ok { background: var(--accent); }
+/* the title is the product name: it should be the loudest thing in the header */
+.brand h1 {
+  font-size: 18px; margin: 0; letter-spacing: 3.6px; font-weight: 700;
+  color: var(--fg); line-height: 1; white-space: nowrap;
+}
+.brand h1 b { color: var(--accent); }
+/* MIDI status is a small readout, not a form control */
+.brand .dev {
+  margin-left: auto; display: flex; align-items: center; gap: 5px; min-width: 0;
+  font-size: 10px; letter-spacing: .6px; color: var(--dim);
+}
+.brand .dev #devname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 42vw; }
+.brand .led { width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
+.brand .led.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.statusrow { display: flex; justify-content: flex-end; padding: 3px 2px 6px; }
+.statusrow .status { font-size: 9px; letter-spacing: .5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statusrow .status.ok { color: var(--fg); }
+.statusrow .status.err { color: var(--err); }
 
 .knob {
   display: flex; flex-direction: column; align-items: center;

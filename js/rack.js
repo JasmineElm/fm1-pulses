@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=60";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=60";
-import * as midi from "./midi.js?v=60";
-import * as audio from "./audio.js?v=60";
-import { knob } from "./knob.js?v=60";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=61";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=61";
+import * as midi from "./midi.js?v=61";
+import * as audio from "./audio.js?v=61";
+import { knob } from "./knob.js?v=61";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -568,28 +568,24 @@ function buildEditor() {
 }
 
 async function initMidi() {
-  const selEl = document.getElementById("device");
+  const nameEl = () => document.getElementById("devname");
   const fill = () => {
-    selEl.innerHTML = "";
-    const outs = midi.listOutputs();
     const fm1 = midi.findFm1();
-    for (const o of outs) {
-      const op = document.createElement("option");
-      op.value = o.id; op.textContent = o.name;
-      if (fm1 && o.id === fm1.id) op.selected = true;
-      selEl.appendChild(op);
-    }
-    if (!outs.length) selEl.innerHTML = "<option>— no MIDI —</option>";
+    const outs = midi.listOutputs();
+    const n = nameEl();
+    if (n) n.textContent = fm1 ? fm1.name : (outs.length ? `${outs[0].name} (no FM-1)` : "no MIDI");
     const led = document.getElementById("led");
     if (led) led.className = "led" + (fm1 ? " ok" : "");
     status(fm1 ? `FM-1: ${fm1.name}` : "FM-1 not found", fm1 ? "ok" : "");
   };
   try {
-    await midi.initMidi(); fill(); midi.onStateChange(fill);
-    selEl.addEventListener("change", fill);
+    await midi.initMidi();
+    fill();
+    midi.onStateChange(fill);
   } catch (e) {
     status(String(e.message || e), "err");
-    selEl.innerHTML = "<option>— Web MIDI blocked —</option>";
+    const n = nameEl();
+    if (n) n.textContent = "no Web MIDI";
   }
 }
 
