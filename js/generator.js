@@ -151,7 +151,7 @@ export function generate(params, prevSteps = null) {
   // phase math needs. Whole cycles repeat on the phrase, fractional ones drift.
   // A periodic wave degenerates when sampled at 1-2 phases (a sine at div 2 reads
   // phase 0 and 1/2, both 0); the random source is fine at div 1.
-  const cycles = Math.max(0.1, Math.min(7, params.lfoRate || 4));
+  const cycles = Math.max(0.1, Math.min(8, params.lfoRate || 4));
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
@@ -209,11 +209,24 @@ export function generate(params, prevSteps = null) {
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
       : clamp(Math.round(fixedVel + (hum ? (velRng() * 2 - 1) * hum : 0)), 1, 127);
-    // Grid snap: with the slider's probability, land the note on the nearest
-    // 4-step line (quarter notes at 1/16). A step already taken keeps its note.
+    // Grid snap: with the slider's probability, land the note on the nearest 4-step
+    // line. A line that is already taken never deletes the gate: the note keeps its
+    // own step instead, so Gate density survives. Only when both are busy does it
+    // take the nearest free step.
     let t = i;
     if (gateQuant && snapRng() < gateQuant) t = Math.max(0, Math.min(len - 1, Math.round(i / SNAP_GRID) * SNAP_GRID));
-    if (!steps[t].notes.length) steps[t].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
+    if (steps[t].notes.length) {
+      if (!steps[i].notes.length) { t = i; }
+      else {
+        let d = 1;
+        for (; d < len; d++) {
+          if (i - d >= 0 && !steps[i - d].notes.length) { t = i - d; break; }
+          if (i + d < len && !steps[i + d].notes.length) { t = i + d; break; }
+        }
+        if (d >= len) t = -1;
+      }
+    }
+    if (t >= 0) steps[t].notes = [{ note: clamp(Math.round(note), 0, 127), vel }];
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
 }
@@ -262,7 +275,7 @@ export function generateBank(base, driftPct = 50) {
       lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
-      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 7),
+      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 8),
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
       octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
