@@ -11,16 +11,26 @@ body { padding: 12px; }
   --grain-dark: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='180'%20height='180'%3E%3Cfilter%20id='d'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.7'%20numOctaves='3'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200.018%200.018%200.018%200%20-0.018'/%3E%3C/filter%3E%3Crect%20width='180'%20height='180'%20filter='url(%23d)'/%3E%3C/svg%3E");
 }
 
-/* Legibility pass (rack-only, so the MVP's style.css is untouched). The themes'
-   --dim only reaches ~2:1 on the panel, which makes every knob legend unreadable.
-   These raise labels to 4.5:1 and dividers to 3:1 against the panel. */
-[data-theme="purple"] { --dim: #8d849a; --line: #716876; }
-[data-theme="black"]  { --dim: #888a8d; --line: #6b6d70; }
-[data-theme="grey"]   { --dim: #8d8f8d; --line: #717171; }
-[data-theme="orange"] { --dim: #9e857b; --line: #766b64; }
-[data-theme="green"]  { --dim: #83958f; --line: #637873; }
-[data-theme="blue"]   { --dim: #818a9a; --line: #656e76; }
-[data-theme="brown"]  { --dim: #90877e; --line: #706b64; }
+/* Rack-only themes, rebuilt from the REAL hardware (the MVP's style.css is left
+   alone). The hero colour of each theme was sampled from M-VAVE's own product
+   photos of the FM-1 colourways, with the white studio background masked out:
+     purple  fm-1-purple    #bb91ce lavender body
+     black   fm-1-blackgreen #1e1e1e charcoal shell, white legends
+     grey    fm-1-coolgray  #ded4cc warm light grey body
+     orange  fm-1-orange    #bd6e4c terracotta body
+     green   fm-1-blackgreen #8cd8cd mint key pads
+     blue    fm-1-whiteblue #577694 slate blue body
+     brown   (no FM-1 brown colourway exists; muted brown, kept close to the rest)
+   Everything else is derived from that hero: --bg/--panel/--panel2 are mixes
+   toward black, and accents/legends are lifted until they clear 4.5:1 against
+   the surface they sit on and dividers clear 3:1. */
+[data-theme="purple"] { --bg: #151017; --panel: #221a25; --panel2: #382c3e; --line: #75607e; --fg: #faf6fb; --dim: #937d9d; --accent: #bc92ce; --accent2: #d5bbe1; }
+[data-theme="black"]  { --bg: #030303; --panel: #050505; --panel2: #090909; --line: #5c5c5c; --fg: #ededed; --dim: #777777; --accent: #f0eef2; --accent2: #f6f4f7; }
+[data-theme="grey"]   { --bg: #181716; --panel: #282625; --panel2: #43403d; --line: #7b7671; --fg: #fcfcfb; --dim: #928c87; --accent: #ded4cd; --accent2: #ebe4e0; }
+[data-theme="orange"] { --bg: #150c08; --panel: #22140e; --panel2: #392117; --line: #805c4c; --fg: #faf3f1; --dim: #9d7867; --accent: #be6f4e; --accent2: #d7a691; }
+[data-theme="green"]  { --bg: #0f1817; --panel: #192725; --panel2: #2a413e; --line: #4f7872; --fg: #f6fcfb; --dim: #66948e; --accent: #8dd8ce; --accent2: #b8e7e1; }
+[data-theme="blue"]   { --bg: #0a0d10; --panel: #10151b; --panel2: #1a232c; --line: #576572; --fg: #f2f4f6; --dim: #72818e; --accent: #64819d; --accent2: #9fb1c2; }
+[data-theme="brown"]  { --bg: #130e09; --panel: #20160f; --panel2: #352619; --line: #79614c; --fg: #f9f5f1; --dim: #957c68; --accent: #b17e54; --accent2: #cfaf95; }
 
 .layout { display: block; }
 .module { display: flex; flex-direction: column; }
