@@ -113,7 +113,7 @@ body { padding: 12px; }
 .toggle.on { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
 
 /* ---- transport: Play is the primary action, utilities are secondary ---- */
-.transport { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 8px; }
+.transport { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0 0 8px; }
 .transport button {
   font: inherit; font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
   color: var(--dim); background: var(--panel2); border: 1px solid var(--line);
@@ -163,8 +163,13 @@ body { padding: 12px; }
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
     gap: 11px;
-    align-items: start;
+    align-items: stretch;   /* both panels end on the same line */
   }
+  /* the display follows the module's height instead of driving it: let the step
+     grid absorb the slack so the panel never overshoots or leaves a void */
+  .display { display: flex; flex-direction: column; }
+  .display .steps { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr; }
+  .display .steps .cell { aspect-ratio: auto; }
   .display { margin-top: 0; }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
