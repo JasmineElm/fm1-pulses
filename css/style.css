@@ -167,6 +167,8 @@ footer {
 .swatch.active { border-color: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
 
 .hint { color: var(--fg); opacity: .6; font-size: 11px; }
+a.guide { color: var(--dim); text-decoration: none; font-size: 12px; }
+a.guide:hover { color: var(--accent); }
 
 @media (max-width: 640px) {
   .ctl { grid-template-columns: 74px 1fr 54px 38px; gap: 6px; }
