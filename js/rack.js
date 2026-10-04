@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=20";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=20";
-import * as midi from "./midi.js?v=20";
-import * as audio from "./audio.js?v=20";
-import { knob, toggle } from "./knob.js?v=20";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=21";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=21";
+import * as midi from "./midi.js?v=21";
+import * as audio from "./audio.js?v=21";
+import { knob, toggle } from "./knob.js?v=21";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -381,28 +381,46 @@ function num(label, value, onInput) {
 function R(key, el) { refs[key] = el; return el; }
 const setState = (key, fn) => (v) => { state[key] = fn ? fn(v) : v; scheduleRegen(); };
 
-function buildRack() {
-  const panel = document.getElementById("panel");
+// ---- the rack: rhythm down the left, globals in the middle, notes down the right ----
+function column(id) { return document.getElementById(id); }
 
-  panel.append(cluster("Clock",
+function buildRack() {
+  const L = column("colL"), C = column("colC"), Rr = column("colR"), B = column("band");
+
+  // LEFT — the clock and the rhythm it drives
+  L.append(cluster("Clock",
     R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "lg",
       format: (v) => `${Math.round(v)}`, onInput: setState("tempo") })),
     R("swing", knob({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing, size: "sm",
       format: (v) => `${Math.round(v)}%`, onInput: setState("swing") })),
-    R("rate", sel("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, setState("rate", Number))),
+  ));
+  L.append(cluster("Rhythm",
+    R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "md",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
+    R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
+    R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: setState("snapGrid") })),
     R("gate", knob({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate, size: "sm",
       format: (v) => `${Math.round(v)}%`, onInput: setState("gate") })),
-    R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refs.loop?.setRange(2, Math.max(2, Math.floor(v / 2))); scheduleRegen(); } })),
   ));
 
-  panel.append(cluster("Bank",
+  // CENTER — everything global: the bank, the phrase, the output
+  C.append(cluster("Bank",
     R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
       format: (v) => `${Math.round(v)}%`, onInput: setState("drift") })),
     R("seed", num("Seed", state.seed, (v) => { state.seed = v | 0; scheduleRegen(); })),
   ));
+  C.append(cluster("Pattern",
+    R("rate", sel("Note", RATE_NAMES.map((t, v) => ({ v, t })), state.rate, setState("rate", Number))),
+    R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refs.loop?.setRange(2, Math.max(2, Math.floor(v / 2))); scheduleRegen(); } })),
+    R("quantSteps", knob({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps, size: "sm",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps") })),
+  ));
 
-  panel.append(cluster("Pitch",
+  // RIGHT — pitch and scale
+  Rr.append(cluster("Pitch",
     R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: w })), state.lfoWave, setState("lfoWave"))),
     R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
       format: (v) => `${v}`, onInput: setState("lfoRate") })),
@@ -412,25 +430,14 @@ function buildRack() {
       format: (v) => `${Math.round(v)}`, onInput: setState("lfoOffset") })),
     R("unipolar", toggle({ label: "Unipolar", value: state.unipolar, onInput: setState("unipolar") })),
   ));
-
-  panel.append(cluster("Scale",
+  Rr.append(cluster("Scale",
     R("scale", sel("Scale", Object.keys(SCALES).map((s) => ({ v: s, t: s })), state.scale, setState("scale"))),
     R("root", knob({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root, size: "md",
       format: (v) => midiName(v), onInput: setState("root") })),
-    R("quantSteps", knob({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps") })),
   ));
 
-  panel.append(cluster("Rhythm",
-    R("gateProb", knob({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gateProb") })),
-    R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
-    R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: setState("snapGrid") })),
-  ));
-
-  panel.append(cluster("Character",
+  // BAND — shaping, applied on top of everything above
+  B.append(cluster("Character",
     R("spread", sel("Spread", ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), state.spread, setState("spread"))),
     R("bias", knob({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias, size: "md",
       format: (v) => `${Math.round(v)}`, onInput: setState("bias") })),
@@ -438,16 +445,12 @@ function buildRack() {
       format: (v) => `${Math.round(v)}%`, onInput: setState("humanize") })),
     R("velocity", knob({ label: "Velocity", min: 1, max: 127, value: state.velocity, def: DEFAULT.velocity, size: "sm",
       format: (v) => `${Math.round(v)}`, onInput: setState("velocity") })),
-  ));
-
-  panel.append(cluster("Sparkle",
     R("octave", knob({ label: "Octave up", min: 0, max: 100, value: state.octave, def: DEFAULT.octave, size: "sm",
       format: (v) => `${Math.round(v)}%`, onInput: setState("octave") })),
     R("gravity", knob({ label: "Root grav", min: 0, max: 100, value: state.gravity, def: DEFAULT.gravity, size: "sm",
       format: (v) => `${Math.round(v)}%`, onInput: setState("gravity") })),
   ));
-
-  panel.append(cluster("Memory",
+  B.append(cluster("Memory",
     R("loop", knob({ label: "Loop", min: 2, max: Math.max(2, Math.floor(state.length / 2)), step: 1, value: state.loop, def: DEFAULT.loop, size: "md",
       format: (v) => `${Math.round(v)}`, onInput: setState("loop") })),
     R("dejaVu", knob({ label: "Deja Vu", min: 0, max: 100, value: state.dejaVu, def: DEFAULT.dejaVu, size: "md",

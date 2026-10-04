@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — rack</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=20">
-<link rel="stylesheet" href="css/rack.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=21">
+<link rel="stylesheet" href="css/rack.css?v=21">
 </head>
 <body>
 <div class="case">
@@ -18,7 +18,12 @@
     <span id="status" class="status">loading…</span>
   </div>
 
-  <div id="panel" class="panel"></div>
+  <div class="rack">
+    <div class="col" id="colL"></div>
+    <div class="col" id="colC"></div>
+    <div class="col" id="colR"></div>
+  </div>
+  <div class="band" id="band"></div>
 
   <div class="transport">
     <button id="gen" class="primary" title="Derive a fresh bank from a new seed (G)">Generate</button>
@@ -47,6 +52,6 @@
     </div>
   </div>
 </div>
-<script type="module" src="js/rack.js?v=20"></script>
+<script type="module" src="js/rack.js?v=21"></script>
 </body>
 </html>
