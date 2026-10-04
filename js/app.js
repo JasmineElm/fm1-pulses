@@ -44,26 +44,6 @@ let bank = [];          // 16 patterns
 let selected = 0;       // 0..15
 let busy = false;
 
-// The LFO rate means "one cycle every N steps". Spell that out musically - the
-// cycle length in bars and how many cycles the sequence runs - so it reads as a
-// duration instead of a cryptic "/16".
-function lfoRateLabel(n) {
-  if (state.lfoWave === "random") return `every ${n} step${n === 1 ? "" : "s"}`;
-  const q = RATE_QUARTERS[state.rate] ?? RATE_QUARTERS[6];
-  const stepsPerBar = 4 / q;                 // steps in one 4/4 bar at this note value
-  const bars = n / stepsPerBar;
-  const cycles = (state.length || 64) / n;
-  const bar = bars >= 1
-    ? `${+bars.toFixed(2)} bar${bars === 1 ? "" : "s"}`
-    : (() => { const inv = 1 / bars; return Math.abs(inv - Math.round(inv)) < 0.05 ? `1/${Math.round(inv)} bar` : `${+bars.toFixed(3)} bar`; })();
-  const cyc = cycles % 1 === 0 ? cycles : +cycles.toFixed(1);
-  return `/${n} · ${n} step${n === 1 ? "" : "s"} · ${bar} · ${cyc} cycle${cyc === 1 ? "" : "s"}`;
-}
-
-function refreshLfoRate() {
-  refs.lfoRate?.sync();
-}
-
 // --------------------------------------------------------------------------- //
 // Controls
 // --------------------------------------------------------------------------- //
@@ -89,10 +69,9 @@ const CONTROLS = [
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
-    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 1, wide: true,
+    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 1,
       magnets: LFO_RATE_STEPS,
-      readout: (v) => lfoRateLabel(v),
-      help: "Deterministic waves: one cycle every N steps (the label shows that in bars and cycles). Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes. The tick marks are the classic powers of two." },
+      help: "Deterministic waves: one cycle every N steps. Random wave: a new value is drawn every N steps. Slower = longer arcs / sparser changes. The tick marks are the classic powers of two." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
@@ -134,7 +113,6 @@ function buildControls() {
     const grid = document.createElement("div"); grid.className = "grid";
     for (const it of sec.items) {
       const row = document.createElement("label"); row.className = "ctl";
-      if (it.wide) row.classList.add("wide");
       if (it.help) row.title = it.help;
       const name = document.createElement("span"); name.textContent = it.label;
       if (it.help) name.title = it.help;
@@ -179,7 +157,6 @@ function buildControls() {
         state[it.k] = v;
         if (box) box.value = String(v);
         if (out) out.textContent = label(v);
-        if (it.k === "rate" || it.k === "length" || it.k === "lfoWave") refreshLfoRate();
         if (it.k === "root") { refs.lfoAmp?.sync(); refs.lfoOffset?.sync(); }
         if (it.k === "lfoOffset") refs.lfoAmp?.sync();
       };
@@ -633,7 +610,6 @@ function buildFooter() {
 
 buildTheme();
 buildControls();
-refreshLfoRate();
 buildEditor();
 buildFooter();
 doGenerate(true);
