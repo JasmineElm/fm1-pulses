@@ -151,7 +151,7 @@ export function generate(params, prevSteps = null) {
   // phase math needs. Whole cycles repeat on the phrase, fractional ones drift.
   // A periodic wave degenerates when sampled at 1-2 phases (a sine at div 2 reads
   // phase 0 and 1/2, both 0); the random source is fine at div 1.
-  const cycles = Math.max(0.1, Math.min(8, params.lfoRate || 4));
+  const cycles = Math.max(0.1, Math.min(16, params.lfoRate || 4));
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
@@ -264,7 +264,7 @@ export function generateBank(base, driftPct = 50) {
       lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
-      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 8),
+      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 16),
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
       octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast

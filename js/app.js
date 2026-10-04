@@ -1,8 +1,8 @@
 // app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=16";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=16";
-import * as midi from "./midi.js?v=16";
-import * as audio from "./audio.js?v=16";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=17";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=17";
+import * as midi from "./midi.js?v=17";
+import * as audio from "./audio.js?v=17";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
@@ -70,7 +70,7 @@ const CONTROLS = [
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
-    { k: "lfoRate", t: "range", label: "LFO cycles", min: 1, max: 8, step: 0.5,
+    { k: "lfoRate", t: "range", label: "LFO cycles", min: 1, max: 16, step: 0.5,
       help: "How many LFO cycles fit across the pattern (higher = faster). Whole numbers land exactly on the phrase and repeat; fractional values drift, so every pass differs. Random wave: a new value every (pattern length ÷ cycles) steps." },
     { k: "octave", t: "range", label: "Octave up", min: 0, max: 100, suffix: "%",
       help: "Chance a note jumps up one octave. Since the jump is 12 semitones it keeps the same scale degree, so it never breaks the key. 0% = never. The jump is in the note, so the FM-1 plays it too." },
