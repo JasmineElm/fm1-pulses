@@ -126,7 +126,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 /**
  * generate(params, prevSteps) -> pattern fields + steps.
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
- *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(div),
+ *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
  *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
  *         humanize(0-100)
  */
@@ -142,7 +142,12 @@ export function generate(params, prevSteps = null) {
   const wave = params.lfoWave || "sine";
   const isRandom = wave === "random";
   const lfo = isRandom ? null : lfoFactory(wave, rng);
-  const div = Math.max(1, params.lfoRate || 4);
+  // lfoRate is CYCLES ACROSS THE PATTERN; `div` (steps per cycle) is what the
+  // phase math needs. Whole cycles repeat on the phrase, fractional ones drift.
+  // A periodic wave degenerates when sampled at 1-2 phases (a sine at div 2 reads
+  // phase 0 and 1/2, both 0); the random source is fine at div 1.
+  const cycles = Math.max(0.1, params.lfoRate || 16);
+  const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
   const dejaVu = (params.dejaVu ?? 0) / 100;

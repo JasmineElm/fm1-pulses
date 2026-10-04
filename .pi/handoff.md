@@ -40,11 +40,14 @@ selected slot and morph it in real time).
 - [x] **Freeze → FM-1** (selected) / **Send all 16**
 - [x] **7 themes** = the FM-1's own (decoded from its firmware)
 - [x] Tooltips on every control + typeable number boxes
-- [x] **LFO rate is a continuous slider** (1–64, 0.5 step, no snapping). Fractional
-      and non-dividing rates are the point: rate 4 gives 1/4 distinct bars (it repeats),
-      rate 4.5 gives 4/4 distinct bars, i.e. the phrase never lands the same way twice.
-      The random source uses a floor-based draw interval so fractional rates work there
-      too. (The old duration readout was dropped.)
+- [x] **LFO rate is "LFO cycles": cycles across the pattern** (1–24, 0.5 step,
+      continuous, no snapping). Flipped from steps-per-cycle because the inverse is
+      counter-intuitive without the formula. `div = len / cycles`; periodic waves are
+      floored at div 2.5 so a sine can't collapse (it degenerates at div 1 and 2 —
+      phase 0 and ½ both read 0). Whole cycles that are multiples of the bar count
+      repeat; fractional ones drift: 16 cycles = old default (repeats every 4 steps),
+      16.5 = 4/4 distinct bars, 26 pitches. Random wave uses a floor-based draw so
+      fractional cycles work. Default `lfoRate` is 16 (= the old 4 steps/cycle sound).
 - [x] **`random` wave** — a Marbles-style stochastic source. It draws a fresh value
       every LFO-rate steps and holds it; `spread` picks the distribution
       (uniform / bell / extremes / constant) and `bias` is a real monotonic skew.

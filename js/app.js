@@ -35,7 +35,7 @@ const DEFAULT = {
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, humanize: 0,
   scale: "pentMinor", root: 60,
-  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 4,
+  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
 };
 const state = { ...DEFAULT };
@@ -68,8 +68,8 @@ const CONTROLS = [
       magnets: OFF_MAGNETS,
       readout: (v) => midiName(state.root + offSemi(v)),
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
-    { k: "lfoRate", t: "range", label: "LFO rate", min: 1, max: 64, step: 0.5,
-      help: "Steps per LFO cycle. Continuous, and fractional values are the point: an integer that divides the pattern repeats, a fractional or odd rate drifts, so every bar lands somewhere new. Random wave: a new value is drawn every N steps." },
+    { k: "lfoRate", t: "range", label: "LFO cycles", min: 1, max: 24, step: 0.5,
+      help: "How many LFO cycles fit across the pattern (higher = faster). Whole numbers land exactly on the phrase and repeat; fractional values drift, so every pass differs. Random wave: a new value every (pattern length ÷ cycles) steps." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",
