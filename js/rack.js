@@ -179,7 +179,7 @@ async function doFreeze(slotIndex) {
   if (!bank[slotIndex]) return;
   syncHeader();
   try {
-    status(`freezing slot ${slotIndex + 1}…`);
+    status(`freezing slot ${slotIndex + 1} · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
     const name = await midi.sendPattern(encodeWrite(bank[slotIndex], slotIndex, true), `slot ${slotIndex + 1}`);
     status(`slot ${slotIndex + 1} frozen ✓ ${Math.round(state.tempo)} bpm ${RATE_NAMES[state.rate]} (${name})`, "ok");
   } catch (e) { status(String(e.message || e), "err"); }
