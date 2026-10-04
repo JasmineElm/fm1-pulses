@@ -15,6 +15,8 @@ const A0 = -SWEEP / 2;
 const A1 = SWEEP / 2;
 const SIZES = { lg: 62, md: 50, sm: 40 };
 
+let knobSeq = 0;
+
 export function knob({ label, min, max, step = 1, value = 0, def, size = "md", format, onInput }) {
   const px = SIZES[size] || SIZES.md;
   const el = document.createElement("div");
@@ -57,10 +59,28 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
     }
   }
 
-  // the pot itself: solid cap + pointer, no progress arc
+  // a domed cap: radial gradient from a top-left highlight down to a shaded rim,
+  // plus a small drop shadow, so the pot looks like a physical object
+  const uid = "cap" + (knobSeq++);
+  const defs = document.createElementNS(NS, "defs");
+  const grad = document.createElementNS(NS, "radialGradient");
+  grad.setAttribute("id", uid);
+  grad.setAttribute("cx", "34%"); grad.setAttribute("cy", "27%"); grad.setAttribute("r", "80%");
+  const hs = document.createElementNS(NS, "stop");
+  hs.setAttribute("offset", "0%"); hs.style.stopColor = "rgba(255,255,255,.22)";
+  const ms = document.createElementNS(NS, "stop");
+  ms.setAttribute("offset", "52%"); ms.style.stopColor = "var(--panel2)";
+  const ls = document.createElementNS(NS, "stop");
+  ls.setAttribute("offset", "100%"); ls.style.stopColor = "rgba(0,0,0,.5)";
+  grad.append(hs, ms, ls);
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  // the pot itself: solid domed cap + pointer, no progress arc
   const cap = document.createElementNS(NS, "circle");
   cap.setAttribute("cx", 50); cap.setAttribute("cy", 50); cap.setAttribute("r", 26);
   cap.setAttribute("class", "k-cap");
+  cap.setAttribute("fill", `url(#${uid})`);
   const ptr = document.createElementNS(NS, "line");
   ptr.setAttribute("class", "k-ptr");
   svg.append(cap, ptr);
