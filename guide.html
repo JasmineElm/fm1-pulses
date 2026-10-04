@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — guide</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=10">
 <style>
   main.guide { max-width: 760px; }
   .intro { color: var(--dim); max-width: 60ch; }
@@ -14,7 +14,6 @@
   .param h3 { margin: 0 0 4px; font-size: 13px; }
   .param h3 .rng { color: var(--accent); font-weight: 500; font-size: 11px; margin-left: 8px; }
   .param p { margin: 0; color: var(--fg); opacity: .85; font-size: 13px; }
-  .param .try { color: var(--accent2); margin-top: 6px; font-size: 12px; }
   a.back { color: var(--dim); text-decoration: none; font-size: 12px; }
   a.back:hover { color: var(--accent); }
   .note { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 12px 0; background: var(--panel); font-size: 13px; }
@@ -29,21 +28,19 @@
 
 <main class="guide">
   <p class="intro">
-    Everything on this page is one control from the app, one line for what it does,
-    one thing to try. The whole tool is: shape the settings, generate a bank of 16
-    patterns, freeze the good ones into the FM-1's own sequencer.
+    Everything on this page is one control from the app and one line for what it
+    does. The whole tool is: shape the settings, generate a bank of 16 patterns,
+    freeze the good ones into the FM-1's own sequencer.
   </p>
 
   <h2>Bank</h2>
   <div class="param">
     <h3>Seed <span class="rng">number</span></h3>
     <p>One number, everything derives from it. Same seed plus same settings gives the same bank. Change it and the whole bank changes.</p>
-    <p class="try">Try: remember a seed you liked so you can come back to it.</p>
   </div>
   <div class="param">
     <h3>Drift <span class="rng">0–100%</span></h3>
     <p>How much the 16 slots differ from each other. 0% means they share the same settings and differ only by luck. 100% means slot 1 and slot 16 are far apart.</p>
-    <p class="try">Try: keep it near 30% for a bank that feels like one idea evolving.</p>
   </div>
 
   <h2>Pitch</h2>
@@ -54,42 +51,34 @@
   <div class="param">
     <h3>Root <span class="rng">24–84, as a note</span></h3>
     <p>The tonic the scale is built on. This is the key, not where the melody sits.</p>
-    <p class="try">Try: root C plus a minor scale, then use Offset to move the range.</p>
   </div>
   <div class="param">
     <h3>LFO wave</h3>
     <p>What makes the pitch move. <code>sine</code>, <code>triangle</code>, <code>saw</code> and <code>square</code> are fixed contours. <code>random</code> draws a fresh value from the Spread distribution. The other three are older random shapes.</p>
-    <p class="try">Try: random is where Spread and Bias actually do their job.</p>
   </div>
   <div class="param">
     <h3>Amplitude <span class="rng">0–100%</span></h3>
     <p>How far notes reach above and below the Offset note. 0% is one note. 100% is ±18 semitones.</p>
-    <p class="try">Try: set Offset first, then open Amplitude until the range feels right.</p>
   </div>
   <div class="param">
     <h3>Unipolar <span class="rng">checkbox</span></h3>
     <p>Off, notes spread both ways around the Offset note. On, the Offset note becomes the floor and notes only rise from it.</p>
-    <p class="try">Try: unipolar with a high Amplitude turns a wandering line into one that always moves upward.</p>
   </div>
   <div class="param">
     <h3>Offset <span class="rng">−100 to +100%</span></h3>
     <p>The centre of the pitch range. Amplitude spreads evenly around this note. This is where the melody lives.</p>
-    <p class="try">Try: leave Root on C, move Offset up an octave, hear the same idea climb.</p>
   </div>
   <div class="param">
     <h3>LFO cycles <span class="rng">1–24</span></h3>
     <p>How many times the pitch contour repeats across the phrase. Whole numbers repeat predictably. Fractional values like 16.5 drift, so each pass lands somewhere new.</p>
-    <p class="try">Try: 16.5 instead of 16. Same speed, but it never repeats.</p>
   </div>
   <div class="param">
     <h3>Octave up <span class="rng">0–100%</span></h3>
     <p>Chance a note jumps up one octave. The jump is 12 semitones, which is the same scale degree, so it stays in key. The jump is written into the note, so the FM-1 plays it too.</p>
-    <p class="try">Try: 25% with Amplitude 0 for an octave pulse on a single note.</p>
   </div>
   <div class="param">
     <h3>Root gravity <span class="rng">0–100%</span></h3>
     <p>Chance a note is pulled to the nearest root note. It keeps its register, so the melody gets grounded instead of flattened onto a single pitch.</p>
-    <p class="try">Try: 40–60% when the random wave is throwing notes around and you want it to settle down.</p>
   </div>
 
   <h2>Density</h2>
@@ -114,7 +103,6 @@
   <div class="param">
     <h3>Bias <span class="rng">−100 to +100</span></h3>
     <p>Tilts the distribution low (−) or high (+) without changing the range. Not a pitch shift, a likelihood shift.</p>
-    <p class="try">Try: +100 with a high Amplitude and the random wave. The melody hugs the top.</p>
   </div>
   <div class="param">
     <h3>Quantize <span class="rng">0–100%</span></h3>
