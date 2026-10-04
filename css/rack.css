@@ -96,8 +96,8 @@ body { padding: 12px; }
 
 .cluster {
   border: 1px solid var(--line); border-radius: 3px;
-  background-color: rgba(0, 0, 0, .16);
-  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 -1px 0 rgba(0,0,0,.3) inset;
+  background-color: rgba(0, 0, 0, .08);
+  box-shadow: 0 1px 0 rgba(255,255,255,.10) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
   padding: 6px 7px 8px;
 }
 .cluster > h3 {

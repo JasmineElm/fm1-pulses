@@ -110,6 +110,44 @@ selected slot and morph it in real time).
 - [ ] **Run the ladder on the phone (Chrome, FM-1 paired to the phone).**
       Hardware is the last gate; nothing else stays blocked on it.
 
+## Rack UI (knob version) — 2026-10-04
+
+A second UI beside the MVP, sharing the same engine. `rack.html` + `js/rack.js`
++ `js/knob.js` + `css/rack.css`. `app.js` and `style.css` are untouched.
+
+- **One panel, not a rack.** Portrait case: transport on top, then a three-column
+  Marbles-style split (rhythm left, globals centre, notes right), a full-width
+  band, the theme strip, then the pattern display inside the same case.
+  Landscape (`@media (min-aspect-ratio: 1/1)`) splits module / display.
+- **Controls** are `knob()` (tick ring, domed cap, drag/wheel/keys) and `sw()`
+  (encoder switch with a **fixed-width, fixed-height, wrapping** value so a long
+  option name can never resize the box or shove the neighbour). Wave names use
+  short panel legends (`randomWalk` → `walk`), full name in the tooltip.
+- **THE PANEL IS THE CASE COLOUR.** This was the big fix. Painting every surface
+  near-black with a small accent measured **79% near-black / 19% coloured** on
+  screen and read as dull; the FM-1 is a *coloured case with dark knobs and a
+  dark screen*, so `--panel` is the case colour, the knobs are dark, and
+  `.display` carries its **own local dark palette** so steps stay a dark TFT.
+  After: 32% near-black / 66% coloured.
+- **Ink is chosen per theme by comparing dark vs light**, not by a lightness
+  guess — orange needs dark ink (5.4:1) where light ink only got 3.6:1.
+- **Themes are calibrated off real hardware**, not invented. Colourway case/key
+  pairs came from M-VAVE product photos, then five were re-derived by **k-means
+  clustering the user's own close-up photos into 4 colours** and reading the two
+  dominant non-shadow clusters as case and keys (the shadow falls out as its own
+  cluster, which is what fixed purple's secondary). Tools:
+  `~/fm1-colours.py` (k-means palettes) and `~/fm1-calib.py` (single photo →
+  proposed theme line + contrast checks). **`black` and `grey` are still
+  product-shot estimates** — both are near-neutral, so a close-up gives two
+  greys clustering can't separate from shadow.
+- **Contrast is enforced numerically**: legends 4.5:1 on the panel, dividers 3:1,
+  accent 4.5:1 against the dark screen.
+- Verification habit: `thum.io` never executes module JS and `microlink` races
+  it (pin with `waitFor=#steps .cell`); the DeepSeek vision model **downscales
+  the screenshot** so it cannot see 1px grain, 4px screws or 2px shadows and
+  will say "no texture, no screws". Verify geometry and colour with PIL against
+  the pixels, not with the model's eye.
+
 ## Key device facts (hard-won — do not re-learn)
 
 - **Pattern write** (FM-1+VA / baud girl firmware only): SysEx `0x20`, 8 steps per
