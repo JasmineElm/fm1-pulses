@@ -35,7 +35,7 @@ const DEFAULT = {
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, humanize: 0,
   scale: "pentMinor", root: 60,
-  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16,
+  lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 16, octave: 0,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0,
 };
 const state = { ...DEFAULT };
@@ -70,6 +70,8 @@ const CONTROLS = [
       help: "The centre (median) of the pitch range. Amplitude spreads notes evenly above and below this note. Snaps to intervals from the root." },
     { k: "lfoRate", t: "range", label: "LFO cycles", min: 1, max: 24, step: 0.5,
       help: "How many LFO cycles fit across the pattern (higher = faster). Whole numbers land exactly on the phrase and repeat; fractional values drift, so every pass differs. Random wave: a new value every (pattern length ÷ cycles) steps." },
+    { k: "octave", t: "range", label: "Octave up", min: 0, max: 100, suffix: "%",
+      help: "Chance a note jumps up one octave. Since the jump is 12 semitones it keeps the same scale degree, so it never breaks the key. 0% = never. The jump is in the note, so the FM-1 plays it too." },
   ] },
   { sec: "Density", items: [
     { k: "gateProb", t: "range", label: "Gate", min: 0, max: 100, suffix: "%",

@@ -128,11 +128,12 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * params: seed, length(64), rate, tempo, swing, gate(header), gateProb,
  *         scale, root, lfoWave, lfoAmp(0-100), lfoOffset(-100..100), lfoRate(cycles/pattern),
  *         spread, bias(-100..100), quantSteps(0-100), dejaVu(0-100), velocity,
- *         humanize(0-100)
+ *         humanize(0-100), octave(0-100)
  */
 export function generate(params, prevSteps = null) {
   const rng = mulberry32(params.seed >>> 0);
   const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
+  const octRng = mulberry32((params.seed ^ 0x85ebca6b) >>> 0);  // separate stream: octave jumps must not shift pitch draws
   const scale = SCALES[params.scale] || SCALES.pentMinor;
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
@@ -154,6 +155,7 @@ export function generate(params, prevSteps = null) {
   const quantStrength = (params.quantSteps ?? 100) / 100;
   const fixedVel = params.velocity;
   const hum = (params.humanize ?? 0) / 100 * 40;   // velocity deviation, +/- 40 max
+  const octChance = (params.octave ?? 0) / 100;    // chance a note jumps up one octave
 
   const steps = [];
   for (let i = 0; i < 64; i++) {
@@ -184,6 +186,9 @@ export function generate(params, prevSteps = null) {
     // clamp the NOTE, not the LFO position, so offset shifts the range without
     // collapsing the swing (it only pins once the note hits the MIDI limits)
     let note = quantize(clamp(raw, 0, 127), scale, params.root, quantStrength, rng);
+    // Octave up: +12 keeps the same scale degree, so the note stays in key. Skipped
+    // when it would leave the MIDI range, rather than pinning to 127.
+    if (octChance && octRng() < octChance && note + 12 <= 127) note += 12;
 
     const vel = fixedVel === "random" || fixedVel == null
       ? 20 + Math.floor(rng() * 107)
@@ -217,6 +222,7 @@ export function generateBank(base, driftPct = 50) {
     lfoRate: r() < 0.5 ? -1 : 1,
     spread: r() < 0.5 ? -1 : 1,
     humanize: r() < 0.5 ? -1 : 1,
+    octave: r() < 0.5 ? -1 : 1,
   };
   const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
 
@@ -237,6 +243,7 @@ export function generateBank(base, driftPct = 50) {
       lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 64),
       spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
       humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
+      octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
     };
     bank.push(generate(p, i > 0 ? bank[i - 1].steps : null));
   }
