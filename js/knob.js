@@ -186,8 +186,9 @@ export function sw({ label, options, value, onInput }) {
 
   let idx = Math.max(0, options.findIndex((o) => String(o.v) === String(value)));
   const paint = () => {
-    val.textContent = options[idx]?.t ?? "";
-    el.title = `${label}: ${options[idx]?.t ?? ""}`;
+    const o = options[idx];
+    val.textContent = o?.t ?? "";
+    el.title = `${label}: ${o?.title ?? o?.t ?? ""}`;
   };
   const move = (d) => {
     idx = (idx + d + options.length) % options.length;

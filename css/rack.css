@@ -121,12 +121,12 @@ body { padding: 12px; }
 .sw-body:focus-within { border-color: var(--accent); }
 .sw-arrow {
   font: inherit; font-size: 11px; line-height: 1; color: var(--dim); background: none;
-  border: 0; padding: 5px 4px 6px; cursor: pointer;
+  border: 0; padding: 5px 3px 6px; cursor: pointer;
 }
 .sw-arrow:hover { color: var(--fg); }
 .sw-val {
-  font-size: 9.5px; color: var(--fg); padding: 5px 2px 6px;
-  width: 76px; text-align: center; font-variant-numeric: tabular-nums;
+  font-size: 9.5px; color: var(--fg); padding: 5px 1px 6px;
+  width: 84px; text-align: center; font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

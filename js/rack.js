@@ -1,11 +1,11 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=43";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=43";
-import * as midi from "./midi.js?v=43";
-import * as audio from "./audio.js?v=43";
-import { knob, sw, toggle } from "./knob.js?v=43";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=44";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=44";
+import * as midi from "./midi.js?v=44";
+import * as audio from "./audio.js?v=44";
+import { knob, sw, toggle } from "./knob.js?v=44";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -353,6 +353,13 @@ function cluster(title, ...kids) {
   return c;
 }
 
+// Short panel legends for the LFO waves: a real panel would not print
+// "smoothRandom" on a 6mm switch. The full name stays in the tooltip.
+const WAVE_SHORT = {
+  sine: "sine", triangle: "tri", saw: "saw", square: "sqr",
+  random: "random", randomWalk: "walk", smoothRandom: "smooth", sampleHold: "hold",
+};
+
 // panel switch (encoder-style) instead of a native <select>
 function sel(label, opts, value, onInput) { return sw({ label, options: opts, value, onInput }); }
 
@@ -411,7 +418,7 @@ function buildRack() {
 
   // RIGHT — pitch and scale
   Rr.append(cluster("Pitch",
-    R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: w })), state.lfoWave, setState("lfoWave"))),
+    R("lfoWave", sel("Wave", LFO_WAVES.map((w) => ({ v: w, t: WAVE_SHORT[w] ?? w, title: w })), state.lfoWave, setState("lfoWave"))),
     R("lfoRate", knob({ label: "Cycles", min: 1, max: 16, step: 0.5, value: state.lfoRate, def: DEFAULT.lfoRate, size: "md",
       format: (v) => `${v}`, onInput: setState("lfoRate") })),
     R("lfoAmp", knob({ label: "Amp", min: 0, max: 100, value: state.lfoAmp, def: DEFAULT.lfoAmp, size: "md",
