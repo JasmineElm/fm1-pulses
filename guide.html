@@ -6,160 +6,194 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — guide</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=19">
+<link rel="stylesheet" href="css/style.css?v=64">
+<link rel="stylesheet" href="css/rack.css?v=64">
 <style>
-  main.guide { max-width: 760px; }
-  .intro { color: var(--dim); max-width: 60ch; }
-  .param { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 14px; margin: 8px 0; }
-  .param h3 { margin: 0 0 4px; font-size: 13px; }
-  .param h3 .rng { color: var(--accent); font-weight: 500; font-size: 11px; margin-left: 8px; }
-  .param p { margin: 0; color: var(--fg); opacity: .85; font-size: 13px; }
-  a.back { color: var(--dim); text-decoration: none; font-size: 12px; }
-  a.back:hover { color: var(--accent); }
-  .note { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 12px 0; background: var(--panel); font-size: 13px; }
+  body { padding: 12px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .top {
+    display: flex; align-items: baseline; gap: 10px; padding: 0 2px 8px;
+    border-bottom: 1px solid var(--line); margin-bottom: 12px;
+  }
+  .top h1 { font-size: 18px; margin: 0; letter-spacing: 3.6px; font-weight: 700; color: var(--fg); }
+  .top h1 b { color: var(--accent); }
+  .top .sub { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-left: auto; }
+  .intro { color: var(--dim); max-width: 62ch; margin: 0 0 4px; }
+  h2 { font-size: 9px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--dim); font-weight: 700; margin: 18px 0 6px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .param {
+    border-radius: 3px; background-color: rgba(0,0,0,.07);
+    box-shadow: inset 0 0 0 1px var(--line);
+    padding: 8px 10px; margin: 6px 0;
+  }
+  .param h3 { margin: 0 0 3px; font-size: 12px; letter-spacing: .4px; color: var(--fg); }
+  .param h3 .rng { color: var(--dim); font-weight: 400; font-size: 10px; margin-left: 8px; }
+  .param h3 .kind { color: var(--accent); font-weight: 700; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-left: 8px; }
+  .param p { margin: 0; font-size: 12.5px; color: var(--fg); opacity: .9; }
+  .note {
+    border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 9px 12px; margin: 10px 0; font-size: 12.5px; background-color: rgba(0,0,0,.07);
+  }
+  .note p { margin: 0 0 4px; }
+  .note p:last-child { margin-bottom: 0; }
   code { color: var(--accent); }
+  a.back { color: var(--dim); text-decoration: none; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  a.back:hover { color: var(--accent); }
 </style>
 </head>
 <body>
-<header>
-  <h1>FM-1 <span>Pulses</span> <small>guide</small></h1>
-  <a class="back" href="index.html">← back to the app</a>
-</header>
+<div class="wrap">
 
-<main class="guide">
-  <p class="intro">
-    Everything on this page is one control from the app and one line for what it
-    does. The whole tool is: shape the settings, generate a bank of 16 patterns,
-    freeze the good ones into the FM-1's own sequencer.
-  </p>
+  <div class="top">
+    <h1>FM-1 <b>PULSES</b></h1>
+    <span class="sub">guide</span>
+  </div>
+  <p class="intro">Every control on the panel, what it does, and a thing to try. The shape of it: set the settings, generate a bank of 16 patterns, freeze the good ones into the FM-1's own sequencer. <a class="back" href="index.html">← back to the panel</a></p>
 
-  <h2>Bank</h2>
+  <h2>Reading the panel</h2>
   <div class="param">
-    <h3>Seed <span class="rng">number</span></h3>
-    <p>One number, everything derives from it. Same seed plus same settings gives the same bank. Change it and the whole bank changes.</p>
+    <h3>Knobs and switches</h3>
+    <p>Round knobs are continuous: drag up and down, use the wheel, or the arrow keys. Double-click resets to the default. <code>sine</code>-style switches are rotary: one detent per option, and the chosen name prints underneath.</p>
   </div>
   <div class="param">
-    <h3>Drift <span class="rng">0–100%</span></h3>
-    <p>How much the 16 slots differ from each other. 0% means they share the same settings and differ only by luck. 100% means slot 1 and slot 16 are far apart.</p>
-  </div>
-
-  <h2>Pitch</h2>
-  <div class="param">
-    <h3>Scale</h3>
-    <p>The note set the melody snaps to. Pentatonic minor is the safe default.</p>
+    <h3>Transport</h3>
+    <p><b>Generate</b> rolls a new seed and rebuilds the bank. <b>Randomize</b> rolls settings too. <b>Play</b> loops the selected slot so you can tweak it live. <b>Freeze</b> writes the selected slot, <b>Send 16</b> writes the whole bank, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme.</p>
   </div>
   <div class="param">
-    <h3>Root <span class="rng">24–84, as a note</span></h3>
-    <p>The tonic the scale is built on. This is the key, not where the melody sits.</p>
-  </div>
-  <div class="param">
-    <h3>LFO wave</h3>
-    <p>What makes the pitch move. <code>sine</code>, <code>triangle</code>, <code>saw</code> and <code>square</code> are fixed contours. <code>random</code> draws a fresh value from the Spread distribution. The other three are older random shapes.</p>
-  </div>
-  <div class="param">
-    <h3>Amplitude <span class="rng">0–100%</span></h3>
-    <p>How far notes reach above and below the Offset note. 0% is one note. 100% is ±18 semitones.</p>
-  </div>
-  <div class="param">
-    <h3>Unipolar <span class="rng">checkbox</span></h3>
-    <p>Off, notes spread both ways around the Offset note. On, the Offset note becomes the floor and notes only rise from it.</p>
-  </div>
-  <div class="param">
-    <h3>Offset <span class="rng">−100 to +100%</span></h3>
-    <p>The centre of the pitch range. Amplitude spreads evenly around this note. This is where the melody lives.</p>
-  </div>
-  <div class="param">
-    <h3>LFO cycles <span class="rng">1–16</span></h3>
-    <p>How many times the pitch contour repeats across the phrase. Whole numbers repeat predictably. Fractional values like 16.5 drift, so each pass lands somewhere new.</p>
-  </div>
-  <div class="param">
-    <h3>Octave up <span class="rng">0–100%</span></h3>
-    <p>Chance a note jumps up one octave. The jump is 12 semitones, which is the same scale degree, so it stays in key. The jump is written into the note, so the FM-1 plays it too.</p>
-  </div>
-  <div class="param">
-    <h3>Root gravity <span class="rng">0–100%</span></h3>
-    <p>Chance a note is pulled to the nearest root note. It keeps its register, so the melody gets grounded instead of flattened onto a single pitch.</p>
+    <h3>The pattern display</h3>
+    <p>The 16 slots of the bank sit above a 64-step grid, eight wide. Tap a slot to select it. Tap a step to edit it: <b>−</b> and <b>+</b> move it a semitone, <b>✕</b> empties it. Any step you touch is locked, so it survives regeneration.</p>
   </div>
 
-  <h2>Density</h2>
+  <h2>Rhythm</h2>
   <div class="param">
-    <h3>Gate <span class="rng">0–100%</span></h3>
+    <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
+    <p>Playback speed. Written into the pattern and used by the browser player.</p>
+  </div>
+  <div class="param">
+    <h3>Swing <span class="rng">50–75%</span><span class="kind">knob</span></h3>
+    <p>Delays every other step. 50% is straight, 75% is triplet (2:1). Heard in the browser and written into the pattern.</p>
+  </div>
+  <div class="param">
+    <h3>Gate <span class="rng">0–100%</span><span class="kind">knob</span></h3>
     <p>Chance each step plays a note. 0% is silence, 100% is every step. This is the rhythm.</p>
   </div>
   <div class="param">
-    <h3>Grid snap <span class="rng">0–100%</span></h3>
-    <p>Chance a note is kept only if it lands on a grid line. 0% leaves the rhythm fully random, 100% keeps only the grid lines. Notes off the grid become rests. Gate decides how many of those lines fire, so density and grid work together.</p>
+    <h3>Grid snap <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Chance a note is kept only if it lands on a grid line. Off-grid notes become rests. Gate still decides how many of those lines fire, so the two work together.</p>
   </div>
   <div class="param">
-    <h3>Snap grid <span class="rng">2–8 steps</span></h3>
-    <p>Spacing of the grid lines, in steps. 4 is one beat at 1/16, which gives quarter notes. 2 gives eighth notes. Odd values like 3 and 5 do not divide the bar, so they land lopsided and drift across the phrase.</p>
+    <h3>Snap grid <span class="rng">2–8 steps</span><span class="kind">knob</span></h3>
+    <p>Spacing of those grid lines. 4 is one beat at 1/16. Odd values like 3 and 5 do not divide the bar, so they land lopsided and drift.</p>
   </div>
   <div class="param">
-    <h3>Velocity <span class="rng">1–127</span></h3>
-    <p>Base loudness. Only the browser and live MIDI hear it; the FM-1 plays its own velocity on pattern playback.</p>
-  </div>
-  <div class="param">
-    <h3>Humanize <span class="rng">0–100%</span></h3>
-    <p>Random per-note velocity wobble, ±40 at 100%. Same caveat as Velocity.</p>
+    <h3>Gate length <span class="rng">5–100%</span><span class="kind">knob</span></h3>
+    <p>How long each note holds. Low is staccato, high is legato.</p>
   </div>
 
-  <h2>Character</h2>
+  <h2>Global</h2>
   <div class="param">
-    <h3>Spread</h3>
-    <p>The distribution the notes come from. <code>constant</code> is one pitch, <code>bell</code> weights the centre, <code>uniform</code> is flat, <code>extremes</code> only hits the two ends. Matters most with the random wave.</p>
+    <h3>Drift <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>How far the 16 slots evolve away from each other. 0% means they share the settings. 100% means slot 1 and slot 16 are far apart.</p>
   </div>
   <div class="param">
-    <h3>Bias <span class="rng">−100 to +100</span></h3>
-    <p>Tilts the distribution low (−) or high (+) without changing the range. Not a pitch shift, a likelihood shift.</p>
+    <h3>Seed <span class="kind">knob</span></h3>
+    <p>One number, everything derives from it. Same seed plus same settings gives the same bank. The knob rolls it, so you can hunt for a bank by turning.</p>
   </div>
-  <div class="param">
-    <h3>Quantize <span class="rng">0–100%</span></h3>
-    <p>How hard notes snap to the scale. 100% is always in scale. Lower lets chromatic passing notes through.</p>
-  </div>
-
-  <h2>Memory</h2>
-  <div class="param">
-    <h3>Loop <span class="rng">2–32 steps</span></h3>
-    <p>Motif length. The first N steps repeat across the phrase, filling up to Length. The slider reaches half the pattern length, and odd values are allowed, so you can loop 7 or 9 steps. If Loop is half of Length or more there is nothing to fill, so it does nothing.</p>
-  </div>
-  <div class="param">
-    <h3>Deja Vu <span class="rng">0–100%</span></h3>
-    <p>Chance a step past the motif copies the motif instead of playing its own note. 0% plays the phrase as generated, 100% repeats the motif to the end. In between, fresh notes bleed in.</p>
-  </div>
-
-  <h2>Pattern header <span style="font-weight:400;color:var(--dim)">(written into the FM-1)</span></h2>
   <div class="param">
     <h3>Note value</h3>
     <p>The length of one step, which sets the bar length. At 1/32 a 64-step phrase is 2 bars; at 1/16 it is 4 bars.</p>
   </div>
   <div class="param">
-    <h3>Tempo <span class="rng">30–300 BPM</span></h3>
-    <p>Playback speed, in the header and in the audition.</p>
-  </div>
-  <div class="param">
-    <h3>Gate length <span class="rng">5–100%</span></h3>
-    <p>How long each note holds. Low is staccato, high is legato.</p>
-  </div>
-  <div class="param">
-    <h3>Swing <span class="rng">50–75%</span></h3>
-    <p>Delays every other step. 50% is straight, 75% is triplet (2:1). Heard in the audition and written to the pattern.</p>
-  </div>
-  <div class="param">
-    <h3>Length <span class="rng">1–64 steps</span></h3>
+    <h3>Length <span class="rng">1–64 steps</span><span class="kind">knob</span></h3>
     <p>How many of the 64 steps the pattern plays.</p>
+  </div>
+  <div class="param">
+    <h3>Quantize <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>How hard notes snap to the scale. 100% is always in scale. Lower lets chromatic passing notes through.</p>
+  </div>
+  <div class="param">
+    <h3>Unipolar <span class="kind">switch</span></h3>
+    <p>Off, notes spread both ways around the Offset note. On, the Offset note becomes the floor and notes only rise from it.</p>
+  </div>
+
+  <h2>Pitch</h2>
+  <div class="param">
+    <h3>Wave <span class="kind">switch</span></h3>
+    <p>What makes the pitch move. <code>sine</code>, <code>tri</code>, <code>saw</code> and <code>sqr</code> are fixed contours. <code>random</code> draws a fresh value from the Spread distribution. <code>walk</code>, <code>smooth</code> and <code>hold</code> are the older random shapes.</p>
+  </div>
+  <div class="param">
+    <h3>Cycles <span class="rng">1–16</span><span class="kind">knob</span></h3>
+    <p>How many times the contour repeats across the phrase. Whole numbers land on the phrase and repeat; fractional values drift, so every pass differs.</p>
+  </div>
+  <div class="param">
+    <h3>Amplitude <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>How far notes reach above and below the Offset note. 0% is one note. 100% is ±18 semitones.</p>
+  </div>
+  <div class="param">
+    <h3>Offset <span class="rng">−100 to +100%</span><span class="kind">knob</span></h3>
+    <p>The centre of the pitch range. Amplitude spreads evenly around this note. This is where the melody lives.</p>
+  </div>
+  <div class="param">
+    <h3>Scale <span class="kind">switch</span></h3>
+    <p>The note set the melody snaps to. Pentatonic minor is the safe default.</p>
+  </div>
+  <div class="param">
+    <h3>Root <span class="rng">24–84, as a note</span><span class="kind">knob</span></h3>
+    <p>The tonic the scale is built on. This is the key, not where the melody sits.</p>
+  </div>
+
+  <h2>Shape</h2>
+  <div class="param">
+    <h3>Spread <span class="kind">switch</span></h3>
+    <p>The distribution notes come from. <code>constant</code> is one pitch, <code>bell</code> weights the centre, <code>uniform</code> is flat, <code>extremes</code> only hits the two ends. Bites hardest on the random wave.</p>
+  </div>
+  <div class="param">
+    <h3>Bias <span class="rng">−100 to +100</span><span class="kind">knob</span></h3>
+    <p>Tilts the distribution low or high without changing the range. Not a pitch shift, a likelihood shift.</p>
+  </div>
+  <div class="param">
+    <h3>Humanize <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Random per-note velocity wobble, ±40 at 100%. Only the browser player hears this; the FM-1 plays its own velocity.</p>
+  </div>
+  <div class="param">
+    <h3>Velocity <span class="rng">1–127</span><span class="kind">knob</span></h3>
+    <p>Base loudness for the browser player. Same caveat as Humanize.</p>
+  </div>
+  <div class="param">
+    <h3>Octave up <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Chance a note jumps up one octave. Twelve semitones is the same scale degree, so it stays in key. The jump is written into the note, so the FM-1 plays it too.</p>
+  </div>
+  <div class="param">
+    <h3>Root gravity <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Chance a note is pulled to the nearest root note. It keeps its register, so the melody gets grounded instead of flattened onto one pitch.</p>
+  </div>
+
+  <h2>Memory</h2>
+  <div class="param">
+    <h3>Loop from <span class="rng">step 1 … Length−2</span><span class="kind">knob</span></h3>
+    <p>Where the repeated region starts. Everything before it is an intro that plays once.</p>
+  </div>
+  <div class="param">
+    <h3>Loop len <span class="rng">2 … the rest of Length</span><span class="kind">knob</span></h3>
+    <p>How long that region is. Together with Loop from it tiles, say, steps 13 to 29 out to the end of the phrase.</p>
+  </div>
+  <div class="param">
+    <h3>Deja Vu <span class="rng">0–100%</span><span class="kind">knob</span></h3>
+    <p>Chance a step past the loop copies the loop instead of playing its own note. 0% plays the phrase as generated, 100% repeats the region to the end. The readout in the display shows the region and how many repeats fit.</p>
   </div>
 
   <h2>Workflow</h2>
   <div class="note">
-    <p><b>1.</b> Connect the FM-1 and pick it in the device list.</p>
-    <p><b>2.</b> Set Scale, Root, Offset, and Amplitude. Hit <b>Generate</b>.</p>
+    <p><b>1.</b> Connect the FM-1. The LED lights when it is found.</p>
+    <p><b>2.</b> Set Scale, Root, Offset and Amplitude. Hit <b>Generate</b>.</p>
     <p><b>3.</b> Tap through the 16 slots. Keep the ones you like.</p>
-    <p><b>4.</b> <b>Freeze → FM-1</b> writes one slot, <b>Send all 16</b> writes the bank.</p>
+    <p><b>4.</b> <b>Freeze</b> writes one slot, <b>Send 16</b> writes the bank.</p>
     <p><b>5.</b> Unplug it and the FM-1 plays on its own.</p>
   </div>
   <div class="note" style="border-left-color: var(--err)">
-    <p><b>Stop the FM-1's sequencer before freezing.</b> It refuses a write while its sequencer is playing and answers with status 3. Press SEQ off. STOP alone is not enough.</p>
+    <p><b>Stop the FM-1's sequencer before freezing.</b> It refuses a write while its sequencer is playing. Press SEQ off. STOP alone is not enough.</p>
   </div>
-</main>
+
+</div>
 </body>
 </html>

@@ -494,33 +494,43 @@ function toggleLive() {
   liveLoop(liveToken);
 }
 
+// Scheduled against an ABSOLUTE clock, not by accumulating relative sleeps. The
+// gate floors (max 12ms note, max 3ms release) otherwise add to each step instead
+// of eating into it: measured up to 16% slow at low gate on short steps.
 async function liveLoop(token) {
+  const t0 = performance.now();
+  let elapsed = 0;
   let i = 0;
   while (live && token === liveToken) {
     try {
       const p = bank[selected];
-      if (!p || !p.length) { await sleep(100); continue; }
+      if (!p || !p.length) { await sleep(100); t0 += 100; continue; }
       if (i >= p.length) i = 0;
+      if (performance.now() - (t0 + elapsed) > 250) t0 = performance.now() - elapsed;
       const st = p.steps[i];
       const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
       const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
       const late = i % 2 === 1 ? stepMs * swingFrac() : 0;   // swing the offbeat
       const sDur = stepMs - late;
-      if (late) await sleep(late);
+      const startAt = t0 + elapsed + late;
+      let w = startAt - performance.now();
+      if (w > 0) await sleep(w);
       markStep(i);
       if (st.notes.length) {
         for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
-        await sleep(Math.max(12, sDur * gate));
+        w = (startAt + Math.max(12, sDur * gate)) - performance.now();
+        if (w > 0) await sleep(w);
         for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
-        await sleep(Math.max(3, sDur * (1 - gate)));
-      } else {
-        await sleep(sDur);
       }
+      w = (t0 + elapsed + stepMs) - performance.now();
+      if (w > 0) await sleep(w);
+      elapsed += stepMs;
       i++;
     } catch (e) {
       status("play error: " + (e.message || e), "err");
       await sleep(200);
+      t0 += 200;
     }
   }
   clearPlayhead();
