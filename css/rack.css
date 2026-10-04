@@ -138,8 +138,9 @@ body { padding: 12px; }
 .display h2 { margin: 0 0 6px; font-size: 8px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .display h2 small { color: var(--fg); letter-spacing: .4px; font-weight: 400; text-transform: none; }
 
-/* two unambiguous states: a step is lit or it is not */
-.display .steps { padding: 8px; border-radius: 3px; gap: 6px; }
+/* two unambiguous states: a step is lit or it is not. The grid is 8 wide so every
+   row is two beats at 1/16, i.e. 8x8 for the 64 steps. */
+.display .steps { padding: 8px; border-radius: 3px; gap: 6px; grid-template-columns: repeat(8, 1fr); }
 .display .cell { background: transparent; border: 1px solid var(--line); color: transparent; font-size: 9px; }
 .display .cell.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
 .display .cell.off { border-color: transparent; opacity: .25; }
@@ -165,12 +166,11 @@ body { padding: 12px; }
     align-items: start;
   }
   .display { margin-top: 0; }
-  .display .steps { grid-template-columns: repeat(16, 1fr); }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
 
 @media (max-width: 400px) {
-  .display .steps { grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .display .steps { gap: 5px; }
   .display .bank { grid-template-columns: repeat(8, 1fr); }
   .k-lab { max-width: 62px; }
 }
