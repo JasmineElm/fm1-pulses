@@ -68,8 +68,10 @@ const STATUS_TEXT = {
   0: "done",
   1: "a value out of range",
   2: "damaged in transit",
-  3: "the FM-1's sequencer is playing — stop it (SEQ off) and freeze again",
+  3: "the FM-1's sequencer is playing — stop it (SEQ off, not just STOP) and send again",
 };
+
+const hex = (a) => a.map((b) => b.toString(16).padStart(2, "0")).join(" ");
 
 // Wait for one SysEx reply on the FM-1's input port.
 function waitReply(input, timeoutMs) {
@@ -87,24 +89,39 @@ function waitReply(input, timeoutMs) {
 }
 
 // Send the 0x20 pattern messages, confirming each. Throws with a readable
-// message if the FM-1 refuses (e.g. status 3 = sequencer playing).
-export async function sendPattern(msgs, gapMs = 90) {
+// message if the FM-1 refuses (status 3 = sequencer playing/busy). A status 3 is
+// retried once after a pause, since the device can still be busy finishing the
+// previous write; the error carries the raw reply so a wrong decode is visible.
+export async function sendPattern(msgs, label = "") {
   const out = findFm1();
   if (!out) throw new Error("FM-1 not found — connect it and allow the MIDI prompt");
   const input = findFm1Input();
 
-  for (let i = 0; i < msgs.length; i++) {
-    out.send(new Uint8Array(msgs[i]));
-    if (input) {
-      const rep = await waitReply(input, 1500);
-      const d = rep ? decodeReply(rep) : null;
-      if (d && d.status !== 0) {
-        throw new Error(`FM-1 refused (status ${d.status}): ${STATUS_TEXT[d.status] || "unknown"}`);
-      }
-      if (!d) await sleep(gapMs); // no reply (old fw / input unavailable): pace blindly
-    } else if (i < msgs.length - 1) {
-      await sleep(gapMs);
+  const sendOne = async (bytes) => {
+    out.send(new Uint8Array(bytes));
+    if (!input) return;
+    const rep = await waitReply(input, 1500);
+    if (!rep) return;
+    const d = decodeReply(rep);
+    if (d && d.status !== 0) {
+      const err = new Error(
+        `FM-1 refused (status ${d.status}): ${STATUS_TEXT[d.status] || "unknown"}` +
+        `${label ? " [" + label + "]" : ""} [reply ${hex(rep)}]`);
+      err.status = d.status; err.reply = rep;
+      throw err;
     }
+  };
+
+  for (let i = 0; i < msgs.length; i++) {
+    try {
+      await sendOne(msgs[i]);
+    } catch (e) {
+      if (e.status === 3) {
+        await sleep(400);          // give the device a moment, then try once more
+        await sendOne(msgs[i]);
+      } else throw e;
+    }
+    await sleep(60);              // pace like the verified fm1tool (60ms/message)
   }
   return out.name;
 }

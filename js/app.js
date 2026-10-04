@@ -372,7 +372,7 @@ async function doFreeze(slotIndex) {
   const msgs = encodeWrite(bank[slotIndex], slotIndex, true);
   try {
     status(`freezing slot ${slotIndex + 1}…`);
-    const name = await midi.sendPattern(msgs);
+    const name = await midi.sendPattern(msgs, `slot ${slotIndex + 1}`);
     status(`slot ${slotIndex + 1} frozen ✓ (${name})`, "ok");
   } catch (e) {
     status(String(e.message || e), "err");
@@ -386,7 +386,7 @@ async function doSendAll() {
     syncHeader();
     for (let i = 0; i < SLOTS; i++) {
       status(`freezing ${i + 1}/${SLOTS}…`);
-      await midi.sendPattern(encodeWrite(bank[i], i, true));
+      await midi.sendPattern(encodeWrite(bank[i], i, true), `slot ${i + 1}`);
     }
     status(`all ${SLOTS} slots frozen ✓`, "ok");
   } catch (e) {
@@ -401,10 +401,12 @@ async function doClearAll() {
   if (!confirm(`Erase all ${SLOTS} patterns on the FM-1?\n\nThis overwrites them with empty patterns. The browser bank is not affected.`)) return;
   busy = true;
   try {
-    const blank = emptyPattern(state.length, state.rate, state.tempo, state.gate, state.swing);
+    // Always clear a full 64 steps: a shorter length would leave the tail of the
+    // FM-1's pattern intact, and only 8 messages erase all 64.
+    const blank = emptyPattern(64, state.rate, state.tempo, state.gate, state.swing);
     for (let i = 0; i < SLOTS; i++) {
       status(`clearing ${i + 1}/${SLOTS}…`);
-      await midi.sendPattern(encodeWrite(blank, i, true));
+      await midi.sendPattern(encodeWrite(blank, i, true), `slot ${i + 1}`);
     }
     status(`all ${SLOTS} patterns cleared ✓`, "ok");
   } catch (e) {
