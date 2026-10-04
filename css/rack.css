@@ -23,20 +23,21 @@ body { padding: 12px; }
    Case and key colours were read off M-VAVE's own product photos (white studio
    background masked out), then calibrated against photos of real units for
    'blue' (buttons #59718e, shell #ede8e4), 'brown' (keys #91613d at the 75th
-   percentile, shell #eee9e5) and 'green' (teal pads #7bd1c6, charcoal shell #232426). 'orange' and 'purple'
-   came from close-ups of the two colours; 'purple' confirmed the product shot
-   within a few points, 'orange' corrected it. Both landed within a few points of the product
+   percentile, shell #eee9e5) and 'green' (teal pads #7bd1c6, charcoal shell #232426). blue/brown/green/orange/purple were then re-derived by k-means clustering each
+   close-up into 4 colours and reading the two dominant non-shadow clusters as
+   the case and the keys (the variant list tells you which is which, so no
+   guessing about position). 'black' and 'grey' are still product-shot estimates. Both landed within a few points of the product
    shots, which is why the product-shot values are trusted for the rest.
    Surfaces are tinted from each variant's signature colour; accents are lifted
    until they clear 4.5:1 on the background they sit on, legends 4.5:1 on the
    panel, and dividers 3:1. */
-[data-theme="purple"] { --bg: #0e0b0f; --panel: #1a151c; --panel2: #2d2532; --line: #6f5e79; --fg: #fcf9fd; --dim: #8f779d; --accent: #c5a1da; --accent2: #9d7bc0; }
+[data-theme="purple"] { --bg: #0d0a0f; --panel: #19131c; --panel2: #2c2231; --line: #705c79; --fg: #fbf9fc; --dim: #91769f; --accent: #bf94d5; --accent2: #8072b7; }
 [data-theme="black"]  { --bg: #0f0f10; --panel: #1d1d1d; --panel2: #333333; --line: #6e6e6f; --fg: #fdfdfd; --dim: #9a9a9b; --accent: #dcdcde; --accent2: #686868; }
 [data-theme="grey"]   { --bg: #10100f; --panel: #1e1d1c; --panel2: #343331; --line: #726f6a; --fg: #fdfdfc; --dim: #9f9b94; --accent: #e3ded4; --accent2: #8e8c88; }
-[data-theme="orange"] { --bg: #0f0704; --panel: #1b0c08; --panel2: #30160d; --line: #845446; --fg: #fcf5f3; --dim: #aa6c58; --accent: #d15f3a; --accent2: #ab7058; }
-[data-theme="green"]  { --bg: #090f0e; --panel: #101b1a; --panel2: #1c302e; --line: #446d68; --fg: #f7fcfc; --dim: #56928b; --accent: #7bd1c6; --accent2: #5f9c94; }
-[data-theme="blue"]   { --bg: #06080a; --panel: #0c0f12; --panel2: #141a21; --line: #56606c; --fg: #f5f6f8; --dim: #707d8c; --accent: #6d829c; --accent2: #ede8e4; }
-[data-theme="brown"]  { --bg: #0a0704; --panel: #130d08; --panel2: #21160e; --line: #6e5b4d; --fg: #f8f6f3; --dim: #8f7664; --accent: #a07758; --accent2: #eee9e5; }
+[data-theme="orange"] { --bg: #0f0704; --panel: #1b0c08; --panel2: #30160e; --line: #845546; --fg: #fcf5f3; --dim: #ab6c58; --accent: #d25f3b; --accent2: #9b4f41; }
+[data-theme="green"]  { --bg: #090e0e; --panel: #101b19; --panel2: #1c302d; --line: #436d67; --fg: #f7fcfb; --dim: #559188; --accent: #7acfc3; --accent2: #676b6b; }
+[data-theme="blue"]   { --bg: #07090b; --panel: #0d1014; --panel2: #161c23; --line: #57626e; --fg: #f6f7f9; --dim: #717e8e; --accent: #6a829d; --accent2: #ece8e4; }
+[data-theme="brown"]  { --bg: #0a0604; --panel: #120c08; --panel2: #20150e; --line: #6e5c50; --fg: #f8f5f3; --dim: #8d7566; --accent: #9e775f; --accent2: #eeeae5; }
 
 .layout { display: block; }
 .module { display: flex; flex-direction: column; }
