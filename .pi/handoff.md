@@ -186,8 +186,15 @@ A second UI beside the MVP, sharing the same engine. `rack.html` + `js/rack.js`
   parsing are verified, but the Web MIDI freeze has not been confirmed on hardware
   (the phone path uses `mvave-fm1/mvp/fm1tool` over libusb, which IS verified).
   Note Android Chrome may not expose USB-OTG MIDI through Web MIDI — desktop works.
-- [ ] **Live loop timing is `setTimeout`** (~5–15 ms jitter). Swap for a lookahead
-  scheduler using `MIDIOutput.send(data, timestamp)` if it sounds sloppy.
+- [x] **Audition timing fixed in the rack** (`rack.js`): the loop now waits until an
+      ABSOLUTE target time per step instead of accumulating relative sleeps. The gate
+      floors (`max(12ms note, max 3ms release)`) used to ADD to each step instead of
+      eating into it — measured **+5.4% slow at gate 5% on 1/16 and +16.1% on 1/32**,
+      which is why the browser sounded slower than the FM-1. Now +0.0%. It also
+      re-anchors if it falls >250ms behind (throttled tab) rather than bursting.
+      `app.js` (the MVP) still has the old accumulating loop — not ported, MVP frozen.
+- [ ] Still `setTimeout`, so there is residual jitter inside a step. A lookahead
+      scheduler using `MIDIOutput.send(data, timestamp)` would remove that too.
 - [ ] Magnet interval set (root/m3/4th/5th/octave) is a guess — tune to taste.
 - [ ] No persistence yet (bank + locks are lost on reload) — localStorage.
 - [ ] Out of scope of the app but open on the device side: per-step
