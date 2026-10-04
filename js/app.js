@@ -1,8 +1,8 @@
 // app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js";
-import { encodeWrite, emptyPattern } from "./pattern.js";
-import * as midi from "./midi.js";
-import * as audio from "./audio.js";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js?v=16";
+import { encodeWrite, emptyPattern } from "./pattern.js?v=16";
+import * as midi from "./midi.js?v=16";
+import * as audio from "./audio.js?v=16";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const SLOTS = 16;
