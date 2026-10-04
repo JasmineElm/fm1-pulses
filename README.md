@@ -26,7 +26,9 @@ python3 -m http.server 8080   # Web MIDI needs a secure context (https or localh
    differ only by generation; raise it and the parameters themselves move across
    the bank (slot 1 → slot 16) — more/less amplitude, bias, density, LFO speed…
 5. Click a slot in the bank to see its 64-step grid → **Freeze → FM-1** (or `F`)
-   writes just that one, or **Send all 16** writes the whole bank.
+   writes just that one, or **Send all 16** writes the whole bank. **Clear all 16**
+   writes empty patterns over the whole bank, wiping the device's sequencer (it asks
+   first, and leaves the browser bank alone).
 
 `←` / `→` move between slots. **Randomize** rolls a new seed + parameters;
 **Generate** re-derives the bank from the current seed.

@@ -1,6 +1,6 @@
 // app.js — FM-1 Pulses: generate a 16-slot bank (evolving), freeze to the FM-1.
 import { generate, generateBank, SCALES, LFO_WAVES, midiName } from "./generator.js";
-import { encodeWrite } from "./pattern.js";
+import { encodeWrite, emptyPattern } from "./pattern.js";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -384,6 +384,24 @@ async function doSendAll() {
   } finally { busy = false; }
 }
 
+// Erase all 16 sequencer patterns on the FM-1 by writing empty ones. This is
+// destructive on the device, so it asks first; the browser bank is untouched.
+async function doClearAll() {
+  if (busy || !bank.length) return;
+  if (!confirm(`Erase all ${SLOTS} patterns on the FM-1?\n\nThis overwrites them with empty patterns. The browser bank is not affected.`)) return;
+  busy = true;
+  try {
+    const blank = emptyPattern(state.length, state.rate, state.tempo, state.gate, state.swing);
+    for (let i = 0; i < SLOTS; i++) {
+      status(`clearing ${i + 1}/${SLOTS}…`);
+      await midi.sendPattern(encodeWrite(blank, i, true));
+    }
+    status(`all ${SLOTS} patterns cleared ✓`, "ok");
+  } catch (e) {
+    status(String(e.message || e), "err");
+  } finally { busy = false; }
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Live regeneration: any control change re-derives the bank from the same seed,
@@ -589,6 +607,7 @@ function buildFooter() {
   if (muteBtn) muteBtn.addEventListener("click", () => { const m = !audio.isMuted(); audio.setMuted(m); muteBtn.textContent = m ? "🔇" : "🔊"; status(m ? "browser audio muted" : "browser audio on"); });
   document.getElementById("freeze").addEventListener("click", () => doFreeze(selected));
   document.getElementById("fill").addEventListener("click", doSendAll);
+  document.getElementById("clearall").addEventListener("click", doClearAll);
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     if (e.code === "Space") { e.preventDefault(); toggleLive(); }
