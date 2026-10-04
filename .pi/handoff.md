@@ -43,7 +43,11 @@ selected slot and morph it in real time).
 - [x] LFO rate labelled as a duration (`/4 · 4 steps · 1/4 bar · 16 cycles`)
 - [x] Amplitude/offset show the **notes** they produce; magnet snaps at
       root/3rd/5th/octave
-- [x] Amplitude 0 = the scale root (unconditionally)
+- [x] **Offset is the centre (median) of the pitch range; Amplitude is its
+      half-width** — notes span `centre ± 18·amp` semitones, so Amplitude 0 sits
+      exactly on the Offset note. The Amplitude readout shows that offset-centred
+      range, and `generator.js` no longer has the old "Amplitude 0 = scale root"
+      special case (it made 0% ignore Offset).
 - [x] Defaults: note value 1/16, LFO rate /4
 
 **BLE probe (2026-10-03) — `probe/`**

@@ -139,13 +139,13 @@ export function generate(params, prevSteps = null) {
 
     const phase = ((i / div) % 1 + 1) % 1;
     const lfoVal = lfo(phase);
-    // Distribution shapes the LFO itself, then amplitude/offset place it: the
-    // offset shifts the centre by up to +/-18 semitones (same as full amplitude).
+    // Distribution shapes the LFO itself, then amplitude/offset place it:
+    // Offset is the CENTRE (median) of the range; Amplitude is its half-width,
+    // so notes span [centre - 18*amp, centre + 18*amp] before the MIDI clamp.
+    // At Amplitude 0 the range collapses onto the Offset note.
     const shaped = shape(clamp(lfoVal, 0, 1), params.spread || "uniform", (params.bias ?? 0) / 100);
-    const v = 0.5 + (shaped - 0.5) * amp + offset * 0.5;   // may exceed 0..1
-    // Amplitude 0 = no pitch swing: every note sits on the scale root (quantize
-    // then confirms it against the scale). Offset/spread are ignored at 0.
-    const raw = amp === 0 ? params.root : center + (v - 0.5) * span;
+    const v = 0.5 + (shaped - 0.5) * amp + offset * 0.5;   // 0.5 = the centre
+    const raw = center + (v - 0.5) * span;
     // clamp the NOTE, not the LFO position, so offset shifts the range without
     // collapsing the swing (it only pins once the note hits the MIDI limits)
     let note = quantize(clamp(raw, 0, 127), scale, params.root, quantStrength, rng);
