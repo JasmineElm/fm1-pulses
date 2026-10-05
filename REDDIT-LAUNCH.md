@@ -5,71 +5,69 @@
 ### Title
 
 I built a free generative sequencer for the M-VAVE FM-1 (Baud Girl / FM-1+VA
-firmware) — it generates 16 patterns and freezes them straight into the synth's
+firmware): it generates 16 patterns and freezes them straight into the synth's
 own sequencer
 
 ### Body
 
-Link: https://mene311.github.io/fm1-pulses/ — runs in Chrome, phone or desktop,
-no install, no accounts. Repo: https://github.com/mene311/fm1-pulses
+Link: https://mene311.github.io/fm1-pulses/. It runs in Chrome on a phone or
+desktop, installs nothing, and needs no account. Source:
+https://github.com/mene311/fm1-pulses
 
-Firmware heads-up: the freeze path targets the **Baud Girl / FM-1+VA**
-firmware — the 0x20 pattern write exists only there; stock firmware has no
-pattern-write SysEx at all. On other firmware the app still works as a live MIDI
-broadcaster (play and morph in real time), just not the freeze.
+The freeze path targets the **Baud Girl / FM-1+VA** firmware. The 0x20 pattern
+write exists only there; stock firmware has no pattern-write SysEx. On other
+firmware the app still works as a live MIDI broadcaster (play and morph in real
+time), just not the freeze.
 
-The FM-1 is a cheap 6-op FM box with a 64-step sequencer, and its pattern format
-is undocumented. I reverse-engineered the SysEx write (command 0x20, 8 steps per
-message, 177 bytes, checksummed) against the Virtual-FM-1 emulator's source and
-built a generative sequencer on top of it. It works like a small Eurorack chain:
-clock, gate, LFO, quantizer, buffer.
+The FM-1's pattern format was undocumented, so I mapped the SysEx write
+(command 0x20, 8 steps per message, 177 bytes with a checksum) against the
+Virtual-FM-1 emulator's source.
 
-What it does:
+One seed generates a bank of 16 patterns. Same seed, same bank, every time.
+The rhythm side is Gate density plus a Euclidean gradient: at 0% each step is
+a coin flip, at 100% the hits sit at the evenest positions, and between the
+two each step rolls which law it follows. Turn Gate to 37 with the loop at 8
+steps and you get a tresillo; 62 gives a cinquillo, and a 16-step loop at 31
+lands on son clave. A rotate knob shifts the pattern. Pitch has 9 LFO shapes,
+including a Perlin contour. A Shape knob morphs each wave: folds the sine,
+bends the ramps, narrows the square into a pulse. The quantizer covers 19
+scales. The loop region is highlighted in the grid, and Deja Vu sets how often
+the loop repeats itself instead of generating new notes.
 
-- A handful of knobs generates a bank of 16 patterns from one seed. Same seed,
-  same bank, every time.
-- Rhythm: Gate density plus a Euclidean gradient — 0% is a coin flip per step,
-  100% is even spacing (tresillo at 3 hits over 8 steps, cinquillo, son clave),
-  everything between mixes the two. A rotate knob shifts the pattern.
-- Pitch: 9 LFO shapes including a Perlin contour, plus a Shape knob that morphs
-  each wave — folds the sine, bends the ramps, narrows the square into a pulse.
-- Quantizer with 19 scales, a loop region you can see highlighted in the grid,
-  and Deja Vu (how often the loop repeats itself instead of generating new notes).
-- Press Freeze and the pattern lands in the FM-1's sequencer over Web MIDI.
-  Every write is confirmed with a read-back, so the app tells you what the
-  device actually stored — including the "sequencer is playing" refusal instead
-  of failing silently.
 
-Stuff I found while reverse-engineering, for the other FM-1 owners:
+Freeze writes the pattern into the FM-1's sequencer over Web MIDI. Every write
+gets a read-back, so the app reports what the device actually stored. If the
+sequencer is playing, the firmware refuses the write and the app says so.
 
-- BPM is device-global. The firmware acknowledges the tempo bytes in a pattern
-  write and then ignores them. The app reads the unit's real BPM and syncs to
-  it, so the knob always shows what the box will play.
-- Bluetooth MIDI is notes-only on this firmware. SysEx reads get no reply and
-  writes don't land over BLE. The app plays over Bluetooth and freezes over USB.
+The tempo knob on the unit is device-global. The firmware acknowledges tempo
+bytes in a pattern write and then ignores them, so the app reads the real BPM
+back and shows that instead. Bluetooth MIDI carries notes only on this
+firmware: SysEx reads get no reply over BLE, writes do not land, and the app
+plays over Bluetooth while Freeze stays on USB.
 
-Also: banks export/import as JSON, the whole bank downloads as .syx for other
-tools, five browser preview timbres, and the UI themes are sampled from the
-hardware's actual case colors.
+Banks export and import as JSON, the whole bank downloads as .syx for other
+tools, there are five preview timbres in the browser, and the UI themes were
+sampled from photos of the actual hardware.
 
-I'll post a video walkthrough in the comments if anyone wants one. Ask me
-anything about the SysEx format or the firmware quirks.
+Drop a comment if you try it, good or bad. I'll stick around for questions.
 
 ---
 
 ## Posting notes
 
 - **Image rule:** r/synthesizers posts land better with media. Use a screenshot
-  of the rack on a dark theme (e.g. the purple one) or the showcase video as the
-  post media, then put this text as the first comment.
-- **Firmware is the first comment question — answer it in the post.** The
-  freeze needs Baud Girl / FM-1+VA; say it in the title or the first line.
-  Stock firmware users still get the live broadcaster.
+  of the rack on a dark theme (purple reads best) or the video walkthrough as
+  the post media, then put this text as the first comment.
+- **Firmware is the first comment question.** The freeze needs Baud Girl /
+  FM-1+VA; the title and first line already say it. Stock firmware users still
+  get the live broadcaster.
 - **Crossposts:** r/FMsynthesis (the FM angle), r/synthdiy (the
-  reverse-engineering angle — lead with the SysEx table and the firmware
-  findings there), r/wearethemusicmakers (Friday feedback thread only).
-- Post from the phone's Reddit app, or wait for the laptop — posting from here
-  needs the laptop's Firefox session (cookie auth), and it is offline right now.
+  reverse-engineering angle), r/wearethemusicmakers (Friday feedback thread
+  only).
+- Post from the phone's Reddit app, or wait for the laptop. Posting from here
+  needs the laptop's Firefox session (cookie auth).
+- Offer the from-zero demo as a follow-up comment, not in the body, so the post
+  stays tight.
 
 ## Shorter version (for r/synthdiy crosspost lead)
 
