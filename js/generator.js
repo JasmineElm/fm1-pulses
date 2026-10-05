@@ -109,10 +109,26 @@ function lfoFactory(wave, rng, shape) {
   };
 }
 
+// The classic rhythms, pinned to their canonical (Toussaint) forms. The
+// bucket algorithm's tie-breaking differs from the literature on exactly these
+// pairs, and the ear knows: tresillo is x..x..x., not x..x.x..; son clave is
+// x..x..x...x.x..., not five evenly-spaced dots. Everything else stays
+// maximally even.
+const CLASSIC = {
+  "3,8":  { name: "tresillo",  mask: [1, 0, 0, 1, 0, 0, 1, 0] },
+  "5,8":  { name: "cinquillo", mask: [1, 0, 1, 1, 0, 1, 1, 0] },
+  "5,16": { name: "son clave", mask: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0] },
+  "7,16": { name: null,       mask: [1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0] },
+};
+
+export function classicName(n, m) { return CLASSIC[`${n},${m}`]?.name ?? null; }
+
 // Bjorklund: N onsets spread as evenly as possible over M steps, then rotated
-// so the first hit lands on the downbeat (rot 0 reads like the classic rhythms:
-// E(5,8)=x.xx.xx. E(7,16)=x.x.x..x.x.x..)
+// so the first hit lands on the downbeat. Classic pairs come from the table
+// above in their canonical form.
 export function euclid(n, m) {
+  const c = CLASSIC[`${n},${m}`];
+  if (c) return c.mask.slice();
   const mask = new Array(m).fill(0);
   if (n >= m) return mask.fill(1);
   if (n <= 0) return mask;
