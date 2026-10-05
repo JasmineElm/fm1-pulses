@@ -25,35 +25,30 @@ FM-1's sequencer was no different until I flashed the Baud Girl firmware, which
 unlocked the pattern write and made the box programmable. This tool is where
 the two meet. The generative side does the writing; I just shape it.
 
-The FM-1's pattern format was undocumented, so I mapped the SysEx write
-(command 0x20, 8 steps per message, 177 bytes with a checksum) against the
-Virtual-FM-1 emulator's source.
+The FM-1's pattern format was undocumented, so I mapped it with help from the
+Virtual-FM-1 emulator's source and built this on top.
 
 One seed generates a bank of 16 patterns. Same seed, same bank, every time.
 The rhythm side is Gate density plus a Euclidean gradient: at 0% each step is
 a coin flip, at 100% the hits sit at the evenest positions, and between the
-two each step rolls which law it follows. Turn Gate to 37 with the loop at 8
-steps and you get a tresillo; 62 gives a cinquillo, and a 16-step loop at 31
-lands on son clave. A rotate knob shifts the pattern. Pitch has 9 LFO shapes,
-including a Perlin contour. A Shape knob morphs each wave: folds the sine,
-bends the ramps, narrows the square into a pulse. The quantizer covers 19
-scales. The loop region is highlighted in the grid, and Deja Vu sets how often
-the loop repeats itself instead of generating new notes.
-
+two each step rolls which law it follows. Gate at 37 with an 8-step loop gives
+a tresillo, 62 gives a cinquillo, and a 16-step loop at 31 lands on son clave.
+A rotate knob shifts the pattern. Pitch has 9 LFO shapes, including a Perlin
+contour. A Shape knob morphs each wave: folds the sine, bends the ramps,
+narrows the square into a pulse. The quantizer covers 19 scales. The loop
+region is highlighted in the grid. Deja Vu sets how often the loop repeats
+itself instead of generating new notes.
 
 Freeze writes the pattern into the FM-1's sequencer over Web MIDI. Every write
-gets a read-back, so the app reports what the device actually stored. If the
-sequencer is playing, the firmware refuses the write and the app says so.
+gets a read-back, so the app shows what the device stored. If the sequencer is
+playing, the firmware refuses the write and the app says so.
 
-The tempo knob on the unit is device-global. The firmware acknowledges tempo
-bytes in a pattern write and then ignores them, so the app reads the real BPM
-back and shows that instead. Bluetooth MIDI carries notes only on this
-firmware: SysEx reads get no reply over BLE, writes do not land, and the app
-plays over Bluetooth while Freeze stays on USB.
+Two quirks worth knowing. BPM is device-global: set it on the unit, and the
+app reads it back and shows what the box will actually play. Bluetooth
+carries notes only on this firmware, so Freeze needs USB.
 
-Banks export and import as JSON, the whole bank downloads as .syx for other
-tools, there are five preview timbres in the browser, and the UI themes were
-sampled from photos of the actual hardware.
+Banks export and import as JSON. The whole bank downloads as .syx. The UI
+themes were sampled from photos of the actual hardware.
 
 Drop a comment if you try it, good or bad. I'll stick around for questions.
 
