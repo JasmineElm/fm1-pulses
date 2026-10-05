@@ -1,7 +1,24 @@
 # FM-1 Pulses — Bluetooth plan
 
-Status: **planned, not implemented.** No code until the verification ladder is run
-(it hinges on one binary unknown — R1 below).
+Status: **verdict reached on hardware (2026-10-04) — BLE is notes/CC-only on Baud
+Girl 093.** The ladder ran on the phone (Chrome, FM-1_BLE, probe/ble.html):
+
+- GATT connect, service 03B80E5A… + char 7772E5DB…, notifications — all work.
+- Note On/Off **out** works (sounded on the unit); note stream **in** works
+  (the sequencer's notes arrive on notify, same as USB).
+- **R1 FAILS:** `0x11` reads got no reply in 4s, three times, with the sequencer
+  stopped (quiet line). BLE does not route the proprietary parser.
+- **R2 FAILS:** `0x20` write + SAVE to slot 15 → slot 15 does not play the
+  pattern. The write does not land.
+
+So the manual's "incoming SysEx voice dumps" promise does not extend to the
+`F0 43 00 7D` pattern protocol on this firmware. The **hybrid fallback is now the
+design**: BLE for live note audition, USB for Freeze / read-device / Send 16 /
+tempo sync. Observed in the same session: two GATT drops in the first minute, so
+any BLE transport needs a reconnect loop.
+
+Legacy plan below, kept for reference — everything about the transport seam still
+applies to a play-only BleTransport (notes, no SysEx, no reply parsing).
 
 ## Verdict: the FM-1 has native BLE MIDI — it is a documented interface, not a hack
 

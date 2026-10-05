@@ -405,3 +405,9 @@ the knob moves the rhythm's character only. `gateBlend` state key; legacy
 `gateMode:"euclid"` still maps to blend 100 when `gateBlend` is absent. Drift
 moves blend ±30. Loop info shows `E(N,M) @blend%`. The trailing tempo probe
 (one device read 1.2s after the last knob tweak) shipped with it.
+
+**BLE verdict (2026-10-04):** the ladder ran on hardware — connect/notes-out/
+notes-in all work, but `0x11` reads get no reply and `0x20` writes do not land
+(slot 15 empty after SAVE). BLE is notes/CC-only on Baud Girl 093; the hybrid
+fallback (BLE play, USB freeze) is the design. Two GATT drops in the first
+minute → any BLE transport needs auto-reconnect. Plan doc updated.
