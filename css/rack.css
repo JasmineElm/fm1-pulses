@@ -294,7 +294,11 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 /* two unambiguous states: a step is lit or it is not. The circle lives INSIDE the
    cell, so the grid can stretch to any shape while every step stays round. */
 .display .steps { padding: 8px; border-radius: 3px; gap: 6px; grid-template-columns: repeat(8, 1fr); }
-.display .cell { display: grid; place-items: center; background: none; border: 0; padding: 0; }
+/* min-width: 0 — a grid item's automatic minimum is its min-content size, and the dot's
+   size is derived from the (height-driven) cell, so the 1fr tracks used to grow past the
+   screen: the last column hung out of the TFT on the right. Pinning the tracks' minimum
+   to 0 makes the 8 columns always divide the container exactly. */
+.display .cell { display: grid; place-items: center; background: none; border: 0; padding: 0; min-width: 0; }
 .display .cell > .dot {
   aspect-ratio: 1; height: 100%; max-width: 100%;
   border-radius: 50%; border: 1px solid var(--line);
