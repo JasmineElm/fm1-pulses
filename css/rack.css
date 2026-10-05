@@ -156,9 +156,11 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .brand .led { width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
 .brand .led.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 .statusrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 3px 2px 6px; }
-.statusrow .glink { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); text-decoration: none; }
+.statusrow .glink { flex: 0 0 auto; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); text-decoration: none; }
 .statusrow .glink:hover { color: var(--accent); }
-.statusrow .status { font-size: 9px; letter-spacing: .5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the status text fills the leftover width and ellipsizes, so the links on the
+   left never move when the message length changes */
+.statusrow .status { flex: 1 1 auto; min-width: 0; text-align: right; font-size: 9px; letter-spacing: .5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusrow .status.ok { color: var(--fg); }
 .statusrow .status.err { color: var(--err); }
 
@@ -229,9 +231,9 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 /* ---- transport: Play is the primary action, utilities are secondary ---- */
 .transport { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0 0 8px; }
 .transport button {
-  font: inherit; font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
+  font: inherit; font-size: 9.5px; letter-spacing: .8px; text-transform: uppercase;
   color: var(--dim); background: var(--panel2); border: 1px solid var(--line);
-  border-radius: 3px; padding: 6px 9px; cursor: pointer;
+  border-radius: 3px; padding: 5px 7px; cursor: pointer;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.10),
     inset 0 -1px 0 rgba(0,0,0,.55),
@@ -244,10 +246,13 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   box-shadow: inset 0 2px 4px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);
 }
 .transport button:hover { color: var(--fg); border-color: var(--dim); }
-/* the preview-sound switch sits in the button bar: label and ‹ value › inline */
-.transport .sw { flex-direction: row; align-items: center; gap: 4px; }
-.transport .sw-lab { margin: 0 0 1px; }
-.transport .sw-body { align-self: stretch; }
+/* the preview-sound switch sits inline in the button bar: label dropped, width
+   and padding pulled in so it never wraps onto its own row */
+.transport .sw { width: auto; flex: 0 0 auto; flex-direction: row; align-items: center; gap: 3px; margin: 0; }
+.transport .sw-lab { display: none; }
+.transport .sw-body { width: auto; max-width: none; align-self: stretch; }
+.transport .sw-arrow { padding: 3px 3px 4px; font-size: 10px; }
+.transport .sw-val { height: auto; padding: 2px 4px 3px; font-size: 9px; }
 /* local preset slots: a quiet row under the transport */
 .presets { display: flex; gap: 4px; align-items: center; justify-content: center; margin: 0 0 8px; }
 .presets button {
