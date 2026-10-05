@@ -4,13 +4,19 @@
 
 ### Title
 
-I built a free generative sequencer for the M-VAVE FM-1 — it generates 16
-patterns and freezes them straight into the synth's own sequencer
+I built a free generative sequencer for the M-VAVE FM-1 (Baud Girl / FM-1+VA
+firmware) — it generates 16 patterns and freezes them straight into the synth's
+own sequencer
 
 ### Body
 
 Link: https://mene311.github.io/fm1-pulses/ — runs in Chrome, phone or desktop,
 no install, no accounts. Repo: https://github.com/mene311/fm1-pulses
+
+Firmware heads-up: the freeze path targets the **Baud Girl / FM-1+VA**
+firmware — the 0x20 pattern write exists only there; stock firmware has no
+pattern-write SysEx at all. On other firmware the app still works as a live MIDI
+broadcaster (play and morph in real time), just not the freeze.
 
 The FM-1 is a cheap 6-op FM box with a 64-step sequencer, and its pattern format
 is undocumented. I reverse-engineered the SysEx write (command 0x20, 8 steps per
@@ -56,6 +62,9 @@ anything about the SysEx format or the firmware quirks.
 - **Image rule:** r/synthesizers posts land better with media. Use a screenshot
   of the rack on a dark theme (e.g. the purple one) or the showcase video as the
   post media, then put this text as the first comment.
+- **Firmware is the first comment question — answer it in the post.** The
+  freeze needs Baud Girl / FM-1+VA; say it in the title or the first line.
+  Stock firmware users still get the live broadcaster.
 - **Crossposts:** r/FMsynthesis (the FM angle), r/synthdiy (the
   reverse-engineering angle — lead with the SysEx table and the firmware
   findings there), r/wearethemusicmakers (Friday feedback thread only).
@@ -64,8 +73,8 @@ anything about the SysEx format or the firmware quirks.
 
 ## Shorter version (for r/synthdiy crosspost lead)
 
-Title: I mapped the M-VAVE FM-1's undocumented pattern format and built a free
-generative sequencer on it
+Title: I mapped the M-VAVE FM-1's undocumented pattern format (Baud Girl /
+FM-1+VA firmware) and built a free generative sequencer on it
 
 Lead paragraph: command 0x20 writes 8 steps per 177-byte SysEx message; the
 firmware acks each part and refuses while its sequencer plays; tempo bytes are

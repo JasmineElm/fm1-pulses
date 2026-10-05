@@ -5,6 +5,11 @@ Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
 
 **▶ Live:** https://mene311.github.io/fm1-pulses/
 
+**Firmware:** the freeze path (pattern write, SysEx `0x20`) exists only on the
+**FM-1+VA / Baud Girl** firmware — stock firmware has no pattern-write SysEx.
+On any firmware the app still works as a live MIDI broadcaster (▶ Play and
+morph in real time).
+
 **Signal chain:** Clock → Gate Probability → S&H → LFO → Distribution → Quantizer → MIDI out → Buffer (Loop + Deja Vu).
 
 ## Quick start
