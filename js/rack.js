@@ -696,20 +696,95 @@ async function importState(file) {
   try {
     const d = JSON.parse(await file.text());
     if (!d || d.app !== "fm1-pulses") throw new Error("not an FM-1 Pulses file");
-    if (d.params) Object.assign(state, d.params);
-    else if (d.seed != null) Object.assign(state, d);   // tolerate files saved as raw state
-    for (const k of Object.keys(state)) if (!(k in DEFAULT)) delete state[k];
-    state.seed = (d.seed ?? state.seed) >>> 0;
-    locks.clear();
-    for (const [k, v] of Object.entries(d.locks ?? {})) locks.set(k, v.map((n) => ({ ...n })));
-    selected = Math.max(0, Math.min(SLOTS - 1, Number(d.selected) || 0));
-    syncRack(); refreshLoopInfo();
-    doGenerate(false);
-    refreshLockCount();
+    applyStateData(d);
     status(`imported seed ${state.seed >>> 0} ✓`);
   } catch (e) {
     status("import failed: " + (e.message || e), "err");
   }
+}
+
+// --------------------------------------------------------------------------- //
+// Local preset slots (localStorage): the same content as an export file, kept
+// in the browser. save ▸ / ◂ load arm an action, tap a slot to fire it, or
+// double-click a slot to save it directly.
+// --------------------------------------------------------------------------- //
+const PRESET_N = 5;
+const PRESET_KEY = "fm1p.presets";
+let presetArm = null;   // "save" | "load" | null
+
+function readPresets() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PRESET_KEY));
+    return Array.isArray(p) ? p.slice(0, PRESET_N) : Array(PRESET_N).fill(null);
+  } catch { return Array(PRESET_N).fill(null); }
+}
+
+function applyStateData(d) {
+  if (d.params) Object.assign(state, d.params);
+  else if (d.seed != null) Object.assign(state, d);
+  for (const k of Object.keys(state)) if (!(k in DEFAULT)) delete state[k];
+  state.seed = (d.seed ?? state.seed) >>> 0;
+  locks.clear();
+  for (const [k, v] of Object.entries(d.locks ?? {})) locks.set(k, v.map((n) => ({ ...n })));
+  selected = Math.max(0, Math.min(SLOTS - 1, Number(d.selected) || 0));
+  syncRack(); refreshLoopInfo();
+  doGenerate(false);
+  refreshLockCount();
+}
+
+function savePreset(i) {
+  const p = readPresets();
+  p[i] = {
+    app: "fm1-pulses",
+    version: STATE_VERSION,
+    seed: state.seed >>> 0,
+    params: { ...state },
+    locks: Object.fromEntries(locks),
+    selected,
+  };
+  localStorage.setItem(PRESET_KEY, JSON.stringify(p));
+  renderPresets();
+  status(`preset ${i + 1} saved ✓ seed ${state.seed >>> 0}`);
+}
+
+function recallPreset(i) {
+  const d = readPresets()[i];
+  if (!d) { status(`preset ${i + 1} is empty`, "err"); return; }
+  applyStateData(d);
+  status(`preset ${i + 1} recalled ✓ seed ${state.seed >>> 0}`);
+}
+
+function renderPresets() {
+  const el = document.getElementById("presets");
+  if (!el) return;
+  el.innerHTML = "";
+  const p = readPresets();
+  const armBtn = (label, arm, title) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.className = presetArm === arm ? "armed" : "";
+    b.title = title;
+    b.addEventListener("click", () => {
+      presetArm = presetArm === arm ? null : arm;
+      renderPresets();
+    });
+    return b;
+  };
+  el.append(armBtn("save ▸", "save", "Arm saving, then tap a slot. Or double-click a slot to save it directly."));
+  for (let i = 0; i < PRESET_N; i++) {
+    const b = document.createElement("button");
+    b.className = "pslot" + (p[i] ? " filled" : "");
+    b.textContent = String(i + 1);
+    b.title = p[i] ? `preset ${i + 1}: seed ${p[i].seed} — tap to recall, double-click to overwrite` : `preset ${i + 1}: empty`;
+    b.addEventListener("click", () => {
+      if (presetArm === "save") { savePreset(i); presetArm = null; }
+      else if (presetArm === "load") { recallPreset(i); presetArm = null; }
+      else recallPreset(i);
+    });
+    b.addEventListener("dblclick", () => savePreset(i));
+    el.appendChild(b);
+  }
+  el.append(armBtn("◂ load", "load", "Arm recalling, then tap a filled slot. Or just tap a slot: tap = recall, double-click = save."));
 }
 
 function exportSysex() {
@@ -776,6 +851,7 @@ function buildTransport() {
   document.getElementById("fill").addEventListener("click", doSendAll);
   document.getElementById("clearall").addEventListener("click", doClearAll);
   document.getElementById("diag")?.addEventListener("click", dumpGset);
+  renderPresets();
 }
 
 function buildEditor() {
