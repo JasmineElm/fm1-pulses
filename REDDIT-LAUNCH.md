@@ -19,6 +19,12 @@ write exists only there; stock firmware has no pattern-write SysEx. On other
 firmware the app still works as a live MIDI broadcaster (play and morph in real
 time), just not the freeze.
 
+I've used VCV Rack and Cardinal for years. Writing sequences by hand was always
+my weak spot: give me a 64-step grid and I'll tap something flat into it. The
+FM-1's sequencer was no different until I flashed the Baud Girl firmware, which
+unlocked the pattern write and made the box programmable. This tool is where
+the two meet. The generative side does the writing; I just shape it.
+
 The FM-1's pattern format was undocumented, so I mapped the SysEx write
 (command 0x20, 8 steps per message, 177 bytes with a checksum) against the
 Virtual-FM-1 emulator's source.

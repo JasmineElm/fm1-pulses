@@ -426,10 +426,10 @@ full detector suite on the laptop (noslop + theclaymethod phrase/structure/
 silhouette, `--genre social`, body-only). Journey: noslop 11.4/1k → **0.0/1k**,
 phrase FLAG ("no install, no accounts" = the No-X family) → CLEAN, structure
 FLAG (sentence_burstiness 0.528) → CLEAN, silhouette callback 1.308 → **0.1**.
-Remaining: the silhouette composite sits at exactly the 1.0 threshold with both
-individual metrics deep under their fences — it counts topic-word repetition
-("FM-1", "pattern write", "SysEx" at top and bottom), which a product launch
-post cannot avoid. The two metrics the skill says actually matter
+Adding the personal preface (VCV Rack/Cardinal habit, weak hand-sequencing,
+Baud Girl unlocking the box) dropped the composite to **0.899 — under the
+threshold. All four scanners clean on the final body**: noslop 0.0/1k, phrase
+CLEAN, structure CLEAN, silhouette 0.899. The two metrics the skill says actually matter
 (scaffold_opener_share, role_entropy_bits) are 0.0. Bullet lists were converted
 to prose, preview labels ("Firmware heads-up:", "Things I found", "Also in
 there") removed, and the closing shares zero topic vocabulary with the opener.
