@@ -411,3 +411,12 @@ notes-in all work, but `0x11` reads get no reply and `0x20` writes do not land
 (slot 15 empty after SAVE). BLE is notes/CC-only on Baud Girl 093; the hybrid
 fallback (BLE play, USB freeze) is the design. Two GATT drops in the first
 minute → any BLE transport needs auto-reconnect. Plan doc updated.
+
+**BLE play transport shipped (2026-10-04).** After the ladder verdict
+(notes/CC-only), `midi.js` grew the BLE half: `connectBle` (namePrefix FM-1,
+silent reconnect via `getDevices()`), BLE-MIDI packetizer for short messages,
+`bleSendNoteOn/Off`, and an auto-reconnect loop with doubling backoff (6 tries
+then "lost"). rack.js routes the live loop through `liveNoteOn/Off` (BLE when
+connected, USB otherwise — never both, the FM-1 would double every note) and a
+**bluetooth** glink in the status row toggles the link (✓ / … / plain). Freeze,
+Send 16, Clear, device-BPM reads stay USB-only; guide documents the split.

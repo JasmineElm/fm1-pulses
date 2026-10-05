@@ -3,7 +3,7 @@
 // pattern display inside the case below. app.js and the MVP are untouched.
 import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=65";
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
-import * as midi from "./midi.js?v=65";
+import * as midi from "./midi.js?v=67";
 import * as audio from "./audio.js?v=66";
 import { knob, sw } from "./knob.js?v=66";
 
@@ -331,6 +331,16 @@ function swingFrac() {
   return ((s - 50) / 25) / 3;
 }
 
+// Live note out — routes to BLE when it is connected (play-only), USB otherwise.
+function liveNoteOn(note, vel) {
+  if (midi.bleConnected()) { midi.bleSendNoteOn(note, vel); return; }
+  midi.sendNoteOn(note, vel);
+}
+function liveNoteOff(note) {
+  if (midi.bleConnected()) { midi.bleSendNoteOff(note); return; }
+  midi.sendNoteOff(note);
+}
+
 async function playOnce() {
   const p = bank[selected];
   if (!p || live) return;
@@ -346,9 +356,9 @@ async function playOnce() {
     const sDur = stepMs - late;
     if (late) await sleep(late);
     if (st.notes.length) {
-      for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
+      for (const n of st.notes) { liveNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
       await sleep(Math.max(12, sDur * gate));
-      for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
+      for (const n of st.notes) { liveNoteOff(n.note); audio.noteOff(n.note); }
       await sleep(Math.max(3, sDur * (1 - gate)));
     } else await sleep(sDur);
   }
@@ -419,10 +429,10 @@ async function liveLoop(token) {
       if (w > 0) await sleep(w);
       markStep(i);
       if (st.notes.length) {
-        for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
+        for (const n of st.notes) { liveNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
         const offAt = startAt + Math.max(12, sDur * gate);
         w = offAt - performance.now(); if (w > 0) await sleep(w);
-        for (const n of st.notes) { midi.sendNoteOff(n.note); audio.noteOff(n.note); }
+        for (const n of st.notes) { liveNoteOff(n.note); audio.noteOff(n.note); }
       }
       w = (t0 + elapsed + stepMs) - performance.now();
       if (w > 0) await sleep(w);
@@ -841,6 +851,42 @@ function buildTransport() {
     finp.value = "";
   });
   document.getElementById("syx")?.addEventListener("click", exportSysex);
+  // BLE: play-only transport. One glink toggles connect/disconnect; the label
+  // reflects the link state and midi.onBleState drives it through reconnects.
+  const bleBtn = document.getElementById("ble");
+  const blePaint = (s) => {
+    if (!bleBtn) return;
+    if (s === "open") bleBtn.textContent = "bluetooth ✓";
+    else if (s === "reconnecting") bleBtn.textContent = "bluetooth …";
+    else bleBtn.textContent = "bluetooth";
+  };
+  if (bleBtn) {
+    if (!midi.bleSupported()) bleBtn.style.display = "none";
+    else {
+      bleBtn.addEventListener("click", async () => {
+        if (midi.bleConnected()) {
+          midi.disconnectBle();
+          status("bluetooth disconnected");
+          return;
+        }
+        try {
+          status("bluetooth: connect…");
+          const name = await midi.connectBle();
+          status(`bluetooth ✓ ${name} — notes ride BLE, freeze still uses USB`, "ok");
+        } catch (e) {
+          status("bluetooth: " + (e.message || e), "err");
+        }
+      });
+      midi.onBleState((s) => {
+        blePaint(s);
+        if (s === "drop") status("bluetooth dropped — reconnecting…", "err");
+        else if (s === "reconnecting") status("bluetooth reconnecting…");
+        else if (s === "open") status("bluetooth ✓ reconnected — notes ride BLE", "ok");
+        else if (s === "lost") status("bluetooth reconnect failed — tap bluetooth to retry", "err");
+        else if (s === "closed") status("bluetooth disconnected");
+      });
+    }
+  }
   muteBtn.addEventListener("click", () => {
     const m = !audio.isMuted();
     audio.setMuted(m);

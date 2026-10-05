@@ -163,3 +163,112 @@ export function sendNoteOff(note, channel = 1) {
 }
 
 export function hasAccess() { return !!access; }
+
+// --------------------------------------------------------------------------- //
+// BLE transport (play-only). Verdict from the hardware ladder (2026-10-04):
+// notes ride BLE in both directions, but the proprietary 0x11/0x20 SysEx does
+// NOT — reads get no reply, writes do not land. So BLE carries the live
+// audition notes; Freeze / read-device / tempo sync stay on USB MIDI.
+// --------------------------------------------------------------------------- //
+const BLE_SERVICE = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
+const BLE_CHAR = "7772e5db-3868-4112-a1a9-f2669d106bf3";
+
+let bleDevice = null;
+let bleChar = null;
+let bleWant = false;
+let bleRetries = 0;
+let bleTimer = null;
+let bleCb = null;
+const bleListened = new WeakSet();
+
+export function bleSupported() { return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); }
+export function bleConnected() { return !!bleChar; }
+export function onBleState(cb) { bleCb = cb; }
+
+function bleState(s) { if (bleCb) bleCb(s); }
+
+async function bleOpen(device) {
+  const server = await device.gatt.connect();
+  const svc = await server.getPrimaryService(BLE_SERVICE);
+  const ch = await svc.getCharacteristic(BLE_CHAR);
+  await ch.startNotifications();
+  if (!bleListened.has(device)) {
+    bleListened.add(device);
+    device.addEventListener("gattserverdisconnected", () => {
+      bleChar = null;
+      bleState("drop");
+      if (bleWant) scheduleBleReconnect();
+    });
+  }
+  bleDevice = device;
+  bleChar = ch;
+  bleRetries = 0;
+  return ch;
+}
+
+function scheduleBleReconnect() {
+  clearTimeout(bleTimer);
+  if (bleRetries >= 6) {
+    bleWant = false;
+    bleState("lost");
+    return;
+  }
+  const delay = 1000 * Math.pow(2, bleRetries++);
+  bleState("reconnecting");
+  bleTimer = setTimeout(async () => {
+    try {
+      if (bleDevice && !bleChar) {
+        await bleOpen(bleDevice);
+        bleState("open");
+      }
+    } catch { scheduleBleReconnect(); }
+  }, delay);
+}
+
+export async function connectBle() {
+  if (!bleSupported()) throw new Error("Web Bluetooth unsupported in this browser");
+  bleWant = true;
+  let device = null;
+  try {
+    const known = (await navigator.bluetooth.getDevices()) ?? [];
+    device = known.find((d) => (d.name || "").startsWith("FM-1")) ?? null;
+  } catch { /* getDevices can be unavailable */ }
+  if (!device) {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "FM-1" }],
+      optionalServices: [BLE_SERVICE],
+    });
+  }
+  await bleOpen(device);
+  bleState("open");
+  return device.name;
+}
+
+export function disconnectBle() {
+  bleWant = false;
+  clearTimeout(bleTimer);
+  const d = bleDevice;
+  bleDevice = null;
+  bleChar = null;
+  if (d && d.gatt && d.gatt.connected) d.gatt.disconnect();
+  bleState("closed");
+}
+
+// One BLE-MIDI packet: header (ts bits 12-6), timestamp byte (ts bits 6-0), MIDI.
+function bleSend(bytes) {
+  if (!bleChar) return false;
+  const ts = Math.floor(performance.now()) & 0x1FFF;
+  const pkt = new Uint8Array(2 + bytes.length);
+  pkt[0] = 0x80 | ((ts >> 7) & 0x3F);
+  pkt[1] = 0x80 | (ts & 0x7F);
+  pkt.set(bytes, 2);
+  try { bleChar.writeValueWithoutResponse(pkt); return true; }
+  catch { return false; }
+}
+
+export function bleSendNoteOn(note, vel, channel = 1) {
+  return bleSend(new Uint8Array([0x90 | ((channel - 1) & 0x0F), note & 0x7F, vel & 0x7F]));
+}
+export function bleSendNoteOff(note, channel = 1) {
+  return bleSend(new Uint8Array([0x80 | ((channel - 1) & 0x0F), note & 0x7F, 0]));
+}

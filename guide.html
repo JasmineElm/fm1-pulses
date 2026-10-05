@@ -82,6 +82,12 @@
     <p>Downloads the whole 16-slot bank as a <code>.syx</code> file — the raw SysEx pattern-write messages, so any other FM-1 tool can push the same bank to the device without the browser.</p>
   </div>
 
+  <h2>Bluetooth</h2>
+  <div class="param">
+    <h3>bluetooth <span class="kind">link</span></h3>
+    <p>Connects the FM-1 over BLE MIDI for cable-free playback: the ▶ Play loop sends its notes over Bluetooth. <b>Freeze, Send 16, Clear and the device-BPM read still need USB</b> — on this firmware BLE carries notes and controllers only; the pattern SysEx does not ride it (verified on hardware). If the link drops, the app reconnects on its own and shows <i>bluetooth …</i> in the link.</p>
+  </div>
+
   <h2>Rhythm</h2>
   <div class="param">
     <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
