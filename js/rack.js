@@ -5,7 +5,7 @@ import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
 import * as midi from "./midi.js?v=65";
 import * as audio from "./audio.js?v=65";
-import { knob } from "./knob.js?v=65";
+import { knob, sw } from "./knob.js?v=66";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -744,6 +744,19 @@ function buildTransport() {
   document.getElementById("gen").addEventListener("click", () => doGenerate(true));
   document.getElementById("rand").addEventListener("click", randomize);
   document.getElementById("audition").addEventListener("click", toggleLive);
+  // preview timbre: a UI preference, not part of the generative state
+  const muteBtn = document.getElementById("mute");
+  const soundEl = sw({
+    label: "sound",
+    options: audio.SOUNDS.map((s) => ({ v: s.id, t: s.name })),
+    value: localStorage.getItem("fm1p.sound") || audio.getSound(),
+    onInput: (id) => {
+      audio.setSound(id);
+      localStorage.setItem("fm1p.sound", id);
+      status(`preview: ${audio.SOUNDS.find((s) => s.id === id)?.name ?? id}`);
+    },
+  });
+  muteBtn.insertAdjacentElement("beforebegin", soundEl);
   document.getElementById("export")?.addEventListener("click", exportState);
   const finp = document.getElementById("importfile");
   document.getElementById("import")?.addEventListener("click", () => finp.click());
@@ -753,7 +766,6 @@ function buildTransport() {
     finp.value = "";
   });
   document.getElementById("syx")?.addEventListener("click", exportSysex);
-  const muteBtn = document.getElementById("mute");
   muteBtn.addEventListener("click", () => {
     const m = !audio.isMuted();
     audio.setMuted(m);
