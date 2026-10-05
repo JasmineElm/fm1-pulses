@@ -45,15 +45,24 @@ function noteCount(p) {
 function renderBank() {
   const el = document.getElementById("bank");
   el.innerHTML = "";
+  const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);   // loop region, 0-based
+  const ln = Math.round(state.loop ?? 0);
   for (let s = 0; s < SLOTS; s++) {
     const p = bank[s];
     const cell = document.createElement("button");
     cell.className = "bankcell" + (s === selected ? " sel" : "");
     const num = document.createElement("span"); num.className = "bn"; num.textContent = s + 1;
     const mini = document.createElement("div"); mini.className = "mini";
+    const loopOn = p && ln >= 2 && ls + ln <= p.length;
     for (let i = 0; i < 64; i++) {
       const d = document.createElement("i");
-      if (p && i < p.length && p.steps[i] && p.steps[i].notes.length) d.className = "on";
+      const cls = [];
+      if (p && i < p.length && p.steps[i] && p.steps[i].notes.length) cls.push("on");
+      if (loopOn && i >= ls && i < ls + ln) {
+        cls.push("loop");
+        if (i === ls) cls.push("loopstart");
+      }
+      d.className = cls.join(" ");
       mini.appendChild(d);
     }
     const cnt = document.createElement("span"); cnt.className = "bc"; cnt.textContent = noteCount(p);
@@ -118,6 +127,9 @@ function renderBuffer() {
   el.innerHTML = "";
   const p = bank[selected];
   if (!p) return;
+  const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);   // loop region, 0-based
+  const ln = Math.round(state.loop ?? 0);
+  const loopOn = ln >= 2 && ls + ln <= p.length;
   for (let i = 0; i < 64; i++) {
     const st = p.steps[i];
     const cell = document.createElement("div");
@@ -131,6 +143,10 @@ function renderBuffer() {
       cell.classList.add("on");
       cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
     } else if (i >= p.length) cell.classList.add("off");
+    if (loopOn && i >= ls && i < ls + ln) {
+      cell.classList.add("loop");
+      if (i === ls) cell.classList.add("loopstart");
+    }
     if (locks.has(`${selected}:${i}`)) cell.classList.add("locked");
     if (i === editStep) cell.classList.add("edit");
     cell.addEventListener("click", () => selectStep(i));

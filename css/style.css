@@ -117,6 +117,8 @@ button.danger:hover { border-color: var(--err); }
 .bankcell .mini { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; width: 100%; }
 .bankcell .mini i { aspect-ratio: 1 / 1; border-radius: 50%; background: var(--line); opacity: .55; }
 .bankcell .mini i.on { background: var(--accent); opacity: 1; }
+.bankcell .mini i.loop { background: color-mix(in srgb, var(--accent) 30%, transparent); opacity: 1; }
+.bankcell .mini i.loopstart { background: color-mix(in srgb, var(--accent) 55%, transparent); opacity: 1; }
 .bankcell .bc { font-size: 9px; color: var(--dim); }
 
 /* ---- phrase step grid: each step is a circle, like the FM-1's LEDs ---- */
