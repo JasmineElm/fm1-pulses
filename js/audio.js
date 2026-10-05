@@ -5,6 +5,7 @@
 
 let ctx = null;
 let master = null;
+let comp = null;
 let muted = false;
 const voices = new Map();   // note -> { oscs: [], gain, rel }
 
@@ -25,14 +26,23 @@ function ensure() {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.5;
-    master.connect(ctx.destination);
+    master.gain.value = 0.45;
+    // chords stack up to 9 voices plus release overlap; the compressor keeps
+    // the sum out of clipping without killing the attack transients
+    comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.knee.value = 12;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.15;
+    master.connect(comp);
+    comp.connect(ctx.destination);
   }
   if (ctx.state === "suspended") ctx.resume();
   return ctx;
 }
 
-export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; }
+export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.45; }
 export function isMuted() { return muted; }
 export function unlock() { ensure(); }        // call from a user gesture
 
@@ -43,7 +53,7 @@ const hz = (note) => 440 * Math.pow(2, (note - 69) / 12);
 function buildVoice(c, t, f, vel, id) {
   const gain = c.createGain();
   const v = vel > 0 ? vel / 127 : 1;
-  const peak = 0.28 * v;
+  const peak = 0.16 * v;
   const oscs = [];
   const stops = [];
 
@@ -71,7 +81,7 @@ function buildVoice(c, t, f, vel, id) {
       const { o: c0 } = osc("sine", f);
       fm(c0, 3.01, f * 2.2, f * 0.2, 0.6);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak * 1.05, t + 0.003);
+      gain.gain.linearRampToValueAtTime(peak, t + 0.003);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
       rel = 0.3;
       break;
@@ -80,7 +90,7 @@ function buildVoice(c, t, f, vel, id) {
       const { o: c0 } = osc("sine", f);
       fm(c0, 1, f * 4.5, f * 1.1, 0.25);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak * 1.15, t + 0.005);
+      gain.gain.linearRampToValueAtTime(peak * 1.1, t + 0.005);
       gain.gain.linearRampToValueAtTime(peak * 0.65, t + 0.2);
       rel = 0.12;
       break;
@@ -91,7 +101,7 @@ function buildVoice(c, t, f, vel, id) {
       const c0 = oscs[0];
       fm(c0, 1, f * 0.8);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak * 0.8, t + 0.012);
+      gain.gain.linearRampToValueAtTime(peak * 0.7, t + 0.012);
       rel = 0.08;
       break;
     }
@@ -102,8 +112,8 @@ function buildVoice(c, t, f, vel, id) {
       lp.frequency.value = Math.min(f * 5, 7000);
       gain.connect(lp).connect(master);
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak * 0.72, t + 0.004);
-      gain.gain.linearRampToValueAtTime(peak * 0.36, t + 0.18);
+      gain.gain.linearRampToValueAtTime(peak * 0.6, t + 0.004);
+      gain.gain.linearRampToValueAtTime(peak * 0.3, t + 0.18);
       rel = 0.05;
       break;
     }
