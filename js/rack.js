@@ -4,7 +4,7 @@
 import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=65";
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
 import * as midi from "./midi.js?v=65";
-import * as audio from "./audio.js?v=65";
+import * as audio from "./audio.js?v=66";
 import { knob, sw } from "./knob.js?v=66";
 
 const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
