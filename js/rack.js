@@ -16,7 +16,7 @@ const DEFAULT = {
   drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, humanize: 0, gateQuant: 0, snapGrid: 4,
-  gateMode: "random", euclidRot: 0,
+  gateBlend: 0, euclidRot: 0,
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
@@ -497,12 +497,14 @@ function buildRack() {
         format: (v) => `${Math.round(v)}%`,
         onInput: (v) => { state.gateProb = v; refreshLoopInfo(); scheduleRegen(); },
         tip: "random mode: chance each step fires. euclid mode: the DENSITY — Gate % becomes N hits evenly spaced over the cycle (see the loop info line)." })),
-      R("gateMode", rotary("Gate mode", [{ v: "random", t: "random" }, { v: "euclid", t: "euclid" }], state.gateMode,
-        (v) => { state.gateMode = v; refreshLoopInfo(); scheduleRegen(); }, "sm")),
+      R("gateBlend", knob({ label: "Euclid", min: 0, max: 100, value: state.gateBlend, def: DEFAULT.gateBlend, size: "md",
+        format: (v) => v <= 0 ? "random" : v >= 100 ? "euclid" : `${Math.round(v)}%`,
+        onInput: (v) => { state.gateBlend = v; refreshLoopInfo(); scheduleRegen(); },
+        tip: "Gradient between random placement (0%) and even Euclidean spacing (100%). In between, each step rolls which law it follows — Gate % is the density either way." })),
       R("euclidRot", knob({ label: "Rotate", min: 0, max: 15, step: 1, value: state.euclidRot, def: DEFAULT.euclidRot, size: "sm",
         format: (v) => `${Math.round(v)}`,
         onInput: (v) => { state.euclidRot = v; refreshLoopInfo(); scheduleRegen(); },
-        tip: "euclid mode: rotates the hit pattern within its cycle (wraps)." })),
+        tip: "Rotates the Euclidean hit pattern within its cycle (wraps). Only affects the euclid side of the gradient." })),
       R("gateQuant", knob({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant, size: "md",
         format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant") })),
       R("snapGrid", knob({ label: "Snap grid", min: 2, max: 8, step: 1, value: state.snapGrid, def: DEFAULT.snapGrid, size: "sm",
@@ -630,11 +632,12 @@ function refreshLoopInfo() {
   const n = Math.round(refs.loop?.value ?? 8);
   const reps = (L - a + 1) / n;
   const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
-  if (state.gateMode === "euclid") {
+  if (state.gateBlend > 0) {
+    const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
     const M = Math.max(2, n >= 2 ? n : 16);
     const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
     const rot = ((state.euclidRot ?? 0) % M + M) % M;
-    el.textContent = `${loopTxt} · E(${N},${M})${rot ? " rot " + rot : ""}`;
+    el.textContent = `${loopTxt} · E(${N},${M})${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
   } else el.textContent = loopTxt;
 }
 
@@ -658,7 +661,7 @@ function randomize() {
     spread: ["constant", "bell", "uniform", "extremes"][(Math.random() * 4) | 0],
     quantSteps: (Math.random() * 100) | 0, dejaVu: (Math.random() * 100) | 0,
     gateQuant: (Math.random() * 100) | 0, humanize: (Math.random() * 100) | 0,
-    gateMode: Math.random() < 0.5 ? "random" : "euclid", euclidRot: (Math.random() * 16) | 0,
+    gateBlend: (Math.random() * 100) | 0, euclidRot: (Math.random() * 16) | 0,
   });
   syncRack();
   doGenerate(true);

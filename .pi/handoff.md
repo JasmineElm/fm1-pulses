@@ -396,3 +396,12 @@ unit's own PLAY button), FC seems ignored. The device must be armed from the
 unit, then it follows the clock — badly.
 **Decision: no clock-sync feature in the app.** The WYSIWYG tempo read (gset) is
 the correct and only reliable path; the unit's own knob is the tempo setter.
+
+**Gate mode became a GRADIENT (2026-10-04 late).** The `random`/`euclid` rotary
+is now a 0-100% **Euclid** knob: 0% = per-step random, 100% = pure Bjorklund
+mask, in between each step rolls which law governs it (seeded, reproducible).
+Gate % stays the density on both ends (measured flat across the gradient), so
+the knob moves the rhythm's character only. `gateBlend` state key; legacy
+`gateMode:"euclid"` still maps to blend 100 when `gateBlend` is absent. Drift
+moves blend ±30. Loop info shows `E(N,M) @blend%`. The trailing tempo probe
+(one device read 1.2s after the last knob tweak) shipped with it.

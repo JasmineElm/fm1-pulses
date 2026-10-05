@@ -209,16 +209,20 @@ export function generate(params) {
   const div = Math.max(isRandom ? 1 : 2.5, len / cycles);
   let randVal = 0.5;                          // held value of the random source
   const gateProb = (params.gateProb ?? 70) / 100;
-  // Euclid mode: the Gate % is the DENSITY (N/M hits) instead of a per-step
-  // chance, and the hits sit at the evenest positions of an M-step cycle. The
-  // cycle follows the Loop length when the loop is on (default 8 steps), else
-  // one bar of sixteenths. Rotation turns the whole mask.
-  const euclidMode = params.gateMode === "euclid";
+  // Gate placement is a GRADIENT: 0% = pure per-step random, 100% = pure
+  // Euclidean (N hits at the evenest positions of an M-step cycle), and in
+  // between each step rolls which law governs it. Gate % stays the density
+  // on both ends, so the knob only moves the rhythm's character, not its
+  // note count. The cycle follows the Loop length when the loop is on
+  // (default 8 steps), else one bar of sixteenths. Rotation turns the mask.
+  // (Legacy: gateMode "euclid" = blend 100.)
+  const blend = Math.min(1, Math.max(0,
+    (params.gateBlend ?? (params.gateMode === "euclid" ? 100 : 0)) / 100));
   const loopLen0 = Math.round(params.loop || 0);
-  const M = Math.max(2, euclidMode && loopLen0 >= 2 ? loopLen0 : 16);
-  const N = euclidMode ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
+  const M = Math.max(2, blend > 0 && loopLen0 >= 2 ? loopLen0 : 16);
+  const N = blend > 0 ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
   let eMask = null;
-  if (euclidMode) {
+  if (blend > 0) {
     eMask = euclid(N, M);
     const rot = ((params.euclidRot ?? 0) % M + M) % M;
     if (rot) eMask = [...eMask.slice(rot), ...eMask.slice(0, rot)];
@@ -237,7 +241,11 @@ export function generate(params) {
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   for (let i = 0; i < 64; i++) {
-    const active = i < len && (euclidMode ? eMask[i % M] === 1 : rng() < gateProb);
+    const active = i < len && (blend <= 0
+      ? rng() < gateProb
+      : blend >= 1
+        ? eMask[i % M] === 1
+        : (rng() < blend ? eMask[i % M] === 1 : rng() < gateProb));
     if (!active) continue;
 
     // Pitch source. Deterministic waves read their periodic shape at `div` steps
@@ -311,6 +319,7 @@ export function generateBank(base, driftPct = 50) {
   // seeded drift direction per parameter
   const dir = {
     gateProb: r() < 0.5 ? -1 : 1,
+    gateBlend: r() < 0.5 ? -1 : 1,
     lfoAmp: r() < 0.5 ? -1 : 1,
     bias: r() < 0.5 ? -1 : 1,
     lfoOffset: r() < 0.5 ? -1 : 1,
@@ -336,6 +345,7 @@ export function generateBank(base, driftPct = 50) {
       // move from slot 1 to slot 16.
       seed: (seed + i * 0x9e3779b1) >>> 0,
       gateProb: clamp(base.gateProb + dir.gateProb * t * 40, 5, 100),
+      gateBlend: clamp((base.gateBlend ?? 0) + dir.gateBlend * t * 30, 0, 100),
       lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
       bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
       lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
