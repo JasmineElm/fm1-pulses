@@ -64,6 +64,20 @@
     <p>The 16 slots of the bank sit above a 64-step grid, eight wide. Tap a slot to select it. Tap a step to edit it: <b>−</b> and <b>+</b> move it a semitone, <b>✕</b> empties it. Any step you touch is locked, so it survives regeneration. When the loop is on, the tiled region is tinted in the accent colour (its first step a notch brighter), in both the grid and the bank strip.</p>
   </div>
 
+  <h2>Export / import</h2>
+  <div class="param">
+    <h3>export <span class="kind">file</span></h3>
+    <p>Downloads the current state as JSON: every knob, the seed, the locked steps, and the selected slot. The whole bank derives from the seed, so the file <i>is</i> the song — anyone who imports it gets the identical 16 patterns.</p>
+  </div>
+  <div class="param">
+    <h3>import <span class="kind">file</span></h3>
+    <p>Loads a JSON file exported from FM-1 Pulses. Parameters are validated and clamped, the bank regenerates from the file's seed, and locked steps come back as they were.</p>
+  </div>
+  <div class="param">
+    <h3>sysex <span class="kind">file</span></h3>
+    <p>Downloads the whole 16-slot bank as a <code>.syx</code> file — the raw SysEx pattern-write messages, so any other FM-1 tool can push the same bank to the device without the browser.</p>
+  </div>
+
   <h2>Rhythm</h2>
   <div class="param">
     <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>

@@ -664,6 +664,63 @@ function syncRack() {
 }
 
 // --------------------------------------------------------------------------- //
+// Export / import — the bank is fully reproducible from state + locks, so a
+// JSON file IS the song. The .syx download is the same bank in the FM-1's own
+// SysEx format, for anyone who pushes patterns with another tool.
+// --------------------------------------------------------------------------- //
+const STATE_VERSION = 1;
+
+function download(name, data, type) {
+  const blob = new Blob([data], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function exportState() {
+  const data = {
+    app: "fm1-pulses",
+    version: STATE_VERSION,
+    seed: state.seed >>> 0,
+    params: { ...state },
+    locks: Object.fromEntries(locks),
+    selected,
+  };
+  download(`fm1p-${state.seed >>> 0}.json`, JSON.stringify(data, null, 2), "application/json");
+  status(`exported seed ${state.seed >>> 0} ✓`);
+}
+
+async function importState(file) {
+  try {
+    const d = JSON.parse(await file.text());
+    if (!d || d.app !== "fm1-pulses") throw new Error("not an FM-1 Pulses file");
+    if (d.params) Object.assign(state, d.params);
+    else if (d.seed != null) Object.assign(state, d);   // tolerate files saved as raw state
+    for (const k of Object.keys(state)) if (!(k in DEFAULT)) delete state[k];
+    state.seed = (d.seed ?? state.seed) >>> 0;
+    locks.clear();
+    for (const [k, v] of Object.entries(d.locks ?? {})) locks.set(k, v.map((n) => ({ ...n })));
+    selected = Math.max(0, Math.min(SLOTS - 1, Number(d.selected) || 0));
+    syncRack(); refreshLoopInfo();
+    doGenerate(false);
+    refreshLockCount();
+    status(`imported seed ${state.seed >>> 0} ✓`);
+  } catch (e) {
+    status("import failed: " + (e.message || e), "err");
+  }
+}
+
+function exportSysex() {
+  syncHeader();
+  const bytes = [];
+  for (let i = 0; i < SLOTS; i++) for (const m of encodeWrite(bank[i], i, true)) bytes.push(...m);
+  download(`fm1p-${state.seed >>> 0}.syx`, new Uint8Array(bytes), "application/octet-stream");
+  status(`bank .syx downloaded ✓ (${bytes.length} bytes, 16 slots)`);
+}
+
+// --------------------------------------------------------------------------- //
 // Transport + init
 // --------------------------------------------------------------------------- //
 function randomize() {
@@ -687,6 +744,15 @@ function buildTransport() {
   document.getElementById("gen").addEventListener("click", () => doGenerate(true));
   document.getElementById("rand").addEventListener("click", randomize);
   document.getElementById("audition").addEventListener("click", toggleLive);
+  document.getElementById("export")?.addEventListener("click", exportState);
+  const finp = document.getElementById("importfile");
+  document.getElementById("import")?.addEventListener("click", () => finp.click());
+  finp.addEventListener("change", () => {
+    const f = finp.files[0];
+    if (f) importState(f);
+    finp.value = "";
+  });
+  document.getElementById("syx")?.addEventListener("click", exportSysex);
   const muteBtn = document.getElementById("mute");
   muteBtn.addEventListener("click", () => {
     const m = !audio.isMuted();
