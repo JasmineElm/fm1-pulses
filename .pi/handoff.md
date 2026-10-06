@@ -376,6 +376,14 @@ lines + labels, gate trigger lane (dim = gate opened, accent = note survived),
 staircase trace of played notes, hover readout per step. `generate()` also
 returns the raw `gates` mask now.
 
+### Perlin fix 2026-10-06 (`7515282`)
+
+Gradient noise reads exactly 0 at lattice points; at 4 cycles the 1.5
+cells/step sampling hit the lattice every other step → half the contour froze
+at centre → quantized to root (36/47 notes). Switched perlin to smoothed VALUE
+noise + peak normalization; spread now matches sine's. The Shape knob's
+"octave shimmer" term uses the same noise.
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
