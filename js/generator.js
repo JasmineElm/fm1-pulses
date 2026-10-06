@@ -191,14 +191,18 @@ function skew(v, bias) {
 function quantize(note, scale, root, strength, rng) {
   const n = Math.round(note);
   if (rng() > strength) return n;
-  const rel = ((n - root) % 12 + 12) % 12;
-  let best = scale[0], bestD = 99;
+  // Nearest note of the scale in ANY octave: for each degree take its closest
+  // occurrence (root + iv + 12k) and keep the closest. The old form snapped
+  // `rel` to a degree but kept the octave of `rel`, so a B (rel 11) whose
+  // nearest degree is C (0, one semitone up) dropped a full octave: 59 -> 48
+  // instead of 60. Ties go to the higher note.
+  let best = null, bestD = 99;
   for (const iv of scale) {
-    const d = Math.min(Math.abs(rel - iv), 12 - Math.abs(rel - iv));
-    if (d < bestD) { bestD = d; best = iv; }
+    const cand = root + iv + 12 * Math.round((n - root - iv) / 12);
+    const d = Math.abs(cand - n);
+    if (d < bestD || (d === bestD && best != null && cand > best)) { bestD = d; best = cand; }
   }
-  const oct = Math.floor((n - root - rel) / 12);
-  return root + best + oct * 12;
+  return best == null ? n : best;
 }
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
