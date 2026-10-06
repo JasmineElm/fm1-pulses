@@ -310,14 +310,19 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .display .cell.now > .dot { box-shadow: 0 0 0 2px var(--fg); }
 .display .cell.locked > .dot { border-color: var(--fg); border-style: dashed; border-width: 2px; }
 .display .cell.edit > .dot { box-shadow: 0 0 0 2px var(--accent); }
-/* Loop region: the steps the loop tiles across sit on a lit lane — the cell
-   BEHIND the dot carries the accent glow, so notes keep their full brightness
-   and loop rests lift out of the dim. The region's first step glows brighter.
-   (The old version tinted the dots themselves, which read as darkened.) */
-.display .cell.loop { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 3px; }
-.display .cell.loop.off:not(.locked) > .dot { opacity: .5; border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-.display .cell.loopstart { background: color-mix(in srgb, var(--accent) 28%, transparent); }
-.display .cell.loopstart.off:not(.locked) > .dot { opacity: .6; border-color: var(--fg); }
+/* Loop region: the DOT itself carries the highlight — loop notes keep their
+   full brightness and gain an accent ring, loop rests lift out of the dim,
+   and the region's first step gets a bright fg ring. The ring is a
+   pseudo-element, so it never fights the playhead/edit/lock box-shadows. */
+.display .cell.loop > .dot { position: relative; }
+.display .cell.loop > .dot::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  pointer-events: none;
+}
+.display .cell.loop.off > .dot { opacity: .5; }
+.display .cell.loopstart > .dot::after { border-color: var(--fg); }
+.display .cell.loopstart.off > .dot { opacity: .6; }
 
 .display .bank { gap: 4px; }
 .display .bankcell { padding: 4px 2px; border-radius: 3px; background: transparent; }
