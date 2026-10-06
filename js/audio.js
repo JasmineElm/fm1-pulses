@@ -6,7 +6,7 @@
 let ctx = null;
 let master = null;
 let comp = null;
-let muted = false;
+let muted = true;   // browser preview starts MUTED: with the FM-1 attached you only want its audio, not the phone speaker
 const voices = new Map();   // note -> { oscs: [], gain, rel }
 
 export const SOUNDS = [
@@ -26,7 +26,7 @@ function ensure() {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.45;
+    master.gain.value = muted ? 0 : 0.45;
     // chords stack up to 9 voices plus release overlap; the compressor keeps
     // the sum out of clipping without killing the attack transients
     comp = ctx.createDynamicsCompressor();
