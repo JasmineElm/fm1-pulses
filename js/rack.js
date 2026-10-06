@@ -1,7 +1,7 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=68";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=69";
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
 import * as midi from "./midi.js?v=67";
 import * as audio from "./audio.js?v=66";

@@ -51,18 +51,30 @@ export const midiName = (n) => {
 // guide): sine folds, triangle/saw bend, square narrows its pulse width, the
 // random family uses it as slew/step size, perlin adds a detuned octave.
 function makePerlin(rng) {
-  const N = 24;                          // gradient points around the cycle
-  const grads = Array.from({ length: N }, () => rng() * 2 - 1);
-  return (phase) => {
-    const x = phase * N;
+  const N = 24;                          // random points around the cycle
+  // Smoothed VALUE noise, not gradient noise: gradient noise reads exactly 0
+  // at every lattice point, and with 24 cells sampled at integer cell rates
+  // (e.g. 1.5 cells/step at 4 cycles) every other step landed on a lattice
+  // point — the wave froze at the centre and quantized to the root. Value
+  // noise has full amplitude at its lattice points, so it can never lock.
+  const vals = Array.from({ length: N }, () => rng() * 2 - 1);
+  const noise = (phase) => {
+    const x = (((phase % 1) + 1) % 1) * N;
     const i0 = Math.floor(x) % N;
     const i1 = (i0 + 1) % N;
     const f = x - Math.floor(x);
     const u = f * f * (3 - 2 * f);       // smoothstep
-    const n0 = grads[i0] * f;            // dot with distance to i0
-    const n1 = grads[i1] * (f - 1);      // dot with distance to i1
-    return n0 * (1 - u) + n1 * u;        // range ≈ [-1, 1]
+    return vals[i0] * (1 - u) + vals[i1] * u;
   };
+  // Normalize to a true ±1 swing (peak scan over the cycle; deterministic per seed).
+  let peak = 0;
+  const S = 8;                            // samples per cell for the scan
+  for (let k = 0; k < N * S; k++) {
+    const v = Math.abs(noise(k / (N * S)));
+    if (v > peak) peak = v;
+  }
+  const g = peak > 0.01 ? 1 / peak : 1;
+  return (phase) => noise(phase) * g;
 }
 
 function lfoFactory(wave, rng, shape) {
