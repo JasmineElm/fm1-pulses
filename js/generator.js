@@ -258,6 +258,7 @@ export function generate(params) {
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
   const contour = new Array(64).fill(0);   // raw pitch per step (pre-quantize), for the wave scope
+  const gates = new Array(64).fill(0);     // gate-open per step, for the scope's trigger lane
   for (let i = 0; i < 64; i++) {
     // Gate roll FIRST: its draws own the main stream, so the pitch math below
     // (lfoRng-only or pure) can never shift the gate pattern.
@@ -266,6 +267,7 @@ export function generate(params) {
       : blend >= 1
         ? eMask[i % M] === 1
         : (rng() < blend ? eMask[i % M] === 1 : rng() < gateProb));
+    gates[i] = active ? 1 : 0;
 
     // Pitch source — the LFO free-runs every step (the design: the clock
     // advances it regardless of the gate); S&H only matters at gate-open.
@@ -322,7 +324,7 @@ export function generate(params) {
       if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[src].notes.map((n) => ({ ...n }));
     }
   }
-  return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps, contour };
+  return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps, contour, gates };
 }
 
 export const LFO_RATES = [1, 2, 4, 8, 16, 32, 64];

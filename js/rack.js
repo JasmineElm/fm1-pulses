@@ -1,7 +1,7 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=67";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=68";
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
 import * as midi from "./midi.js?v=67";
 import * as audio from "./audio.js?v=66";
@@ -158,15 +158,19 @@ function renderBuffer() {
   renderScope();
 }
 
-// Wave scope: the pitch contour the LFO produced (smooth line) with the notes
-// that actually play (dots), so you can SEE what gate + quantizer do to the
-// wave. Stems connect a played note back to the contour value it came from.
-let scopeNow = null;
+// Wave scope — a DEBUG readout, deliberately plainer than the panel UI.
+// Shows: the pitch contour the LFO produced (line), the notes that actually
+// play (dots + stems), a staircase trace through the played notes (what the
+// ear gets after the quantizer), gate triggers as a lane along the bottom,
+// cycle boundaries, C-octave reference lines, loop region, playhead, and a
+// hover readout per step.
+const SCOPE_PADT = 14, SCOPE_PADB = 16, SCOPE_PADX = 20;
+let scopeNow = null, scopeHover = null;
 function renderScope() {
   const cv = document.getElementById("wave");
   const p = bank[selected];
   if (!cv || !p) return;
-  const w = cv.clientWidth || 320, h = cv.clientHeight || 60;
+  const w = cv.clientWidth || 320, h = cv.clientHeight || 150;
   const dpr = window.devicePixelRatio || 1;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -174,47 +178,63 @@ function renderScope() {
   const ctx = cv.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0f0f12";
+  ctx.fillStyle = "#0b0b0e";
   ctx.fillRect(0, 0, w, h);
 
   const n = 64;
   const cont = p.contour || [];
-  // y-range: the contour plus the played notes, with breathing room
+  const played = [];
   let lo = 127, hi = 0;
   for (let i = 0; i < n; i++) {
     const v = cont[i];
     if (v != null && v < lo) lo = v;
     if (v != null && v > hi) hi = v;
     const nt = i < p.length && p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
-    if (nt != null && nt < lo) lo = nt;
-    if (nt != null && nt > hi) hi = nt;
+    if (nt != null) { played.push([i, nt]); if (nt < lo) lo = nt; if (nt > hi) hi = nt; }
   }
   if (hi - lo < 4) { const c = (lo + hi) / 2; lo = c - 2; hi = c + 2; }
-  const padT = 12, padB = 3, padX = 2;
-  const Y = (v) => padT + (h - padT - padB) * (1 - (v - lo) / (hi - lo));
-  const X = (i) => padX + i / (n - 1) * (w - 2 * padX);
+  const Y = (v) => SCOPE_PADT + (h - SCOPE_PADT - SCOPE_PADB) * (1 - (v - lo) / (hi - lo));
+  const X = (i) => SCOPE_PADX + i / (n - 1) * (w - 2 * SCOPE_PADX);
+
+  // C-octave reference lines + labels (left)
+  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  for (let c = Math.ceil(lo / 12) * 12; c <= hi; c += 12) {
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(SCOPE_PADX, Y(c) + 0.5); ctx.lineTo(w - 4, Y(c) + 0.5); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillText(midiName(c), 3, Y(c));
+  }
+
+  // cycle boundaries (the LFO's own grid, same math as the generator)
+  const cycles = Math.max(0.1, Math.min(16, state.lfoRate || 4));
+  const isRandom = state.lfoWave === "random";
+  const div = Math.max(isRandom ? 1 : 2.5, p.length / cycles);
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.setLineDash([2, 3]);
+  for (let x = div; x < p.length; x += div) {
+    ctx.beginPath(); ctx.moveTo(X(x) + 0.5, SCOPE_PADT); ctx.lineTo(X(x) + 0.5, h - SCOPE_PADB); ctx.stroke();
+  }
+  ctx.setLineDash([]);
 
   // loop region backdrop + start guide
   const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);
   const ln = Math.round(state.loop ?? 0);
   if (ln >= 2 && ls + ln <= p.length) {
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
-    ctx.fillRect(X(ls), padT, X(ls + ln) - X(ls), h - padT - padB);
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(X(ls), SCOPE_PADT, X(ls + ln) - X(ls), h - SCOPE_PADT - SCOPE_PADB);
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(X(ls) + 0.5, padT); ctx.lineTo(X(ls) + 0.5, h - padB); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(ls) + 0.5, SCOPE_PADT); ctx.lineTo(X(ls) + 0.5, h - SCOPE_PADB); ctx.stroke();
   }
-  // centre line
-  ctx.strokeStyle = "rgba(255,255,255,0.09)";
-  ctx.beginPath(); ctx.moveTo(padX, Y((lo + hi) / 2) + 0.5); ctx.lineTo(w - padX, Y((lo + hi) / 2) + 0.5); ctx.stroke();
 
   const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8a33d";
-  const beyondLen = p.length < n;
   // contour: full accent inside the phrase, dimmed past its length
   ctx.strokeStyle = accent;
   ctx.lineWidth = 1.5;
   ctx.lineJoin = "round";
-  let started = false;
   const seg = (i0, i1, alpha) => {
     if (i0 > i1 || cont[i0] == null) return;
     ctx.globalAlpha = alpha;
@@ -228,36 +248,71 @@ function renderScope() {
     ctx.globalAlpha = 1;
   };
   seg(0, p.length - 1, 1);
-  if (beyondLen) seg(p.length, n - 1, 0.35);
+  if (p.length < n) seg(p.length, n - 1, 0.35);
+
+  // staircase: the quantized melody as the ear gets it (connect played dots)
+  if (played.length > 1) {
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(played[0][0]), Y(played[0][1]));
+    for (let k = 1; k < played.length; k++) ctx.lineTo(X(played[k][0]), Y(played[k][1]));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 
   // played notes: stem from the contour, dot at the quantized pitch
-  for (let i = 0; i < p.length; i++) {
-    const nt = p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
-    if (nt == null) continue;
+  for (const [i, nt] of played) {
     ctx.strokeStyle = "rgba(255,255,255,0.30)";
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(i), Y(cont[i] ?? nt)); ctx.lineTo(X(i), Y(nt)); ctx.stroke();
     ctx.fillStyle = accent;
-    ctx.beginPath(); ctx.arc(X(i), Y(nt), 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(i), Y(nt), 2.6, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // gate trigger lane: dim bar = gate opened, accent bar = a note survived
+  const laneY = h - SCOPE_PADB;
+  const laneH = SCOPE_PADB - 4;
+  const bw = (w - 2 * SCOPE_PADX) / n;
+  for (let i = 0; i < p.length; i++) {
+    const gated = p.gates?.[i] === 1;
+    const on = p.steps[i]?.notes.length;
+    if (!gated && !on) continue;
+    ctx.fillStyle = on ? accent : "rgba(255,255,255,0.22)";
+    ctx.fillRect(X(i) - bw / 2 + 0.5, laneY + 2, Math.max(1, bw - 1), laneH - 2);
   }
 
   // playhead
   if (scopeNow != null) {
     ctx.strokeStyle = "#ececf0";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(X(scopeNow) + 0.5, padT); ctx.lineTo(X(scopeNow) + 0.5, h - padB); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(scopeNow) + 0.5, SCOPE_PADT); ctx.lineTo(X(scopeNow) + 0.5, h - 2); ctx.stroke();
+  }
+  // hover guide
+  if (scopeHover != null) {
+    ctx.strokeStyle = "rgba(236,236,240,0.45)";
+    ctx.beginPath(); ctx.moveTo(X(scopeHover) + 0.5, SCOPE_PADT); ctx.lineTo(X(scopeHover) + 0.5, h - 2); ctx.stroke();
   }
 
-  // labels
-  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
+  // labels: wave · cycles · div | hover readout | lo/hi notes
   ctx.textBaseline = "top";
+  ctx.textAlign = "left";
   ctx.fillStyle = "#9a9aa2";
-  ctx.fillText(`${state.lfoWave ?? "sine"}${state.lfoRate ? " · " + state.lfoRate + " cyc" : ""}`, 5, 2);
+  ctx.font = "9px 'Barlow Semi Condensed', sans-serif";
+  ctx.fillText(`${state.lfoWave ?? "sine"} · ${cycles} cyc · div ${div.toFixed(1)}`, 4, 2);
+  if (scopeHover != null) {
+    const i = scopeHover;
+    const gated = i < p.length && p.gates?.[i] === 1;
+    const nt = i < p.length && p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
+    ctx.fillStyle = "#ececf0";
+    ctx.fillText(`step ${i + 1}: ${midiName(cont[i] ?? 0)}${nt != null ? " → " + midiName(nt) : gated ? " (gated, no note)" : " (rest)"}`, 150, 2);
+  }
   ctx.textAlign = "right";
   ctx.fillText(midiName(Math.round(hi)), w - 4, 2);
   ctx.textBaseline = "alphabetic";
-  ctx.fillText(midiName(Math.round(lo)), w - 4, h - 2);
-  ctx.textAlign = "start";
+  ctx.fillText(midiName(Math.round(lo)), w - 4, h - SCOPE_PADB - 1);
+  ctx.textAlign = "left";
 }
 
 // Header fields apply to every slot without a regen.
@@ -1089,3 +1144,12 @@ buildEditor();
 doGenerate(true);
 initMidi();
 window.addEventListener("resize", () => renderScope());
+// scope hover readout (debug tool): show the step under the pointer
+const wcv = document.getElementById("wave");
+wcv?.addEventListener("mousemove", (e) => {
+  const rect = wcv.getBoundingClientRect();
+  const stepW = (wcv.clientWidth - 2 * SCOPE_PADX) / 63;
+  scopeHover = Math.max(0, Math.min(63, Math.round((e.clientX - rect.left - SCOPE_PADX) / stepW)));
+  renderScope();
+});
+wcv?.addEventListener("mouseleave", () => { scopeHover = null; renderScope(); });
