@@ -338,6 +338,17 @@ on `css/style.css`. To force a one-off refresh, open the page in Incognito or ap
 
 ## Session 2026-10-04 (evening) — euclid, perlin, Shape knob, tempo WYSIWYG
 
+### Bug fix 2026-10-06 — wave switch reshuffled the gates
+
+The stochastic waves (perlin/random/randomWalk/sampleHold) drew from the
+shared main RNG stream that also rolls the gates, so switching to them moved
+the whole gate mask (7–26 steps differed); sine/triangle/saw/square consumed
+no extra draws and stayed put — which is what the user heard. Fix: `lfoRng =
+mulberry32(seed ^ 0x3c6ef372)` — the LFO (factory + drawRandom) now has its
+own stream, like vel/oct/grav/loop/snap already had. Verified: all 8 waves
+keep the identical gate mask per seed while the notes still change per wave.
+Committed `45b2887`, pushed from the phone (gh token, no laptop needed).
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
