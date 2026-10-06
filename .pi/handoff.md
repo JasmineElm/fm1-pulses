@@ -384,6 +384,15 @@ at centre → quantized to root (36/47 notes). Switched perlin to smoothed VALUE
 noise + peak normalization; spread now matches sine's. The Shape knob's
 "octave shimmer" term uses the same noise.
 
+### Quantizer octave bug 2026-10-06 (`a8246da`)
+
+User spotted (via the debug scope) notes an octave off the contour with root
+gravity and octave up at 0. Quantiuze kept the octave of the INPUT's rel
+offset: B (rel 11) whose nearest scale note was C wrapped DOWN an octave
+(59 -> 48 instead of 60). Sweep: 90 bad cases, worst 11 semitones. Now each
+degree is taken at its nearest octave occurrence; ties go higher per DESIGN.
+After: worst 1.5 semitones over 720 patterns.
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
