@@ -370,6 +370,12 @@ Also: the LFO now advances every clock tick (free-run) regardless of the gate
 byte-identical; random/walk/smooth/hold changed how they sound by design.
 Committed `8c4d229`. `generate()` now returns `contour` (64 raw pitches).
 
+Scope upgraded to a debug readout (`e99b71b`, per user: it does not have to
+fit the UI): 150px tall, plain bg, cycle-boundary grid (div math), C-octave
+lines + labels, gate trigger lane (dim = gate opened, accent = note survived),
+staircase trace of played notes, hover readout per step. `generate()` also
+returns the raw `gates` mask now.
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
