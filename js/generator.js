@@ -202,6 +202,7 @@ const SNAP_GRID = 4;   // default grid-snap spacing, in steps
  */
 export function generate(params) {
   const rng = mulberry32(params.seed >>> 0);
+  const lfoRng = mulberry32((params.seed ^ 0x3c6ef372) >>> 0);  // separate stream: switching the wave must not shift the gates
   const velRng = mulberry32((params.seed ^ 0x5bd1e995) >>> 0);  // separate stream: humanize must not shift pitch draws
   const octRng = mulberry32((params.seed ^ 0x85ebca6b) >>> 0);  // separate stream: octave jumps must not shift pitch draws
   const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
@@ -216,7 +217,7 @@ export function generate(params) {
   const wave = params.lfoWave || "sine";
   const isRandom = wave === "random";
   const shapeAmt = Math.min(1, Math.max(0, (params.lfoShape ?? 0) / 100));
-  const lfo = isRandom ? null : lfoFactory(wave, rng, shapeAmt);
+  const lfo = isRandom ? null : lfoFactory(wave, lfoRng, shapeAmt);
   // lfoRate is CYCLES ACROSS THE PATTERN; `div` (steps per cycle) is what the
   // phase math needs. Whole cycles repeat on the phrase, fractional ones drift.
   // A periodic wave degenerates when sampled at 1-2 phases (a sine at div 2 reads
@@ -270,7 +271,7 @@ export function generate(params) {
     let shaped;
     if (isRandom) {
       // floor-based so fractional `div` works: a draw each time the block index ticks
-      if (Math.floor(i / div) !== Math.floor((i - 1) / div)) randVal = drawRandom(rng, params.spread || "uniform");
+      if (Math.floor(i / div) !== Math.floor((i - 1) / div)) randVal = drawRandom(lfoRng, params.spread || "uniform");
       shaped = randVal;
     } else {
       const phase = ((i / div) % 1 + 1) % 1;
