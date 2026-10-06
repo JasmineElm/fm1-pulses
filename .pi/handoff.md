@@ -349,6 +349,14 @@ own stream, like vel/oct/grav/loop/snap already had. Verified: all 8 waves
 keep the identical gate mask per seed while the notes still change per wave.
 Committed `45b2887`, pushed from the phone (gh token, no laptop needed).
 
+### UI fix 2026-10-06 — loop region darkened instead of highlighted
+
+Loop steps were tinted on the dot itself (20-30% accent), so notes inside the
+loop looked darker than notes outside it (full accent). Now the highlight sits
+on the cell behind the dot: notes keep full brightness, loop rests lift out of
+the dim, the region's first step glows with an fg ring. Minimap (style.css)
+matching. Committed `19874df`.
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
