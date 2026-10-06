@@ -1,7 +1,7 @@
 // rack.js — the single-module knob UI. Same engine as app.js (generator, pattern,
 // midi, audio); only the controls differ: one portrait case, knobs on top and the
 // pattern display inside the case below. app.js and the MVP are untouched.
-import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=66";
+import { generate, generateBank, SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=67";
 import { encodeWrite, emptyPattern } from "./pattern.js?v=65";
 import * as midi from "./midi.js?v=67";
 import * as audio from "./audio.js?v=66";
@@ -155,6 +155,109 @@ function renderBuffer() {
   document.getElementById("selnum").textContent = String(selected + 1);
   document.getElementById("bufinfo").textContent = `${p.length} steps · ${RATE_NAMES[p.rate]} · ${noteCount(p)} notes`;
   renderEditor();
+  renderScope();
+}
+
+// Wave scope: the pitch contour the LFO produced (smooth line) with the notes
+// that actually play (dots), so you can SEE what gate + quantizer do to the
+// wave. Stems connect a played note back to the contour value it came from.
+let scopeNow = null;
+function renderScope() {
+  const cv = document.getElementById("wave");
+  const p = bank[selected];
+  if (!cv || !p) return;
+  const w = cv.clientWidth || 320, h = cv.clientHeight || 60;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#0f0f12";
+  ctx.fillRect(0, 0, w, h);
+
+  const n = 64;
+  const cont = p.contour || [];
+  // y-range: the contour plus the played notes, with breathing room
+  let lo = 127, hi = 0;
+  for (let i = 0; i < n; i++) {
+    const v = cont[i];
+    if (v != null && v < lo) lo = v;
+    if (v != null && v > hi) hi = v;
+    const nt = i < p.length && p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
+    if (nt != null && nt < lo) lo = nt;
+    if (nt != null && nt > hi) hi = nt;
+  }
+  if (hi - lo < 4) { const c = (lo + hi) / 2; lo = c - 2; hi = c + 2; }
+  const padT = 12, padB = 3, padX = 2;
+  const Y = (v) => padT + (h - padT - padB) * (1 - (v - lo) / (hi - lo));
+  const X = (i) => padX + i / (n - 1) * (w - 2 * padX);
+
+  // loop region backdrop + start guide
+  const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);
+  const ln = Math.round(state.loop ?? 0);
+  if (ln >= 2 && ls + ln <= p.length) {
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.fillRect(X(ls), padT, X(ls + ln) - X(ls), h - padT - padB);
+    ctx.strokeStyle = "rgba(255,255,255,0.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(ls) + 0.5, padT); ctx.lineTo(X(ls) + 0.5, h - padB); ctx.stroke();
+  }
+  // centre line
+  ctx.strokeStyle = "rgba(255,255,255,0.09)";
+  ctx.beginPath(); ctx.moveTo(padX, Y((lo + hi) / 2) + 0.5); ctx.lineTo(w - padX, Y((lo + hi) / 2) + 0.5); ctx.stroke();
+
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8a33d";
+  const beyondLen = p.length < n;
+  // contour: full accent inside the phrase, dimmed past its length
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = "round";
+  let started = false;
+  const seg = (i0, i1, alpha) => {
+    if (i0 > i1 || cont[i0] == null) return;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(X(i0), Y(cont[i0]));
+    for (let i = i0 + 1; i <= i1; i++) {
+      if (cont[i] == null) continue;
+      ctx.lineTo(X(i), Y(cont[i]));
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  seg(0, p.length - 1, 1);
+  if (beyondLen) seg(p.length, n - 1, 0.35);
+
+  // played notes: stem from the contour, dot at the quantized pitch
+  for (let i = 0; i < p.length; i++) {
+    const nt = p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
+    if (nt == null) continue;
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(i), Y(cont[i] ?? nt)); ctx.lineTo(X(i), Y(nt)); ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.beginPath(); ctx.arc(X(i), Y(nt), 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // playhead
+  if (scopeNow != null) {
+    ctx.strokeStyle = "#ececf0";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(scopeNow) + 0.5, padT); ctx.lineTo(X(scopeNow) + 0.5, h - padB); ctx.stroke();
+  }
+
+  // labels
+  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#9a9aa2";
+  ctx.fillText(`${state.lfoWave ?? "sine"}${state.lfoRate ? " · " + state.lfoRate + " cyc" : ""}`, 5, 2);
+  ctx.textAlign = "right";
+  ctx.fillText(midiName(Math.round(hi)), w - 4, 2);
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(midiName(Math.round(lo)), w - 4, h - 2);
+  ctx.textAlign = "start";
 }
 
 // Header fields apply to every slot without a regen.
@@ -367,6 +470,8 @@ async function playOnce() {
 function clearPlayhead() {
   if (nowCell) nowCell.classList.remove("now");
   nowCell = null;
+  scopeNow = null;
+  renderScope();
 }
 
 function markStep(i) {
@@ -374,6 +479,8 @@ function markStep(i) {
   if (nowCell) nowCell.classList.remove("now");
   nowCell = el.children[i] || null;
   if (nowCell) nowCell.classList.add("now");
+  scopeNow = i;
+  renderScope();
 }
 
 function stopLive() {
@@ -462,6 +569,7 @@ function applyTheme(id) {
   document.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s.dataset.id === id));
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
+  renderScope();
 }
 
 function buildTheme() {
@@ -980,3 +1088,4 @@ buildTransport();
 buildEditor();
 doGenerate(true);
 initMidi();
+window.addEventListener("resize", () => renderScope());

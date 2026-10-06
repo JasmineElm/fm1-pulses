@@ -324,6 +324,7 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .display .cell.loopstart > .dot::after { border-color: var(--fg); }
 .display .cell.loopstart.off > .dot { opacity: .6; }
 
+.display .wave { display: block; width: 100%; height: 64px; margin-top: 6px; border-radius: 3px; background: #0f0f12; border: 1px solid rgba(0,0,0,.55); }
 .display .bank { gap: 4px; }
 .display .bankcell { padding: 4px 2px; border-radius: 3px; background: transparent; }
 .display .bankcell.sel { border-color: var(--accent); box-shadow: none; }

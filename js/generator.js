@@ -257,17 +257,21 @@ export function generate(params) {
   const snapGrid = Math.max(2, Math.min(8, Math.round(params.snapGrid || SNAP_GRID)));  // grid spacing in steps
 
   const steps = Array.from({ length: 64 }, () => ({ rate: params.rate, notes: [] }));
+  const contour = new Array(64).fill(0);   // raw pitch per step (pre-quantize), for the wave scope
   for (let i = 0; i < 64; i++) {
+    // Gate roll FIRST: its draws own the main stream, so the pitch math below
+    // (lfoRng-only or pure) can never shift the gate pattern.
     const active = i < len && (blend <= 0
       ? rng() < gateProb
       : blend >= 1
         ? eMask[i % M] === 1
         : (rng() < blend ? eMask[i % M] === 1 : rng() < gateProb));
-    if (!active) continue;
 
-    // Pitch source. Deterministic waves read their periodic shape at `div` steps
-    // per cycle; "random" draws a fresh value every `div` steps and holds it (S&H),
-    // with spread choosing the distribution and bias skewing it.
+    // Pitch source — the LFO free-runs every step (the design: the clock
+    // advances it regardless of the gate); S&H only matters at gate-open.
+    // Deterministic waves read their periodic shape at `div` steps per cycle;
+    // "random" draws a fresh value every `div` steps and holds it (S&H), with
+    // spread choosing the distribution and bias skewing it.
     let shaped;
     if (isRandom) {
       // floor-based so fractional `div` works: a draw each time the block index ticks
@@ -285,6 +289,9 @@ export function generate(params) {
     const raw = unipolar
       ? centreNote + shaped * dev
       : centreNote + (shaped - 0.5) * 2 * dev;
+    contour[i] = clamp(raw, 0, 127);
+    if (!active) continue;
+
     // clamp the NOTE, not the LFO position, so offset shifts the range without
     // collapsing the swing (it only pins once the note hits the MIDI limits)
     let note = quantize(clamp(raw, 0, 127), scale, params.root, quantStrength, rng);
@@ -315,7 +322,7 @@ export function generate(params) {
       if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[src].notes.map((n) => ({ ...n }));
     }
   }
-  return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps };
+  return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps, contour };
 }
 
 export const LFO_RATES = [1, 2, 4, 8, 16, 32, 64];
