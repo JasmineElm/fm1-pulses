@@ -357,6 +357,19 @@ on the cell behind the dot: notes keep full brightness, loop rests lift out of
 the dim, the region's first step glows with an fg ring. Minimap (style.css)
 matching. Committed `19874df`.
 
+### Wave scope + LFO free-run — 2026-10-06
+
+Added a canvas scope in the display (between steps grid and editor): pitch
+contour line (pre-quantize raw pitch), played notes as dots on stems back to
+the contour, loop backdrop + start guide, playhead line, wave/cycles label and
+min/max note labels. Hooks: renderBuffer, markStep/clearPlayhead, applyTheme,
+resize. The user wanted proof the waves do what they should.
+
+Also: the LFO now advances every clock tick (free-run) regardless of the gate
+— the stateful waves used to pause during rests. Deterministic waves are
+byte-identical; random/walk/smooth/hold changed how they sound by design.
+Committed `8c4d229`. `generate()` now returns `contour` (64 raw pitches).
+
 **The tempo verdict is now deterministic** (see the RESOLVED section above): the
 firmware acks the 0x20 tempo bytes and discards them; 6 test tempos, zero gset
 changes, while swing/rate/gate land. The single-param write (`F0 43 10 pp qq vv
