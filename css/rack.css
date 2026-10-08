@@ -300,7 +300,11 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
    to 0 makes the 8 columns always divide the container exactly. */
 .display .cell { display: grid; place-items: center; background: none; border: 0; padding: 0; min-width: 0; }
 .display .cell > .dot {
-  aspect-ratio: 1; height: 100%; max-width: 100%;
+  /* the dot size comes from --dot (fitSteps() = min(cell width, row height)), so
+     the circle can never stretch into an ellipse on a phone where the grid is
+     taller than it is wide; min-width:0 stops the note label from stretching the
+     circle when rows are short. Fallback keeps a circle before the first fit */
+  aspect-ratio: 1; width: var(--dot, 100%); height: var(--dot, auto); max-width: 100%; max-height: 100%; min-width: 0; min-height: 0;
   border-radius: 50%; border: 1px solid var(--line);
   display: grid; place-items: center; line-height: 1;
   font-size: 9px; color: transparent; font-variant-numeric: tabular-nums;

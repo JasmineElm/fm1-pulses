@@ -68,7 +68,7 @@ function renderBank() {
     const cnt = document.createElement("span"); cnt.className = "bc"; cnt.textContent = noteCount(p);
     cell.append(num, mini, cnt);
     cell.title = `slot ${s + 1}: ${noteCount(p)} notes`;
-    cell.addEventListener("click", () => { selected = s; renderBank(); renderBuffer(); if (!live) playOnce(); });
+    cell.addEventListener("click", () => { selected = s; renderBank(); renderBuffer(); if (!live) playOnce(s); });
     el.appendChild(cell);
   }
   const el2 = document.getElementById("bufinfo");
@@ -155,7 +155,24 @@ function renderBuffer() {
   document.getElementById("selnum").textContent = String(selected + 1);
   document.getElementById("bufinfo").textContent = `${p.length} steps · ${RATE_NAMES[p.rate]} · ${noteCount(p)} notes`;
   renderEditor();
+  fitSteps();
   renderScope();
+}
+
+// Size every step dot to min(cell width, row height) so the circles can never
+// stretch into ellipses when the grid is taller than it is wide (small phones).
+function fitSteps() {
+  const grid = document.getElementById("steps");
+  if (!grid) return;
+  const cs = getComputedStyle(grid);
+  const gap = parseFloat(cs.gap) || 0;
+  const cellW = (grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - gap * 7) / 8;
+  let dot = cellW;
+  const hSpace = grid.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - gap * 7;
+  // -4px tolerance: in content-sized layouts the measured height IS the current dot
+  // size, so without it every render would shave another 2px (feedback loop).
+  if (hSpace > 0 && hSpace / 8 < cellW - 4) dot = hSpace / 8;
+  grid.style.setProperty("--dot", Math.max(8, Math.floor(dot) - 2) + "px");
 }
 
 // Wave scope — a DEBUG readout, deliberately plainer than the panel UI.
@@ -499,10 +516,18 @@ function liveNoteOff(note) {
   midi.sendNoteOff(note);
 }
 
-async function playOnce() {
-  const p = bank[selected];
+const previewHeld = new Set();   // pitches still sounding from a slot preview
+function panicPreview() {
+  for (const n of previewHeld) { try { liveNoteOff(n); } catch (_) {} try { audio.noteOff(n); } catch (_) {} }
+  previewHeld.clear();
+}
+
+async function playOnce(index) {
+  const slot = typeof index === "number" ? index : selected;
+  const p = bank[slot];
   if (!p || live) return;
   const token = ++onceToken;
+  panicPreview();                // never let the previous slot's notes bleed into this preview
   audio.unlock();
   const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
   const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
@@ -514,9 +539,10 @@ async function playOnce() {
     const sDur = stepMs - late;
     if (late) await sleep(late);
     if (st.notes.length) {
-      for (const n of st.notes) { liveNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
+      for (const n of st.notes) { previewHeld.add(n.note); liveNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
       await sleep(Math.max(12, sDur * gate));
-      for (const n of st.notes) { liveNoteOff(n.note); audio.noteOff(n.note); }
+      if (token !== onceToken || live) return;   // cancelled: panicPreview() already stopped these
+      for (const n of st.notes) { previewHeld.delete(n.note); liveNoteOff(n.note); audio.noteOff(n.note); }
       await sleep(Math.max(3, sDur * (1 - gate)));
     } else await sleep(sDur);
   }
@@ -549,6 +575,7 @@ function stopLive() {
 function toggleLive() {
   if (live) { stopLive(); return; }
   onceToken++;
+  panicPreview();
   live = true; liveToken++;
   audio.unlock();
   const btn = document.getElementById("audition");
@@ -1143,7 +1170,32 @@ buildTransport();
 buildEditor();
 doGenerate(true);
 initMidi();
-window.addEventListener("resize", () => renderScope());
+// Tooltips on/off: on phones the long-press hints cover the panel. The observer
+// keeps them off even for titles set later by renders (banks, knobs, switches).
+let tipsOn = localStorage.getItem("fm1p.tips") !== "off";
+const tipsLink = document.getElementById("tips");
+function applyTips() {
+  document.querySelectorAll("[title], [data-tip]").forEach((el) => {
+    if (tipsOn) { if (el.dataset.tip) el.setAttribute("title", el.dataset.tip); }
+    else if (el.hasAttribute("title")) { el.dataset.tip = el.getAttribute("title"); el.removeAttribute("title"); }
+  });
+  if (tipsLink) tipsLink.textContent = tipsOn ? "tips on" : "tips off";
+}
+tipsLink?.addEventListener("click", () => {
+  tipsOn = !tipsOn;
+  localStorage.setItem("fm1p.tips", tipsOn ? "on" : "off");
+  applyTips();
+  status(tipsOn ? "tooltips on" : "tooltips off");
+});
+new MutationObserver((muts) => {
+  if (tipsOn) return;
+  for (const m of muts) {
+    const el = m.target, t = el.getAttribute && el.getAttribute("title");
+    if (t != null) { el.dataset.tip = t; el.removeAttribute("title"); }
+  }
+}).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["title"] });
+setTimeout(applyTips, 0);
+window.addEventListener("resize", () => { fitSteps(); renderScope(); });
 // scope hover readout (debug tool): show the step under the pointer
 const wcv = document.getElementById("wave");
 wcv?.addEventListener("mousemove", (e) => {
