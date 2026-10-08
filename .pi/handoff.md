@@ -357,6 +357,18 @@ on the cell behind the dot: notes keep full brightness, loop rests lift out of
 the dim, the region's first step glows with an fg ring. Minimap (style.css)
 matching. Committed `19874df`.
 
+### User feedback round — 2026-10-07 (`bdfeec1`)
+
+1. Slot preview: `playOnce(s)` takes the slot explicitly + `panicPreview()` kills
+   still-sounding preview notes on switch (no more previous-slot bleed). If it
+   persists on a phone it is likely touch-target size on the 16-up bank row —
+   make preview opt-in (first tap selects, second plays) if reported again.
+2. Step dots: `fitSteps()` sizes dots to min(cell width, row height) via --dot;
+   `min-width: 0` stops note labels stretching circles when rows are short.
+   NOT browser-verified (laptop was down) — check on a small phone on refresh.
+3. Tooltips: "tips on/off" toggle in the status row, persisted (fm1p.tips);
+   MutationObserver strips titles set later by renders.
+
 ### Wave scope + LFO free-run — 2026-10-06
 
 Added a canvas scope in the display (between steps grid and editor): pitch
