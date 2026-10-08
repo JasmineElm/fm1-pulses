@@ -327,6 +327,15 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .display .cell.loop.off > .dot { opacity: .5; }
 .display .cell.loopstart > .dot::after { border-color: var(--fg); }
 .display .cell.loopstart.off > .dot { opacity: .6; }
+/* Echo steps: the steps the loop actually copied from the motif, marked with a
+   dashed ring so it is visible WHERE the repeats landed (the motif itself sounds
+   once, one region before the copies begin). */
+.display .cell.echo > .dot { position: relative; }
+.display .cell.echo > .dot::before {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--fg) 55%, transparent);
+  pointer-events: none;
+}
 
 .display .wave { display: block; width: 100%; height: 72px; margin-top: 6px; border-radius: 3px; background: #0b0b0e; border: 1px solid rgba(0,0,0,.55); }
 .display .bank { gap: 4px; }

@@ -337,7 +337,10 @@ export function generate(params) {
   if (loopLen >= 2 && loopStart + loopLen <= len) {
     for (let i = loopStart + loopLen; i < len; i++) {
       const src = loopStart + ((i - loopStart) % loopLen);
-      if (loopSlip >= 1 || loopRng() < loopSlip) steps[i].notes = steps[src].notes.map((n) => ({ ...n }));
+      if (loopSlip >= 1 || loopRng() < loopSlip) {
+        steps[i].notes = steps[src].notes.map((n) => ({ ...n }));
+        steps[i].echo = src;   // the grid marks copied steps, so the repeats are visible
+      }
     }
   }
   return { length: len, rate: params.rate, tempo: params.tempo, gate: params.gate, swing: params.swing, steps, contour, gates };

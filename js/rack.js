@@ -116,6 +116,7 @@ function setStepNote(i, note) {
     const v = p.steps[i].notes[0]?.vel ?? state.velocity ?? 100;
     p.steps[i].notes = [{ note: Math.max(0, Math.min(127, note)), vel: Math.max(1, Math.min(127, v)) }];
   }
+  delete p.steps[i].echo;   // an edited step is no longer a pure copy of the motif
   locks.set(`${selected}:${i}`, p.steps[i].notes.map((n) => ({ ...n })));
   renderBank(); renderBuffer(); refreshLockCount();
 }
@@ -147,6 +148,7 @@ function renderBuffer() {
       cell.classList.add("loop");
       if (i === ls) cell.classList.add("loopstart");
     }
+    if (st && st.echo != null) cell.classList.add("echo");   // a step the loop copied from the motif
     if (locks.has(`${selected}:${i}`)) cell.classList.add("locked");
     if (i === editStep) cell.classList.add("edit");
     cell.addEventListener("click", () => selectStep(i));
@@ -773,11 +775,11 @@ function buildRack() {
 
     sect("Memory", 6, [
       R("loopFrom", knob({ label: "Loop from", min: 1, max: Math.max(1, state.length - 2), step: 1, value: state.loopFrom, def: DEFAULT.loopFrom, size: "md",
-        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loopFrom = Math.round(v); refreshLoopRanges(); scheduleRegen(); } })),
+        format: (v) => `${Math.round(v)}`, tip: "where the motif starts. Everything before it plays once as an intro. The motif itself sounds once too — the copies begin one motif later (motif 42-49, copies from 50).", onInput: (v) => { state.loopFrom = Math.round(v); refreshLoopRanges(); scheduleRegen(); } })),
       R("loop", knob({ label: "Loop len", min: 2, max: Math.max(2, state.length - 1), step: 1, value: state.loop, def: DEFAULT.loop, size: "md",
-        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.loop = Math.round(v); refreshLoopInfo(); scheduleRegen(); } })),
+        format: (v) => `${Math.round(v)}`, tip: "how many steps the motif holds. The motif tiles from its own end to the end of the phrase.", onInput: (v) => { state.loop = Math.round(v); refreshLoopInfo(); scheduleRegen(); } })),
       R("dejaVu", knob({ label: "Deja Vu", min: 0, max: 100, value: state.dejaVu, def: DEFAULT.dejaVu, size: "md",
-        format: (v) => `${Math.round(v)}%`, onInput: setState("dejaVu") })),
+        format: (v) => `${Math.round(v)}%`, tip: "chance each step past the motif copies it instead of playing a fresh note. 100% = solid repeat; lower lets new notes bleed through. Copied steps are marked in the grid.", onInput: setState("dejaVu") })),
     ]),
   );
 }
