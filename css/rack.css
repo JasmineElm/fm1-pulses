@@ -25,15 +25,49 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   border-radius: 3px;
   background-color: rgba(0, 0, 0, .07);
   box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255,255,255,.06);
-  padding: 5px 0 7px;   /* horizontal padding must be 0 or the rails drift */
+  padding: 3px 4px 3px 0;
   min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
 }
 .sect > h3 {
-  margin: 0 2px 6px; font-size: 8.5px; letter-spacing: 2.2px; text-transform: uppercase;
-  color: var(--dim); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 3px;
+  flex: 0 0 18px;
+  width: 18px;
+  margin: 0 4px 0 0;
+  padding: 4px 0;
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 700;
+  border-right: 1px solid var(--line);
+  border-bottom: none;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  line-height: 1;
 }
 /* the internal gap MUST equal the panel gap, or the rails drift */
-.sgrid { display: grid; gap: 8px 7px; align-items: start; }
+.sgrid {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 5px 6px;
+  align-items: center;
+}
+.sgrid hr {
+  grid-column: 1 / -1;
+  border: 0;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06);
+  margin: 2px 0;
+  width: 100%;
+}
 
 /* controls scale with the rail so 6 columns fit a phone too */
 .rack *, .rack *::before, .rack *::after { box-sizing: border-box; }
@@ -207,7 +241,12 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 }
 .sw-arrow:hover { color: var(--fg); }
 
-/* ---- toggle ---- */
+/* ---- toggle & button wrapper ---- */
+.ctrl-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  width: 100%; min-width: 0; padding: 1px 2px;
+}
+.ctrl-wrap .k-lab { margin-bottom: 3px; }
 .toggle {
   font: inherit; font-size: 9px; letter-spacing: 1.1px; text-transform: uppercase;
   color: var(--dim); background: var(--panel2); border: 1px solid var(--line);
@@ -227,6 +266,151 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 }
 .sel input:focus { outline: none; border-color: var(--accent); }
 .toggle.on { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+/* ---- dropdown select ---- */
+.dropdown-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  width: 100%; min-width: 0; padding: 1px 2px;
+}
+.dropdown-wrap .k-lab {
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+  text-align: center; line-height: 1.2; font-weight: 700; margin-bottom: 5px;
+}
+.p-select {
+  font: inherit; font-size: 8.5px; font-weight: 700; letter-spacing: .3px;
+  color: var(--fg); background-color: var(--panel2); border: 1px solid var(--line);
+  border-radius: 3px; padding: 5px 3px; width: calc(100% - 4px); margin: 0 auto;
+  cursor: pointer; outline: none; text-align: center; text-align-last: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 3px rgba(0,0,0,.5);
+  transition: border-color .12s, box-shadow .12s;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.p-select:hover { border-color: var(--dim); color: var(--fg); }
+.p-select:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.p-select option { background-color: var(--panel); color: var(--fg); font-size: 11px; padding: 3px 6px; text-align: left; }
+.dropdown-wrap.lab-right,
+.toggle-wrap.lab-right {
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+  width: 100%; min-width: 0; padding: 1px 2px; gap: 6px; height: 24px;
+}
+.dropdown-wrap.lab-right .p-select,
+.toggle-wrap.lab-right .toggle {
+  flex: 1 1 auto; min-width: 0; width: auto; max-width: 76px; margin: 0; padding: 4px 3px; font-size: 8.5px;
+}
+.dropdown-wrap.lab-right .k-lab,
+.toggle-wrap.lab-right .k-lab {
+  flex: 0 0 auto; margin: 0; text-align: left; font-size: 8px; letter-spacing: .6px; white-space: nowrap;
+}
+
+/* ---- seed control with randomise button and text input ---- */
+.seed-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  width: 100%; min-width: 0; padding: 1px 2px; gap: 4px;
+}
+.seed-wrap .k-lab {
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+  text-align: center; line-height: 1.2; font-weight: 700; margin-bottom: 1px;
+}
+.seed-rnd-btn {
+  width: calc(100% - 8px); max-width: 64px; margin: 0 auto;
+  font: inherit; font-size: 8.5px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; padding: 4px 2px; text-align: center;
+  box-sizing: border-box;
+}
+.seed-input {
+  font: inherit; font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px; font-weight: 600; letter-spacing: .2px;
+  color: var(--fg); background-color: var(--panel2); border: 1px solid var(--line);
+  border-radius: 3px; padding: 4px 2px; width: calc(100% - 8px); max-width: 64px; margin: 0 auto;
+  outline: none; text-align: center; font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 3px rgba(0,0,0,.5);
+  transition: border-color .12s, box-shadow .12s;
+}
+.seed-input:hover { border-color: var(--dim); color: var(--fg); }
+.seed-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* ---- dual min/max velocity bounds knobs ---- */
+.vel-bounds-wrap {
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+  width: 100%; min-width: 0; gap: 4px; height: auto; padding: 1px 0;
+}
+.vel-bounds-wrap .knob-wrap {
+  flex: 1 1 50%; min-width: 0;
+}
+
+/* ---- horizontal fader & side controls ---- */
+.faders-stack {
+  display: flex; flex-direction: column; gap: 6px;
+  width: 100%; min-width: 0; justify-content: center;
+}
+.side-controls {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100%; min-width: 0; align-items: center; justify-content: flex-start; padding-top: 2px;
+}
+.fader {
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+  width: 100%; min-width: 0; padding: 1px 2px;
+  user-select: none; touch-action: none; cursor: ew-resize; outline: none;
+}
+.fader .k-lab {
+  width: 72px; flex: 0 0 72px; text-align: right; margin: 0 6px 0 0;
+  font-size: 8px; letter-spacing: .4px; text-transform: uppercase; color: var(--dim);
+  font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fader-opt {
+  width: 14px; flex: 0 0 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 6px 0 0;
+}
+.fader-chk {
+  width: 13px; height: 13px; margin: 0;
+  accent-color: var(--accent); cursor: pointer;
+}
+.fader-track-wrap {
+  position: relative; flex: 1 1 auto; min-width: 40px; height: 22px;
+  display: flex; align-items: center; margin: 0;
+}
+.fader-track {
+  position: absolute; left: 0; right: 0; height: 6px;
+  background-color: var(--panel2); border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: inset 0 1.5px 3px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.fader-slot {
+  position: absolute; left: 4px; right: 4px; top: 50%; height: 2px; margin-top: -1px;
+  background: #0d0d10; border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.fader-center-tick {
+  position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px;
+  background: var(--dim); opacity: .75;
+}
+.fader-thumb {
+  position: absolute; top: 50%; width: 13px; height: 18px;
+  margin-top: -9px; margin-left: -6.5px;
+  background: linear-gradient(180deg, #44444a 0%, #29292e 48%, #1f1f23 52%, #141418 100%);
+  border: 1px solid rgba(0,0,0,.7); border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.8);
+  pointer-events: none; transition: border-color .1s;
+}
+.fader-thumb::after {
+  content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px;
+  width: 1.5px; margin-left: -0.75px; background: #ededf0; border-radius: 1px;
+  box-shadow: 0 0 2px rgba(0,0,0,.5);
+}
+.fader:focus-visible .fader-thumb,
+.fader.dragging .fader-thumb {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 2px 4px rgba(0,0,0,.75);
+}
+.fader.dragging .fader-thumb::after {
+  background: var(--accent);
+}
+.fader .k-val {
+  width: 36px; flex: 0 0 36px; text-align: left; margin: 0 0 0 8px;
+  font-size: 10px; color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* ---- transport: Play is the primary action, utilities are secondary ---- */
 .transport { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0 0 8px; }
@@ -253,13 +437,28 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .transport .sw-body { width: auto; max-width: none; align-self: stretch; }
 .transport .sw-arrow { padding: 3px 3px 4px; font-size: 10px; }
 .transport .sw-val { height: auto; padding: 2px 4px 3px; font-size: 9px; }
-/* local preset slots: a quiet row under the transport */
-.presets { display: flex; gap: 4px; align-items: center; justify-content: center; margin: 0 0 8px; }
+/* preview volume knob in transport */
+.transport .knob { width: auto; flex: 0 0 auto; margin: 0; padding: 0 2px; }
+.transport .knob svg { max-width: 30px; height: 30px; }
+.transport .knob .k-lab { font-size: 7.5px; letter-spacing: .5px; line-height: 1; margin-bottom: 0; }
+.transport .knob .k-val { font-size: 8px; line-height: 1; margin-top: 0; }
+/* local preset slots and utility actions row */
+.presets { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0 0 8px; }
+.presets .preset-slots { display: flex; gap: 4px; align-items: center; }
 .presets button {
   font: inherit; font-size: 9px; letter-spacing: .8px; text-transform: uppercase;
   color: var(--dim); background: var(--panel2); border: 1px solid var(--line);
-  border-radius: 3px; padding: 4px 8px; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5);
+  border-radius: 3px; padding: 4px 7px; cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(0,0,0,.55),
+    0 2px 3px rgba(0,0,0,.55),
+    0 1px 1px rgba(0,0,0,.4);
+  transition: box-shadow .08s, transform .08s;
+}
+.presets button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);
 }
 .presets button:hover { color: var(--fg); border-color: var(--dim); }
 .presets button.armed { color: var(--fg); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -291,9 +490,58 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .display h2 { margin: 0 0 6px; font-size: 8px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .display h2 small { color: var(--fg); letter-spacing: .4px; font-weight: 400; text-transform: none; }
 
-/* two unambiguous states: a step is lit or it is not. The circle lives INSIDE the
-   cell, so the grid can stretch to any shape while every step stays round. */
-.display .steps { padding: 8px; border-radius: 3px; gap: 6px; grid-template-columns: repeat(8, 1fr); }
+/* ---- pattern grid with row & column headers ---- */
+.grid-frame {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  grid-template-rows: 14px 1fr;
+  gap: 4px 6px;
+  width: 100%;
+  margin: 4px 0 6px;
+}
+.grid-corner {
+  grid-column: 1;
+  grid-row: 1;
+}
+.col-headers {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: .4px;
+  user-select: none;
+  line-height: 1;
+}
+.row-headers {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  gap: 6px;
+  align-items: center;
+  justify-items: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: .4px;
+  user-select: none;
+  line-height: 1;
+}
+.display .steps {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  padding: 0;
+  border-radius: 3px;
+  gap: 6px;
+  grid-template-columns: repeat(8, 1fr);
+}
 /* min-width: 0 — a grid item's automatic minimum is its min-content size, and the dot's
    size is derived from the (height-driven) cell, so the 1fr tracks used to grow past the
    screen: the last column hung out of the TFT on the right. Pinning the tracks' minimum
@@ -301,26 +549,32 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .display .cell { display: grid; place-items: center; background: none; border: 0; padding: 0; min-width: 0; }
 .display .cell > .dot {
   /* the dot size comes from --dot (fitSteps() = min(cell width, row height)), so
-     the circle can never stretch into an ellipse on a phone where the grid is
+     the squircle can never stretch into an ellipse on a phone where the grid is
      taller than it is wide; min-width:0 stops the note label from stretching the
-     circle when rows are short. Fallback keeps a circle before the first fit */
+     squircle when rows are short. Fallback keeps a squircle before the first fit */
   aspect-ratio: 1; width: var(--dot, 100%); height: var(--dot, auto); max-width: 100%; max-height: 100%; min-width: 0; min-height: 0;
-  border-radius: 50%; border: 1px solid var(--line);
+  border-radius: 28%; border: 1px solid var(--line);
   display: grid; place-items: center; line-height: 1;
   font-size: 9px; color: transparent; font-variant-numeric: tabular-nums;
+  transition: opacity .1s ease, background-color .1s ease;
 }
-.display .cell.on > .dot { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
-.display .cell.off > .dot { border-color: transparent; opacity: .25; }
-.display .cell.now > .dot { box-shadow: 0 0 0 2px var(--fg); }
+.display .cell.on > .dot {
+  background: var(--accent); border-color: var(--accent);
+  color: #ffffff; font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85);
+  opacity: var(--vel-alpha, 1);
+}
+.display .cell.off > .dot { border-color: transparent; opacity: .20; }
+.display .cell.now > .dot { box-shadow: 0 0 0 2px var(--fg); opacity: 1 !important; }
 .display .cell.locked > .dot { border-color: var(--fg); border-style: dashed; border-width: 2px; }
-.display .cell.edit > .dot { box-shadow: 0 0 0 2px var(--accent); }
+.display .cell.edit > .dot { box-shadow: 0 0 0 2px var(--accent); opacity: 1 !important; }
 /* Loop region: the DOT itself carries the highlight — loop notes keep their
    full brightness and gain an accent ring, loop rests lift out of the dim,
    and the region's first step gets a bright fg ring. The ring is a
    pseudo-element, so it never fights the playhead/edit/lock box-shadows. */
 .display .cell.loop > .dot { position: relative; }
 .display .cell.loop > .dot::after {
-  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  content: ""; position: absolute; inset: -3px; border-radius: 34%;
   border: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
   pointer-events: none;
 }
@@ -332,7 +586,7 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
    once, one region before the copies begin). */
 .display .cell.echo > .dot { position: relative; }
 .display .cell.echo > .dot::before {
-  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  content: ""; position: absolute; inset: -3px; border-radius: 34%;
   border: 1px dashed color-mix(in srgb, var(--fg) 55%, transparent);
   pointer-events: none;
 }
