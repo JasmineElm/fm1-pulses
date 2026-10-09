@@ -225,3 +225,179 @@ export function toggle({ label, value = false, onInput }) {
   el.setValue = (v) => el.classList.toggle("on", !!v);
   return el;
 }
+
+// A panel dropdown select box for choosing from a list of options.
+export function dropdown({ label, options, value, onInput, tip = "", labelPos = "top" }) {
+  const el = document.createElement("div");
+  el.className = "dropdown-wrap" + (labelPos === "right" ? " lab-right" : "");
+
+  const lab = document.createElement("div");
+  lab.className = "k-lab";
+  lab.textContent = label;
+
+  const select = document.createElement("select");
+  select.className = "p-select";
+  if (tip) el.title = `${label}: ${tip}`;
+
+  for (const opt of options) {
+    const o = document.createElement("option");
+    o.value = opt.v;
+    o.textContent = opt.t ?? opt.v;
+    if (String(opt.v) === String(value)) o.selected = true;
+    select.appendChild(o);
+  }
+
+  select.addEventListener("change", () => {
+    const v = select.value;
+    if (onInput) onInput(v);
+  });
+
+  if (labelPos === "right") {
+    el.append(select, lab);
+  } else {
+    el.append(lab, select);
+  }
+
+  el.setValue = (v) => {
+    select.value = String(v);
+  };
+  Object.defineProperty(el, "value", { get: () => select.value });
+  return el;
+}
+
+export function fader({ label, min, max, step = 1, value = 0, def, format, onInput, tip = "", onDblClick, checkbox }) {
+  const el = document.createElement("div");
+  el.className = "fader";
+  el.tabIndex = 0;
+  el.setAttribute("role", "slider");
+
+  const lab = document.createElement("div");
+  lab.className = "k-lab";
+  lab.textContent = label;
+
+  const opt = document.createElement("div");
+  opt.className = "fader-opt";
+
+  let chk = null;
+  if (checkbox) {
+    chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.className = "fader-chk";
+    chk.checked = !!checkbox.value;
+    if (checkbox.tip) chk.title = checkbox.tip;
+    chk.addEventListener("change", (e) => {
+      e.stopPropagation();
+      if (checkbox.onInput) checkbox.onInput(chk.checked);
+    });
+    chk.addEventListener("pointerdown", (e) => e.stopPropagation());
+    opt.appendChild(chk);
+  }
+
+  const trackWrap = document.createElement("div");
+  trackWrap.className = "fader-track-wrap";
+
+  const track = document.createElement("div");
+  track.className = "fader-track";
+
+  const slot = document.createElement("div");
+  slot.className = "fader-slot";
+  track.appendChild(slot);
+
+  if (min < 0 && max > 0) {
+    const centerTick = document.createElement("div");
+    centerTick.className = "fader-center-tick";
+    track.appendChild(centerTick);
+  }
+
+  const thumb = document.createElement("div");
+  thumb.className = "fader-thumb";
+  trackWrap.append(track, thumb);
+
+  const val = document.createElement("div");
+  val.className = "k-val";
+
+  el.append(lab, opt, trackWrap, val);
+
+  const fmt = format || ((v) => (step < 1 ? String(Math.round(v * 100) / 100) : String(Math.round(v))));
+  let cur = clamp(value, min, max);
+  let dragging = false;
+
+  function paint() {
+    const t = max === min ? 0 : (cur - min) / (max - min);
+    thumb.style.left = `${(t * 100).toFixed(2)}%`;
+    val.textContent = fmt(cur);
+    el.title = `${label}: ${fmt(cur)}${tip ? " — " + tip : ""}`;
+    el.setAttribute("aria-valuemin", String(min));
+    el.setAttribute("aria-valuemax", String(max));
+    el.setAttribute("aria-valuenow", String(cur));
+  }
+
+  function set(v, fire = true) {
+    let n = clamp(Number(v) || 0, min, max);
+    if (step > 0) n = clamp(Math.round(n / step) * step, min, max);
+    if (n === cur) { paint(); return; }
+    cur = n;
+    paint();
+    if (fire && onInput) onInput(cur);
+  }
+
+  function updateFromPointer(clientX) {
+    const rect = trackWrap.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const t = clamp((clientX - rect.left) / rect.width, 0, 1);
+    set(min + t * (max - min));
+  }
+
+  el.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+    el.classList.add("dragging");
+    updateFromPointer(e.clientX);
+  });
+
+  el.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    updateFromPointer(e.clientX);
+  });
+
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove("dragging");
+    try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+  };
+  el.addEventListener("pointerup", endDrag);
+  el.addEventListener("pointercancel", endDrag);
+
+  el.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    set(cur + (e.deltaY < 0 ? 1 : -1) * step);
+  }, { passive: false });
+
+  el.addEventListener("dblclick", () => {
+    if (onDblClick) onDblClick();
+    else if (def != null) set(def);
+  });
+
+  el.addEventListener("keydown", (e) => {
+    const mult = e.shiftKey ? 10 : 1;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); set(cur + step * mult); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); set(cur - step * mult); }
+    else if (e.key === "Home") { e.preventDefault(); set(min); }
+    else if (e.key === "End") { e.preventDefault(); set(max); }
+  });
+
+  paint();
+  el.setValue = (v, fire) => set(v, fire);
+  el.setCheckbox = (v) => {
+    if (chk) chk.checked = !!v;
+  };
+  el.setRange = (lo, hi) => {
+    min = lo; max = hi;
+    if (cur > max) set(max); else if (cur < min) set(min); else paint();
+  };
+  Object.defineProperty(el, "value", { get: () => cur });
+  return el;
+}
+

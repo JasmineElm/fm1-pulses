@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=70">
-<link rel="stylesheet" href="css/rack.css?v=80">
+<link rel="stylesheet" href="css/style.css?v=100">
+<link rel="stylesheet" href="css/rack.css?v=100">
 </head>
 <body>
 <div class="case">
@@ -23,16 +23,18 @@
   <div class="layout">
     <div class="module">
       <div class="transport">
+        <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
+        <button id="mute" title="Mute / unmute browser audio (M) — starts muted">🔇</button>
+      </div>
+
+      <div class="presets" id="presets">
         <button id="gen" title="Derive a fresh bank from a new seed (G)">Generate</button>
         <button id="rand" title="Random parameters + a new seed">Randomize</button>
-        <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
-        <button id="mute" title="Mute / unmute the browser preview (starts muted)">🔇</button>
+        <div id="preset-slots" class="preset-slots"></div>
         <button id="freeze" title="Write the selected slot into the FM-1 (F)">Freeze</button>
         <button id="fill" title="Write all 16 slots into the FM-1">Send 16</button>
         <button id="clearall" title="Erase all 16 patterns on the FM-1">Clear</button>
       </div>
-
-      <div class="presets" id="presets"></div>
 
       <div class="rack" id="panel"></div>
       <div class="themebar"><span class="swatches" id="themes"></span></div>
@@ -41,7 +43,30 @@
     <div class="display">
       <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
       <div id="bank" class="bank"></div>
-      <div id="steps" class="steps"></div>
+      <div class="grid-frame">
+        <div class="grid-corner"></div>
+        <div class="col-headers" aria-hidden="true">
+          <span title="Column 1">1</span>
+          <span title="Column 2">2</span>
+          <span title="Column 3">3</span>
+          <span title="Column 4">4</span>
+          <span title="Column 5">5</span>
+          <span title="Column 6">6</span>
+          <span title="Column 7">7</span>
+          <span title="Column 8">8</span>
+        </div>
+        <div class="row-headers" aria-hidden="true">
+          <span title="Row 1 (steps 1–8)">1</span>
+          <span title="Row 2 (steps 9–16)">2</span>
+          <span title="Row 3 (steps 17–24)">3</span>
+          <span title="Row 4 (steps 25–32)">4</span>
+          <span title="Row 5 (steps 33–40)">5</span>
+          <span title="Row 6 (steps 41–48)">6</span>
+          <span title="Row 7 (steps 49–56)">7</span>
+          <span title="Row 8 (steps 57–64)">8</span>
+        </div>
+        <div id="steps" class="steps"></div>
+      </div>
       <canvas id="wave" class="wave" height="60"></canvas>
       <div id="editor" class="editor">
         <span class="elab">Step <b id="estep">—</b></span>
@@ -56,6 +81,6 @@
     </div>
   </div>
 </div>
-<script type="module" src="js/rack.js?v=86"></script>
+<script type="module" src="js/rack.js?v=100"></script>
 </body>
 </html>

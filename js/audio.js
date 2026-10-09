@@ -9,6 +9,16 @@ let comp = null;
 let muted = true;   // browser preview starts MUTED: with the FM-1 attached you only want its audio, not the phone speaker
 const voices = new Map();   // note -> { oscs: [], gain, rel }
 
+let volume = 70;
+try {
+  const saved = typeof localStorage !== "undefined" && localStorage ? localStorage.getItem("fm1p.volume") : null;
+  if (saved != null) {
+    const v = Number(saved);
+    if (!isNaN(v) && v >= 0 && v <= 100) volume = v;
+  }
+} catch (_) {}
+const MAX_GAIN = 0.55;
+
 export const SOUNDS = [
   { id: "epiano", name: "e-piano" },
   { id: "bell", name: "bell" },
@@ -20,13 +30,19 @@ let sound = "epiano";
 export function setSound(id) { if (SOUNDS.some((s) => s.id === id)) sound = id; }
 export function getSound() { return sound; }
 
+export function getVolume() { return volume; }
+export function setVolume(v) {
+  volume = Math.max(0, Math.min(100, Number(v) || 0));
+  if (master) master.gain.value = muted ? 0 : (volume / 100) * MAX_GAIN;
+}
+
 function ensure() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = muted ? 0 : 0.45;
+    master.gain.value = muted ? 0 : (volume / 100) * MAX_GAIN;
     // chords stack up to 9 voices plus release overlap; the compressor keeps
     // the sum out of clipping without killing the attack transients
     comp = ctx.createDynamicsCompressor();
@@ -42,7 +58,10 @@ function ensure() {
   return ctx;
 }
 
-export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.45; }
+export function setMuted(m) {
+  muted = !!m;
+  if (master) master.gain.value = muted ? 0 : (volume / 100) * MAX_GAIN;
+}
 export function isMuted() { return muted; }
 export function unlock() { ensure(); }        // call from a user gesture
 

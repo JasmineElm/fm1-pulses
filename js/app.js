@@ -33,7 +33,7 @@ const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
-  gateProb: 70, velocity: 100, humanize: 0, gateQuant: 0, snapGrid: 4,
+  gateProb: 70, velocity: 100, velMin: 1, velMax: 127, humanize: 0, gateQuant: 0, snapGrid: 4,
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8,
@@ -327,8 +327,12 @@ function renderBuffer() {
     cell.className = "cell";
     const on = i < p.length && st && st.notes.length;
     if (on) {
-      cell.textContent = midiName(st.notes[0].note);
+      const n0 = st.notes[0];
+      cell.textContent = midiName(n0.note);
       cell.classList.add("on");
+      const vel = Math.max(1, Math.min(127, n0.vel ?? 100));
+      const alpha = 0.25 + 0.75 * (vel / 127);
+      cell.style.setProperty("--vel-alpha", alpha.toFixed(3));
       cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
     } else if (i >= p.length) {
       cell.classList.add("off");
@@ -451,8 +455,11 @@ async function playOnce() {
     const st = p.steps[i];
     const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
     const late = i % 2 === 1 ? stepMs * swingFrac() : 0;   // swing the offbeat
-    const sDur = stepMs - late;
-    if (late) await sleep(late);
+    const humFactor = (state.humanize ?? 0) / 100;
+    const humJitter = humFactor > 0 ? (Math.random() * 2 - 1) * humFactor * 0.15 * stepMs : 0;
+    const sDur = Math.max(10, stepMs - late);
+    const playDelay = Math.max(0, late + humJitter);
+    if (playDelay) await sleep(playDelay);
     if (st.notes.length) {
       for (const n of st.notes) { midi.sendNoteOn(n.note, n.vel); audio.noteOn(n.note, n.vel); }
       await sleep(Math.max(12, sDur * gate));
@@ -512,8 +519,10 @@ async function liveLoop(token) {
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
       const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
       const late = i % 2 === 1 ? stepMs * swingFrac() : 0;   // swing the offbeat
-      const sDur = stepMs - late;
-      const startAt = t0 + elapsed + late;
+      const humFactor = (state.humanize ?? 0) / 100;
+      const humJitter = humFactor > 0 ? (Math.random() * 2 - 1) * humFactor * 0.15 * stepMs : 0;
+      const sDur = Math.max(10, stepMs - late);
+      const startAt = t0 + elapsed + late + humJitter;
       let w = startAt - performance.now();
       if (w > 0) await sleep(w);
       markStep(i);
@@ -645,8 +654,14 @@ function buildFooter() {
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     if (e.code === "Space") { e.preventDefault(); toggleLive(); }
-    if (e.key === "f") doFreeze(selected);
-    if (e.key === "g") doGenerate(true);
+    if (e.key === "m" || e.key === "M") {
+      const m = !audio.isMuted();
+      audio.setMuted(m);
+      if (muteBtn) muteBtn.textContent = m ? "🔇" : "🔊";
+      status(m ? "browser audio muted" : "browser audio on");
+    }
+    if (e.key === "f" || e.key === "F") doFreeze(selected);
+    if (e.key === "g" || e.key === "G") doGenerate(true);
     if (e.key === "ArrowRight") { selected = (selected + 1) % SLOTS; renderBank(); renderBuffer(); }
     if (e.key === "ArrowLeft") { selected = (selected + SLOTS - 1) % SLOTS; renderBank(); renderBuffer(); }
   });

@@ -252,7 +252,10 @@ export function generate(params) {
   const blend = Math.min(1, Math.max(0,
     (params.gateBlend ?? (params.gateMode === "euclid" ? 100 : 0)) / 100));
   const loopLen0 = Math.round(params.loop || 0);
-  const M = Math.max(2, blend > 0 && loopLen0 >= 2 ? loopLen0 : 16);
+  const divSetting = params.euclidDiv;
+  const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
+    ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
+    : Math.max(2, blend > 0 && loopLen0 >= 2 ? loopLen0 : 16);
   const N = blend > 0 ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
   let eMask = null;
   if (blend > 0) {
@@ -265,7 +268,10 @@ export function generate(params) {
   const loopSlip = (params.dejaVu ?? 0) / 100;                  // chance a later step loops back
   const quantStrength = (params.quantSteps ?? 100) / 100;
   const fixedVel = params.velocity;
-  const hum = (params.humanize ?? 0) / 100 * 40;   // velocity deviation, +/- 40 max
+  const velMin = Math.max(1, Math.min(127, Math.round(params.velMin ?? 1)));
+  const velMax = Math.max(1, Math.min(127, Math.round(params.velMax ?? 127)));
+  const vFloor = Math.min(velMin, velMax);
+  const vCeil = Math.max(velMin, velMax);
   const octChance = (params.octave ?? 0) / 100;    // chance a note jumps up one octave
   const gravity = (params.gravity ?? 0) / 100;     // chance a note snaps to the nearest root
   const unipolar = !!params.unipolar;              // range rises from Offset instead of centring on it
@@ -316,13 +322,29 @@ export function generate(params) {
     // Root gravity: snap to the nearest root note, keeping the register, so the
     // melody is grounded rather than flattened onto one pitch.
     if (gravity && gravRng() < gravity) note = params.root + Math.round((note - params.root) / 12) * 12;
-    // Octave up: +12 keeps the same scale degree, so the note stays in key. Skipped
-    // when it would leave the MIDI range, rather than pinning to 127.
-    if (octChance && octRng() < octChance && note + 12 <= 127) note += 12;
+    // Octave spread: Up (+12), Down (-12), or Both (random ±12). Twelve semitones
+    // keeps the same scale degree, so the note stays in key. Skipped when it would
+    // leave the MIDI range [0, 127].
+    if (octChance && octRng() < octChance) {
+      const mode = (params.octaveMode || "up").toLowerCase();
+      let shift = 12;
+      if (mode === "down") shift = -12;
+      else if (mode === "both") shift = octRng() < 0.5 ? 12 : -12;
+      if (note + shift >= 0 && note + shift <= 127) note += shift;
+    }
 
-    const vel = fixedVel === "random" || fixedVel == null
-      ? 20 + Math.floor(rng() * 107)
-      : clamp(Math.round(fixedVel + (hum ? (velRng() * 2 - 1) * hum : 0)), 1, 127);
+    let vel;
+    const isRandVel = !!params.randVel || (params.randVelAmt != null && params.randVelAmt > 0);
+    if (isRandVel) {
+      const amt = Math.max(0, Math.min(100, params.randVelAmt ?? 100)) / 100;
+      const midV = (vFloor + vCeil) / 2;
+      const halfSpan = ((vCeil - vFloor) / 2) * amt;
+      vel = clamp(Math.round(midV + (velRng() * 2 - 1) * halfSpan), vFloor, vCeil);
+    } else {
+      vel = (fixedVel === "random" || fixedVel == null)
+        ? vFloor + Math.floor(velRng() * (vCeil - vFloor + 1))
+        : clamp(Math.round(fixedVel), vFloor, vCeil);
+    }
     // Grid snap: with the slider's probability, a note survives only if it already
     // sits on a grid line (spacing = Snap grid). Keeping the line's own note instead
     // of moving notes onto it means Gate still decides how many lines fire, so
