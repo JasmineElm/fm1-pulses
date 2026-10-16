@@ -3,7 +3,7 @@
 Browser-based generative MIDI sequencer for the **M-VAVE FM-1** (6-op FM synth).
 Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
 
-**▶ Live:** https://mene311.github.io/fm1-pulses/
+**▶ Live:** https://james-lemin.com/fm1-pulses/
 
 **Firmware:** the freeze path (pattern write, SysEx `0x20`) exists only on the
 **FM-1+VA / Baud Girl** firmware — stock firmware has no pattern-write SysEx.
