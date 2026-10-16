@@ -2,38 +2,40 @@
 import { renderScope } from "./scope.js?v=100";
 
 export const THEMES = [
-  { id: "purple", name: "Purple", accent: "#ff5da4" },
-  { id: "black", name: "Black", accent: "#f6f2f6" },
-  { id: "grey", name: "Grey", accent: "#f6e6d5" },
-  { id: "orange", name: "Orange", accent: "#ff7939" },
-  { id: "green", name: "Green", accent: "#6ae2cd" },
-  { id: "blue", name: "Blue", accent: "#8bb2e6" },
-  { id: "brown", name: "Brown", accent: "#e69962" },
+  { id: "dark", name: "Dark", icon: "🌙", accent: "#3b82f6" },
+  { id: "light", name: "Light", icon: "☀️", accent: "#2563eb" },
 ];
 
 export function applyTheme(id) {
-  document.documentElement.dataset.theme = id;
-  localStorage.setItem("fm1p.theme", id);
-  document.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s.dataset.id === id));
+  const themeId = id === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = themeId;
+  localStorage.setItem("fm1p.theme", themeId);
+  document.querySelectorAll(".theme-btn, .swatch").forEach((s) => {
+    const isActive = s.dataset.id === themeId;
+    s.classList.toggle("active", isActive);
+    s.setAttribute("aria-pressed", String(isActive));
+  });
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
   renderScope();
 }
 
 export function buildTheme() {
-  const menu = document.getElementById("themes");
-  if (!menu) return;
-  menu.innerHTML = "";
-  for (const t of THEMES) {
-    const b = document.createElement("button");
-    b.className = "swatch";
-    b.dataset.id = t.id;
-    b.title = t.name;
-    b.setAttribute("aria-label", t.name);
-    b.style.background = t.accent;
-    b.addEventListener("click", () => applyTheme(t.id));
-    menu.appendChild(b);
+  const menus = document.querySelectorAll(".swatches, #themes");
+  if (!menus.length) return;
+  for (const menu of menus) {
+    menu.innerHTML = "";
+    for (const t of THEMES) {
+      const b = document.createElement("button");
+      b.className = "theme-btn";
+      b.dataset.id = t.id;
+      b.textContent = `${t.icon} ${t.name}`;
+      b.title = `Switch to ${t.name} theme`;
+      b.setAttribute("aria-label", `${t.name} theme`);
+      b.addEventListener("click", () => applyTheme(t.id));
+      menu.appendChild(b);
+    }
   }
   const saved = localStorage.getItem("fm1p.theme");
-  applyTheme(THEMES.some((t) => t.id === saved) ? saved : "purple");
+  applyTheme(saved === "light" ? "light" : "dark");
 }

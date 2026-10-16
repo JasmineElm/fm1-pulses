@@ -11,6 +11,7 @@ import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTem
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js?v=100";
 import { buildTheme } from "./themes.js?v=100";
 import { initScope, renderScope } from "./scope.js?v=100";
+import { initModes, getActiveModel } from "./modes.js?v=101";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=100";
 import * as midi from "./midi.js?v=100";
 import * as audio from "./audio.js?v=100";
@@ -119,30 +120,37 @@ function sect(title, span, kids) {
   return s;
 }
 
+export function buildGlobalBar() {
+  const container = document.getElementById("global-controls");
+  if (!container) return;
+  container.innerHTML = "";
+  container.append(
+    R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
+      onDblClick: () => {
+        syncDeviceTempo().then((held) => {
+          status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
+        });
+      },
+      tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
+    R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "sm",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
+      tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
+    R("seed", seedControl({ label: "Seed", value: state.seed, onInput: (v) => { state.seed = v; scheduleRegen(); }, tip: "Pattern seed (numeric or text)" })),
+    R("rate", dropdown({ label: "Note", options: RATE_NAMES.map((t, v) => ({ v, t })), value: state.rate, onInput: (v) => { state.rate = Number(v); refreshLoopRanges(); scheduleRegen(); }, tip: "Step note value" })),
+    R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); },
+      tip: "Pattern length in steps (1 to 64)." }))
+  );
+}
+
 export function buildRack() {
+  buildGlobalBar();
   const panel = document.getElementById("panel");
   if (!panel) return;
+  panel.innerHTML = "";
 
   panel.append(
-    sect("Global", 6, [
-      R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "md",
-        format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
-        onDblClick: () => {
-          syncDeviceTempo().then((held) => {
-            status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
-          });
-        },
-        tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
-      R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
-        format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
-        tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
-      R("seed", seedControl({ label: "Seed", value: state.seed, onInput: (v) => { state.seed = v; scheduleRegen(); }, tip: "Pattern seed (numeric or text)" })),
-      R("rate", dropdown({ label: "Note", options: RATE_NAMES.map((t, v) => ({ v, t })), value: state.rate, onInput: (v) => { state.rate = Number(v); refreshLoopRanges(); scheduleRegen(); }, tip: "Step note value" })),
-      R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
-        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); },
-        tip: "Pattern length in steps (1 to 64)." })),
-    ]),
-
     (() => {
       const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
       const blank = () => span(document.createElement("div"), 2);
@@ -419,6 +427,7 @@ function buildTransport() {
 // Global keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (getActiveModel() !== "traditional") return;
   if (e.code === "Space") { e.preventDefault(); toggleLive(); }
   if (e.key === "m" || e.key === "M") {
     const muteBtn = document.getElementById("mute");
@@ -481,4 +490,19 @@ buildEditor();
 initScope();
 doGenerate(true);
 initMidi();
+initModes({
+  onEnterModel: (modelId) => {
+    if (modelId === "traditional") {
+      fitSteps();
+      renderScope();
+      renderBank();
+      renderBuffer();
+    }
+  },
+  onLeaveModel: () => {
+    if (isLive()) {
+      stopLive();
+    }
+  }
+});
 setTimeout(applyTips, 0);

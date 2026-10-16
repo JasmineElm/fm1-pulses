@@ -60,31 +60,13 @@ export function knob({ label, min, max, step = 1, value = 0, def, size = "md", f
     }
   }
 
-  // a domed cap: radial gradient from a top-left highlight down to a shaded rim,
-  // plus a small drop shadow, so the pot looks like a physical object
-  const uid = "cap" + (knobSeq++);
-  const defs = document.createElementNS(NS, "defs");
-  const grad = document.createElementNS(NS, "radialGradient");
-  grad.setAttribute("id", uid);
-  grad.setAttribute("cx", "34%"); grad.setAttribute("cy", "27%"); grad.setAttribute("r", "80%");
-  const hs = document.createElementNS(NS, "stop");
-  hs.setAttribute("offset", "0%"); hs.style.stopColor = "rgba(255,255,255,.22)";
-  const ms = document.createElementNS(NS, "stop");
-  ms.setAttribute("offset", "52%"); ms.style.stopColor = "#2c2c31";
-  const ls = document.createElementNS(NS, "stop");
-  ls.setAttribute("offset", "100%"); ls.style.stopColor = "rgba(0,0,0,.5)";
-  grad.append(hs, ms, ls);
-  defs.appendChild(grad);
-  svg.appendChild(defs);
-
-  // the pot: a dark skirt, then a domed cap, then the pointer
+  // Clean, unambiguous flat knob: a base track ring, cap body, and high-contrast pointer
   const base = document.createElementNS(NS, "circle");
-  base.setAttribute("cx", 50); base.setAttribute("cy", 50); base.setAttribute("r", 29.5);
+  base.setAttribute("cx", 50); base.setAttribute("cy", 50); base.setAttribute("r", 28);
   base.setAttribute("class", "k-base");
   const cap = document.createElementNS(NS, "circle");
-  cap.setAttribute("cx", 50); cap.setAttribute("cy", 50); cap.setAttribute("r", 26);
+  cap.setAttribute("cx", 50); cap.setAttribute("cy", 50); cap.setAttribute("r", 24);
   cap.setAttribute("class", "k-cap");
-  cap.setAttribute("fill", `url(#${uid})`);
   const ptr = document.createElementNS(NS, "line");
   ptr.setAttribute("class", "k-ptr");
   svg.append(base, cap, ptr);
@@ -299,19 +281,12 @@ export function fader({ label, min, max, step = 1, value = 0, def, format, onInp
   const track = document.createElement("div");
   track.className = "fader-track";
 
-  const slot = document.createElement("div");
-  slot.className = "fader-slot";
-  track.appendChild(slot);
-
-  if (min < 0 && max > 0) {
-    const centerTick = document.createElement("div");
-    centerTick.className = "fader-center-tick";
-    track.appendChild(centerTick);
-  }
+  const fill = document.createElement("div");
+  fill.className = "fader-fill";
 
   const thumb = document.createElement("div");
   thumb.className = "fader-thumb";
-  trackWrap.append(track, thumb);
+  trackWrap.append(track, fill, thumb);
 
   const val = document.createElement("div");
   val.className = "k-val";
@@ -322,14 +297,32 @@ export function fader({ label, min, max, step = 1, value = 0, def, format, onInp
   let cur = clamp(value, min, max);
   let dragging = false;
 
+  const isBipolar = min < 0 && max > 0;
+  const zeroT = isBipolar ? (0 - min) / (max - min) : 0;
+
   function paint() {
     const t = max === min ? 0 : (cur - min) / (max - min);
     thumb.style.left = `${(t * 100).toFixed(2)}%`;
+
+    if (isBipolar) {
+      if (t >= zeroT) {
+        fill.style.left = `${(zeroT * 100).toFixed(2)}%`;
+        fill.style.width = `${((t - zeroT) * 100).toFixed(2)}%`;
+      } else {
+        fill.style.left = `${(t * 100).toFixed(2)}%`;
+        fill.style.width = `${((zeroT - t) * 100).toFixed(2)}%`;
+      }
+    } else {
+      fill.style.left = "0%";
+      fill.style.width = `${(t * 100).toFixed(2)}%`;
+    }
+
     val.textContent = fmt(cur);
     el.title = `${label}: ${fmt(cur)}${tip ? " — " + tip : ""}`;
     el.setAttribute("aria-valuemin", String(min));
     el.setAttribute("aria-valuemax", String(max));
     el.setAttribute("aria-valuenow", String(cur));
+    el.setAttribute("aria-valuetext", fmt(cur));
   }
 
   function set(v, fire = true) {

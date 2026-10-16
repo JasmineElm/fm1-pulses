@@ -2,40 +2,32 @@
    (`BGTHEME` table, baudgirl_092_app.bin @ 0x8ecbc: each entry = 12-byte name
    + 4 RGB565 colours = accent, tint, dark bg, mid). */
 
-:root, [data-theme="purple"] {
-  --bg: #1e1524; --panel: #291c31; --panel2: #3c3043; --line: #584d5e;
-  --fg: #edecee; --dim: #6a5d7b; --accent: #ff5da4; --accent2: #c5a5f6;
-  --ok: #7ee787; --err: #ff6b8a;
+:root, [data-theme="dark"] {
+  --bg: #111215;
+  --panel: #18191f;
+  --panel2: #22252e;
+  --line: #333846;
+  --line-focus: #4b5264;
+  --fg: #f3f4f6;
+  --dim: #9ca3af;
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
+  --ok: #22c55e;
+  --err: #ef4444;
 }
-[data-theme="black"] {
-  --bg: #181b1e; --panel: #202429; --panel2: #34373c; --line: #515458;
-  --fg: #ededed; --dim: #52555a; --accent: #f6f2f6; --accent2: #9c99a4;
-  --ok: #7ee787; --err: #ff6b8a;
-}
-[data-theme="grey"] {
-  --bg: #1e1e1e; --panel: #292829; --panel2: #3c3b3c; --line: #585758;
-  --fg: #ededed; --dim: #5a5d5a; --accent: #f6e6d5; --accent2: #b4b2ac;
-  --ok: #7ee787; --err: #ff6b8a;
-}
-[data-theme="orange"] {
-  --bg: #241812; --panel: #312018; --panel2: #43342c; --line: #5e514a;
-  --fg: #eeedec; --dim: #7b594a; --accent: #ff7939; --accent2: #ffcaa4;
-  --ok: #7ee787; --err: #ff6b8a;
-}
-[data-theme="green"] {
-  --bg: #0c241e; --panel: #103029; --panel2: #25423c; --line: #445d58;
-  --fg: #ebeeed; --dim: #5a716a; --accent: #6ae2cd; --accent2: #c5eee6;
-  --ok: #7ee787; --err: #ff6b8a;
-}
-[data-theme="blue"] {
-  --bg: #121b24; --panel: #182431; --panel2: #2c3743; --line: #4a545e;
-  --fg: #ecedee; --dim: #5a657b; --accent: #8bb2e6; --accent2: #eee2d5;
-  --ok: #7ee787; --err: #ff6b8a;
-}
-[data-theme="brown"] {
-  --bg: #1e1812; --panel: #292018; --panel2: #3c342c; --line: #58514a;
-  --fg: #ededec; --dim: #6a5d52; --accent: #e69962; --accent2: #eee2d5;
-  --ok: #7ee787; --err: #ff6b8a;
+
+[data-theme="light"] {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --panel2: #e5e7eb;
+  --line: #d1d5db;
+  --line-focus: #9ca3af;
+  --fg: #111827;
+  --dim: #4b5563;
+  --accent: #2563eb;
+  --accent2: #1d4ed8;
+  --ok: #16a34a;
+  --err: #dc2626;
 }
 
 * { box-sizing: border-box; }
@@ -132,18 +124,17 @@ button.danger:hover { border-color: var(--err); }
 }
 .cell {
   aspect-ratio: 1 / 1; border-radius: 28%; display: flex; align-items: center; justify-content: center;
-  font-size: 10px; background: #ffffff; color: #17171f;
-  border: 1px solid transparent; user-select: none;
+  font-size: 10px; background: var(--panel2); color: var(--fg);
+  border: 1px solid var(--line); user-select: none;
   transition: opacity .1s ease, background-color .1s ease;
 }
 .cell.on {
   background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85);
   opacity: var(--vel-alpha, 1);
 }
-.cell.off { opacity: .18; }
-.cell.now { box-shadow: 0 0 0 2px var(--accent2); opacity: 1 !important; }
-.cell.locked { border-color: var(--accent2); box-shadow: inset 0 0 0 1px var(--accent2); }
+.cell.off { opacity: .45; }
+.cell.now { outline: 2px solid var(--fg); outline-offset: 1px; opacity: 1 !important; }
+.cell.locked { border-color: var(--fg); border-style: dashed; }
 .cell.edit { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1 !important; }
 
 /* step editor bar */
