@@ -2,25 +2,29 @@
 import {
   state, DEFAULT, refs, R, setState, RATE_NAMES, SLOTS, status,
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
-  getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend
-} from "./state.js?v=100";
-import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=100";
+  getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
+  getCurrentModelRandomizer
+} from "./state.js?v=103";
+import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=103";
 import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=100";
-import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=100";
+import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=103";
 import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js?v=100";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js?v=100";
 import { buildTheme } from "./themes.js?v=100";
 import { initScope, renderScope } from "./scope.js?v=100";
-import { initModes, getActiveModel } from "./modes.js?v=101";
+import { initModes, getActiveModel } from "./modes.js?v=103";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=100";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=103";
 import * as midi from "./midi.js?v=100";
 import * as audio from "./audio.js?v=100";
 
 // Register hooks
 onRegen(() => {
-  applyLocks();
-  renderBank();
-  renderBuffer();
+  if (getActiveModel() === "traditional") {
+    applyLocks();
+    renderBank();
+    renderBuffer();
+  }
 });
 
 onTempoProbe(() => {
@@ -87,6 +91,11 @@ export function syncRack() {
 }
 
 export function randomize() {
+  const modelRnd = getCurrentModelRandomizer();
+  if (modelRnd) {
+    modelRnd();
+    return;
+  }
   state.seed = (Math.random() * 1e9) | 0;
   Object.assign(state, {
     scale: Object.keys(SCALES)[(Math.random() * Object.keys(SCALES).length) | 0],
@@ -488,21 +497,26 @@ refreshLoopRanges();
 buildTransport();
 buildEditor();
 initScope();
+initCellular();
 doGenerate(true);
 initMidi();
 initModes({
   onEnterModel: (modelId) => {
     if (modelId === "traditional") {
+      deactivateCellularModel();
       fitSteps();
       renderScope();
       renderBank();
       renderBuffer();
+    } else if (modelId === "cellular") {
+      activateCellularModel();
     }
   },
   onLeaveModel: () => {
     if (isLive()) {
       stopLive();
     }
+    deactivateCellularModel();
   }
 });
 setTimeout(applyTips, 0);

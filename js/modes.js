@@ -54,11 +54,11 @@ export const MODELS = [
     id: "cellular",
     name: "Cellular Automata",
     kicker: "Wolfram 1D Rules · Step Matrix · Emergent",
-    badge: "Coming Soon",
-    badgeClass: "badge-wip",
-    available: false,
-    desc: "Step generation driven by 1D elementary cellular automata (Rule 30, 90, 110). Patterns evolve across generations through local neighbor interactions, yielding organic self-similar melodic contours.",
-    tags: ["Wolfram 1D Rules", "Rule 30 / 110", "Emergent Evolution", "Seed Genetics"],
+    badge: "Active",
+    badgeClass: "badge-active",
+    available: true,
+    desc: "Step generation driven by 1D elementary cellular automata (Rule 30, 90, 110, 150). Patterns evolve across generations through local neighbor interactions, yielding organic self-similar melodic contours.",
+    tags: ["Wolfram 1D Rules", "Rule 30 / 110", "Emergent Evolution", "Seed Genetics", "Polyphonic / Lead"],
     icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="3" width="5" height="5" />
       <rect x="10" y="3" width="5" height="5" />
@@ -138,12 +138,16 @@ export function showLanding(updateHash = true) {
   activeModelId = null;
 
   const viewLanding = document.getElementById("view-landing");
-  const viewTraditional = document.getElementById("view-traditional");
+  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const modelTraditional = document.getElementById("model-traditional");
+  const modelCellular = document.getElementById("model-cellular");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
 
   if (viewLanding) viewLanding.style.display = "block";
-  if (viewTraditional) viewTraditional.style.display = "none";
+  if (viewWorkspace) viewWorkspace.style.display = "none";
+  if (modelTraditional) modelTraditional.style.display = "none";
+  if (modelCellular) modelCellular.style.display = "none";
   if (btnBack) btnBack.style.display = "none";
   if (modeTag) modeTag.style.display = "none";
 
@@ -153,25 +157,29 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "traditional") return; // Future alternative models will branch here
+  if (id !== "traditional" && id !== "cellular") return;
 
   const viewLanding = document.getElementById("view-landing");
-  const viewTraditional = document.getElementById("view-traditional");
+  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const modelTraditional = document.getElementById("model-traditional");
+  const modelCellular = document.getElementById("model-cellular");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
 
   activeModelId = id;
 
   if (viewLanding) viewLanding.style.display = "none";
-  if (viewTraditional) viewTraditional.style.display = "block";
+  if (viewWorkspace) viewWorkspace.style.display = "block";
+  if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
+  if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
   if (btnBack) btnBack.style.display = "inline-flex";
   if (modeTag) {
-    modeTag.textContent = "Traditional";
+    modeTag.textContent = id === "traditional" ? "Traditional" : "Cellular Automata";
     modeTag.style.display = "inline-block";
   }
 
-  if (updateHash && window.location.hash !== "#traditional") {
-    history.pushState(null, "", "#traditional");
+  if (updateHash && window.location.hash !== `#${id}`) {
+    history.pushState(null, "", `#${id}`);
   }
 
   if (callbacks.onEnterModel) {
@@ -201,6 +209,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
     const h = window.location.hash.toLowerCase();
     if (h === "#traditional") {
       if (activeModelId !== "traditional") showModel("traditional", false);
+    } else if (h === "#cellular") {
+      if (activeModelId !== "cellular") showModel("cellular", false);
     } else {
       if (activeModelId !== null) showLanding(false);
     }
@@ -210,6 +220,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   const initialHash = window.location.hash.toLowerCase();
   if (initialHash === "#traditional") {
     showModel("traditional", false);
+  } else if (initialHash === "#cellular") {
+    showModel("cellular", false);
   } else {
     showLanding(false);
   }

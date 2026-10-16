@@ -46,8 +46,8 @@
     </div>
   </section>
 
-  <!-- TRADITIONAL INTERFACE: Full Rack & Pattern Display -->
-  <section id="view-traditional" class="view-traditional" style="display: none;" aria-label="Traditional Sequencer">
+  <!-- SEQUENCER WORKSPACE: Shared Statusrow & Global Settings Bar -->
+  <section id="view-workspace" class="view-workspace view-traditional" style="display: none;" aria-label="Sequencer Workspace">
     <div class="statusrow">
       <a class="glink glink-model" id="link-models" href="#models" title="Return to sequencer models">‹ models</a>
       <a class="glink" href="guide.html">guide</a>
@@ -83,53 +83,61 @@
       </div>
     </div>
 
-    <div class="layout">
-      <div class="module">
-        <div class="rack" id="panel"></div>
-      </div>
-
-      <div class="display">
-        <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
-        <div id="bank" class="bank"></div>
-        <div class="grid-frame">
-          <div class="grid-corner"></div>
-          <div class="col-headers" aria-hidden="true">
-            <span title="Column 1">1</span>
-            <span title="Column 2">2</span>
-            <span title="Column 3">3</span>
-            <span title="Column 4">4</span>
-            <span title="Column 5">5</span>
-            <span title="Column 6">6</span>
-            <span title="Column 7">7</span>
-            <span title="Column 8">8</span>
-          </div>
-          <div class="row-headers" aria-hidden="true">
-            <span title="Row 1 (steps 1–8)">1</span>
-            <span title="Row 2 (steps 9–16)">2</span>
-            <span title="Row 3 (steps 17–24)">3</span>
-            <span title="Row 4 (steps 25–32)">4</span>
-            <span title="Row 5 (steps 33–40)">5</span>
-            <span title="Row 6 (steps 41–48)">6</span>
-            <span title="Row 7 (steps 49–56)">7</span>
-            <span title="Row 8 (steps 57–64)">8</span>
-          </div>
-          <div id="steps" class="steps"></div>
+    <!-- MODEL 1: TRADITIONAL SEQUENCER -->
+    <div id="model-traditional" class="model-view" style="display: none;">
+      <div class="layout">
+        <div class="module">
+          <div class="rack" id="panel"></div>
         </div>
-        <canvas id="wave" class="wave" height="60"></canvas>
-        <div id="editor" class="editor">
-          <span class="elab">Step <b id="estep">—</b></span>
-          <span id="enote" class="enote">—</span>
-          <button id="edown" title="Lower this step a semitone (locks it)">−</button>
-          <button id="eup" title="Raise this step a semitone (locks it)">+</button>
-          <button id="eclear" title="Empty this step and lock it">✕</button>
-          <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
-          <button id="eclearlocks" title="Forget every locked step">clear locks</button>
-          <span id="lockcount" class="lockcount"></span>
+
+        <div class="display">
+          <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
+          <div id="bank" class="bank"></div>
+          <div class="grid-frame">
+            <div class="grid-corner"></div>
+            <div class="col-headers" aria-hidden="true">
+              <span title="Column 1">1</span>
+              <span title="Column 2">2</span>
+              <span title="Column 3">3</span>
+              <span title="Column 4">4</span>
+              <span title="Column 5">5</span>
+              <span title="Column 6">6</span>
+              <span title="Column 7">7</span>
+              <span title="Column 8">8</span>
+            </div>
+            <div class="row-headers" aria-hidden="true">
+              <span title="Row 1 (steps 1–8)">1</span>
+              <span title="Row 2 (steps 9–16)">2</span>
+              <span title="Row 3 (steps 17–24)">3</span>
+              <span title="Row 4 (steps 25–32)">4</span>
+              <span title="Row 5 (steps 33–40)">5</span>
+              <span title="Row 6 (steps 41–48)">6</span>
+              <span title="Row 7 (steps 49–56)">7</span>
+              <span title="Row 8 (steps 57–64)">8</span>
+            </div>
+            <div id="steps" class="steps"></div>
+          </div>
+          <canvas id="wave" class="wave" height="60"></canvas>
+          <div id="editor" class="editor">
+            <span class="elab">Step <b id="estep">—</b></span>
+            <span id="enote" class="enote">—</span>
+            <button id="edown" title="Lower this step a semitone (locks it)">−</button>
+            <button id="eup" title="Raise this step a semitone (locks it)">+</button>
+            <button id="eclear" title="Empty this step and lock it">✕</button>
+            <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
+            <button id="eclearlocks" title="Forget every locked step">clear locks</button>
+            <span id="lockcount" class="lockcount"></span>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- MODEL 2: CELLULAR AUTOMATA SEQUENCER -->
+    <div id="model-cellular" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/cellular.js -->
+    </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=101"></script>
+<script type="module" src="js/rack.js?v=103"></script>
 </body>
 </html>

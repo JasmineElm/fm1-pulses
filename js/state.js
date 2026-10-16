@@ -18,6 +18,17 @@ export const DEFAULT = {
   scale: "pentMinor", root: 60,
   lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, octaveMode: "up", gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
+
+  // Cellular Automata model parameters
+  caRule: 30,
+  caGenesis: "center",
+  caBoundary: "wrap",
+  caMapping: "matrix",
+  caScale: "pentMinor",
+  caRoot: 48,
+  caDensity: 85,
+  caInitDensity: 35,
+  caVelocity: 100,
 };
 
 export const state = { ...DEFAULT };
@@ -62,10 +73,28 @@ export function triggerRegenHooks() {
   for (const fn of onRegenCallbacks) fn();
 }
 
+let currentModelGenerator = null;
+export function setModelGenerator(fn) {
+  currentModelGenerator = fn;
+}
+
+let currentModelRandomizer = null;
+export function setModelRandomizer(fn) {
+  currentModelRandomizer = fn;
+}
+
+export function getCurrentModelRandomizer() {
+  return currentModelRandomizer;
+}
+
 export function doGenerate(newSeed = false) {
   if (newSeed) state.seed = (Math.random() * 1e9) | 0;
   refs.seed?.setValue(state.seed, false);
-  bank = generateBank(state, state.drift);
+  if (currentModelGenerator) {
+    bank = currentModelGenerator(state, state.drift);
+  } else {
+    bank = generateBank(state, state.drift);
+  }
   triggerRegenHooks();
   status(`16 slots · seed ${state.seed >>> 0}`);
 }
@@ -74,7 +103,11 @@ let regenTimer = null;
 export function scheduleRegen() {
   clearTimeout(regenTimer);
   regenTimer = setTimeout(() => {
-    bank = generateBank(state, state.drift);
+    if (currentModelGenerator) {
+      bank = currentModelGenerator(state, state.drift);
+    } else {
+      bank = generateBank(state, state.drift);
+    }
     triggerRegenHooks();
   }, 40);
   for (const fn of onTempoProbeCallbacks) fn();

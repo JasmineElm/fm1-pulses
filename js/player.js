@@ -69,21 +69,34 @@ export async function playOnce(index) {
   }
 }
 
+const stepListeners = new Set();
+export function onStep(fn) {
+  stepListeners.add(fn);
+  return () => stepListeners.delete(fn);
+}
+
 export function clearPlayhead() {
   if (nowCell) nowCell.classList.remove("now");
   nowCell = null;
   setScopeNow(null);
   renderScope();
+  for (const fn of stepListeners) {
+    try { fn(null); } catch (_) {}
+  }
 }
 
 export function markStep(i) {
   const el = document.getElementById("steps");
-  if (!el) return;
-  if (nowCell) nowCell.classList.remove("now");
-  nowCell = el.children[i] || null;
-  if (nowCell) nowCell.classList.add("now");
-  setScopeNow(i);
-  renderScope();
+  if (el) {
+    if (nowCell) nowCell.classList.remove("now");
+    nowCell = el.children[i] || null;
+    if (nowCell) nowCell.classList.add("now");
+    setScopeNow(i);
+    renderScope();
+  }
+  for (const fn of stepListeners) {
+    try { fn(i); } catch (_) {}
+  }
 }
 
 export function stopLive() {
@@ -110,7 +123,7 @@ export function toggleLive() {
 }
 
 export async function liveLoop(token) {
-  const t0 = performance.now();
+  let t0 = performance.now();
   let elapsed = 0;
   let i = 0;
   while (live && token === liveToken) {
