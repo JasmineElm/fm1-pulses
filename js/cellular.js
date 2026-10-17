@@ -2,7 +2,7 @@
 // Inspired by Reaktor's Newscool: resizable square grid (defaults to 64x64),
 // interactive cell drawing, Conway's B3/S23 evolution, and real-time generation updates.
 
-import { mulberry32 } from "./generator.js";
+import { mulberry32, SCALES, quantize, NOTE_NAMES, midiName } from "./generator.js";
 import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
@@ -14,6 +14,65 @@ import { onStep, isLive } from "./player.js";
 // Grid sizes supported
 export const GRID_SIZES = [16, 32, 48, 64, 80, 96, 128];
 export const DEFAULT_GRID_SIZE = 64;
+
+// Note Triggering & Cell Selection Rules
+export const NOTE_RULES = [
+  // Pitch / X-axis Rules (relative to previous state)
+  { v: "closest", t: "Closest Pitch (X Stepwise)", desc: "Cell closest in pitch to previous note — smooth stepwise melody" },
+  { v: "median", t: "Median Pitch (X Center)", desc: "Cell closest to the median pitch of all active cells — harmonic center" },
+  { v: "furthest", t: "Furthest Pitch (X Leaps)", desc: "Cell furthest in pitch from previous note — wide angular leaps" },
+  { v: "lowest", t: "Lowest Pitch (Min X Bass)", desc: "Cell with the lowest pitch — bass voice anchor" },
+  { v: "highest", t: "Highest Pitch (Max X Lead)", desc: "Cell with the highest pitch — soprano lead line" },
+
+  // Velocity / Y-axis Rules
+  { v: "closest-vel", t: "Closest Velocity (Y Smooth)", desc: "Cell closest in velocity to previous note — dynamic continuity" },
+  { v: "furthest-vel", t: "Furthest Velocity (Y Contrast)", desc: "Cell furthest in velocity from previous note — alternates accents and ghost notes" },
+  { v: "loudest", t: "Loudest Cell (Max Y)", desc: "Cell highest on the grid with peak velocity" },
+  { v: "softest", t: "Softest Cell (Min Y)", desc: "Cell lowest on the grid with quietest velocity" },
+
+  // 2D Spatial & Morphological Rules
+  { v: "closest-2d", t: "Closest 2D (Tracks Organisms)", desc: "Cell closest in 2D Euclidean space — tracks gliders & moving creatures" },
+  { v: "furthest-2d", t: "Furthest 2D (Spatial Leap)", desc: "Cell furthest in 2D space — jumps across distant colonies" },
+  { v: "centroid", t: "Center of Mass (Centroid)", desc: "Cell closest to collective center of mass of living cells" },
+  { v: "newborn", t: "Newborn Cells (Wavefront)", desc: "Prioritizes cells born this generation — sparks on active life frontier" },
+  { v: "oldest", t: "Oldest Cells (Still-Life)", desc: "Prioritizes oldest surviving cells — anchors repetitive tonal pedal points" },
+  { v: "random", t: "Random Cell (Stochastic)", desc: "Picks a random live cell uniformly — unpredictable generative textures" }
+];
+
+export const SCALE_LABELS = {
+  pentMinor: "Pentatonic Minor",
+  pentMajor: "Pentatonic Major",
+  minor: "Natural Minor (Aeolian)",
+  major: "Major (Ionian)",
+  dorian: "Dorian",
+  mixolydian: "Mixolydian",
+  blues: "Blues",
+  harmonicMinor: "Harmonic Minor",
+  melodicMinor: "Melodic Minor",
+  phrygian: "Phrygian",
+  lydian: "Lydian",
+  locrian: "Locrian",
+  wholeTone: "Whole Tone",
+  dimHalfWhole: "Diminished (Half-Whole)",
+  dimWholeHalf: "Diminished (Whole-Half)",
+  augmented: "Augmented",
+  inSen: "In Sen (Japanese)",
+  hijaz: "Hijaz (Arabic)",
+  chromatic: "Chromatic"
+};
+
+export const ROOT_OPTIONS = [];
+for (let n = 24; n <= 72; n++) {
+  ROOT_OPTIONS.push({ v: String(n), t: `${midiName(n)} (${n})` });
+}
+
+export const OCTAVE_OPTIONS = [
+  { v: "1", t: "1 Octave (12 semitones)" },
+  { v: "2", t: "2 Octaves (24 semitones)" },
+  { v: "3", t: "3 Octaves (36 semitones - Default)" },
+  { v: "4", t: "4 Octaves (48 semitones)" },
+  { v: "5", t: "5 Octaves (60 semitones)" }
+];
 
 // Conway Engine State
 let gridSize = DEFAULT_GRID_SIZE;
@@ -30,6 +89,10 @@ let brushSize = 1; // 1, 2, or 3
 let hoverCell = null;
 let isPointerDown = false;
 let drawValue = 1; // 1 for drawing alive, 0 for erasing
+
+// Note Triggering Tracking
+let prevCell = null; // { x, y }
+let lastTriggeredNote = null; // { note, vel, x, y }
 
 // Classic Conway's Game of Life Presets
 export const LIFE_PRESETS = [
@@ -166,40 +229,38 @@ export function countPopulation() {
   return count;
 }
 
-// Conway's Game of Life Evolution Step (B3 / S23)
-export function stepConway() {
-  const N = gridSize;
-  const isWrap = boundaryMode === "wrap";
+// Step arbitrary Conway grid buffer: B3 / S23
+export function stepGrid(src, dst, N, wrap = true) {
   let liveCount = 0;
 
   for (let y = 0; y < N; y++) {
-    const ym1 = y === 0 ? (isWrap ? N - 1 : -1) : y - 1;
-    const yp1 = y === N - 1 ? (isWrap ? 0 : -1) : y + 1;
+    const ym1 = y === 0 ? (wrap ? N - 1 : -1) : y - 1;
+    const yp1 = y === N - 1 ? (wrap ? 0 : -1) : y + 1;
     const rowMid = y * N;
     const rowTop = ym1 >= 0 ? ym1 * N : -1;
     const rowBot = yp1 >= 0 ? yp1 * N : -1;
 
     for (let x = 0; x < N; x++) {
-      const xm1 = x === 0 ? (isWrap ? N - 1 : -1) : x - 1;
-      const xp1 = x === N - 1 ? (isWrap ? 0 : -1) : x + 1;
+      const xm1 = x === 0 ? (wrap ? N - 1 : -1) : x - 1;
+      const xp1 = x === N - 1 ? (wrap ? 0 : -1) : x + 1;
 
       // Sum of 8 neighbors
       let k = 0;
       if (rowTop >= 0) {
-        if (xm1 >= 0 && currentGrid[rowTop + xm1] > 0) k++;
-        if (currentGrid[rowTop + x] > 0) k++;
-        if (xp1 >= 0 && currentGrid[rowTop + xp1] > 0) k++;
+        if (xm1 >= 0 && src[rowTop + xm1] > 0) k++;
+        if (src[rowTop + x] > 0) k++;
+        if (xp1 >= 0 && src[rowTop + xp1] > 0) k++;
       }
-      if (xm1 >= 0 && currentGrid[rowMid + xm1] > 0) k++;
-      if (xp1 >= 0 && currentGrid[rowMid + xp1] > 0) k++;
+      if (xm1 >= 0 && src[rowMid + xm1] > 0) k++;
+      if (xp1 >= 0 && src[rowMid + xp1] > 0) k++;
       if (rowBot >= 0) {
-        if (xm1 >= 0 && currentGrid[rowBot + xm1] > 0) k++;
-        if (currentGrid[rowBot + x] > 0) k++;
-        if (xp1 >= 0 && currentGrid[rowBot + xp1] > 0) k++;
+        if (xm1 >= 0 && src[rowBot + xm1] > 0) k++;
+        if (src[rowBot + x] > 0) k++;
+        if (xp1 >= 0 && src[rowBot + xp1] > 0) k++;
       }
 
       const idx = rowMid + x;
-      const age = currentGrid[idx];
+      const age = src[idx];
       let nextState = 0;
 
       if (age > 0) {
@@ -215,9 +276,16 @@ export function stepConway() {
           liveCount++;
         }
       }
-      nextGrid[idx] = nextState;
+      dst[idx] = nextState;
     }
   }
+  return liveCount;
+}
+
+// Conway's Game of Life Evolution Step (B3 / S23)
+export function stepConway() {
+  const isWrap = boundaryMode === "wrap";
+  const liveCount = stepGrid(currentGrid, nextGrid, gridSize, isWrap);
 
   // Swap buffers
   const temp = currentGrid;
@@ -226,12 +294,252 @@ export function stepConway() {
 
   generation++;
   population = liveCount;
+  return liveCount;
+}
+
+// Map a 2D Cell coordinate to Quantized Musical Note and Velocity
+// X Axis: Pitch (Scale Quantized)
+// Y Axis: Velocity (Top = Loud 120, Bottom = Soft 30)
+export function mapCellToNote(cell, N) {
+  if (!cell) return null;
+  const scaleName = state.caScale || "pentMinor";
+  const scale = SCALES[scaleName] || SCALES.pentMinor;
+  const root = typeof state.caRoot === "number" ? state.caRoot : 48;
+  const octaves = typeof state.caOctaves === "number" ? state.caOctaves : 3;
+  const minVel = typeof state.caMinVel === "number" ? state.caMinVel : 30;
+  const maxVel = typeof state.caMaxVel === "number" ? state.caMaxVel : 120;
+
+  // X Axis -> Pitch: quantize along scale degrees
+  const normX = Math.max(0, Math.min(1, cell.x / Math.max(1, N - 1)));
+  const rawPitch = root + normX * (octaves * 12);
+  const note = Math.max(0, Math.min(127, quantize(rawPitch, scale, root, 1)));
+
+  // Y Axis -> Velocity: top (y = 0) is loud (maxVel), bottom (y = N-1) is soft (minVel)
+  const normY = 1 - Math.max(0, Math.min(1, cell.y / Math.max(1, N - 1)));
+  const vel = Math.max(1, Math.min(127, Math.round(minVel + normY * (maxVel - minVel))));
+
+  return { note, vel, x: cell.x, y: cell.y };
+}
+
+// Cell Selection Rule Algorithm (Monophonic Picker)
+export function pickCell(cells, rule = "closest", prevCell = null, grid = null, N = 64) {
+  if (!cells || cells.length === 0) return null;
+  if (cells.length === 1) return cells[0];
+
+  const px = prevCell ? prevCell.x : Math.floor(N / 2);
+  const py = prevCell ? prevCell.y : Math.floor(N / 2);
+
+  switch (rule) {
+    case "closest": {
+      // Cell whose X (pitch) is closest to previous X (stepwise smooth voice-leading)
+      let best = cells[0];
+      let minDx = Math.abs(cells[0].x - px);
+      let minD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const dx = Math.abs(c.x - px);
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (dx < minDx || (dx === minDx && d2 < minD2)) {
+          best = c;
+          minDx = dx;
+          minD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "furthest": {
+      // Cell whose X (pitch) is furthest from previous X (wide angular leaps)
+      let best = cells[0];
+      let maxDx = Math.abs(cells[0].x - px);
+      let maxD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const dx = Math.abs(c.x - px);
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (dx > maxDx || (dx === maxDx && d2 > maxD2)) {
+          best = c;
+          maxDx = dx;
+          maxD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "median": {
+      // Cell whose X is closest to the median X of all active cells (harmonic center)
+      const sorted = [...cells].sort((a, b) => a.x - b.x);
+      const medianX = sorted[Math.floor(sorted.length / 2)].x;
+      let best = cells[0];
+      let minDiff = Math.abs(cells[0].x - medianX);
+      let minD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const diff = Math.abs(c.x - medianX);
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (diff < minDiff || (diff === minDiff && d2 < minD2)) {
+          best = c;
+          minDiff = diff;
+          minD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "lowest": {
+      // Minimum X (lowest pitch / bass note)
+      let best = cells[0];
+      for (let i = 1; i < cells.length; i++) {
+        if (cells[i].x < best.x) best = cells[i];
+      }
+      return best;
+    }
+
+    case "highest": {
+      // Maximum X (highest pitch / soprano note)
+      let best = cells[0];
+      for (let i = 1; i < cells.length; i++) {
+        if (cells[i].x > best.x) best = cells[i];
+      }
+      return best;
+    }
+
+    case "closest-vel": {
+      // Cell whose Y (velocity) is closest to previous Y (smooth dynamic continuity)
+      let best = cells[0];
+      let minDy = Math.abs(cells[0].y - py);
+      let minD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const dy = Math.abs(c.y - py);
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (dy < minDy || (dy === minDy && d2 < minD2)) {
+          best = c;
+          minDy = dy;
+          minD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "furthest-vel": {
+      // Cell whose Y (velocity) is furthest from previous Y (dynamic contrast)
+      let best = cells[0];
+      let maxDy = Math.abs(cells[0].y - py);
+      let maxD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const dy = Math.abs(c.y - py);
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (dy > maxDy || (dy === maxDy && d2 > maxD2)) {
+          best = c;
+          maxDy = dy;
+          maxD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "loudest": {
+      // Minimum Y (top of grid = max velocity)
+      let best = cells[0];
+      for (let i = 1; i < cells.length; i++) {
+        if (cells[i].y < best.y) best = cells[i];
+      }
+      return best;
+    }
+
+    case "softest": {
+      // Maximum Y (bottom of grid = min velocity)
+      let best = cells[0];
+      for (let i = 1; i < cells.length; i++) {
+        if (cells[i].y > best.y) best = cells[i];
+      }
+      return best;
+    }
+
+    case "closest-2d": {
+      // Cell closest in Euclidean 2D distance to previous cell (tracks moving gliders)
+      let best = cells[0];
+      let minD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (d2 < minD2) {
+          best = c;
+          minD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "furthest-2d": {
+      // Cell furthest in Euclidean 2D distance from previous cell (spatial leaps)
+      let best = cells[0];
+      let maxD2 = (cells[0].x - px) ** 2 + (cells[0].y - py) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const d2 = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (d2 > maxD2) {
+          best = c;
+          maxD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "centroid": {
+      // Cell closest to collective center of mass
+      let sumX = 0, sumY = 0;
+      for (const c of cells) { sumX += c.x; sumY += c.y; }
+      const cx = sumX / cells.length;
+      const cy = sumY / cells.length;
+      let best = cells[0];
+      let minD2 = (cells[0].x - cx) ** 2 + (cells[0].y - cy) ** 2;
+      for (let i = 1; i < cells.length; i++) {
+        const c = cells[i];
+        const d2 = (c.x - cx) ** 2 + (c.y - cy) ** 2;
+        if (d2 < minD2) {
+          best = c;
+          minD2 = d2;
+        }
+      }
+      return best;
+    }
+
+    case "newborn": {
+      // Prioritize cells born this generation (age === 1)
+      const newborns = cells.filter((c) => c.age === 1);
+      if (newborns.length > 0) {
+        return pickCell(newborns, "closest", prevCell, grid, N);
+      }
+      return pickCell(cells, "closest", prevCell, grid, N);
+    }
+
+    case "oldest": {
+      // Prioritize oldest cells (highest age / persistent still-lifes)
+      let best = cells[0];
+      for (let i = 1; i < cells.length; i++) {
+        if (cells[i].age > best.age) best = cells[i];
+      }
+      return best;
+    }
+
+    case "random": {
+      return cells[Math.floor(Math.random() * cells.length)];
+    }
+
+    default:
+      return cells[0];
+  }
 }
 
 // Reset to initial user-drawn or stamped seed
 export function resetToSeed() {
   currentGrid.set(seedGrid);
   generation = 0;
+  prevCell = null;
+  lastTriggeredNote = null;
   countPopulation();
   redrawCaCanvas();
   updateHud();
@@ -251,6 +559,9 @@ export function clearGrid() {
   seedGrid.fill(0);
   generation = 0;
   population = 0;
+  prevCell = null;
+  lastTriggeredNote = null;
+  generateCaBank();
   redrawCaCanvas();
   updateHud();
   status("Grid cleared");
@@ -262,7 +573,10 @@ export function invertGrid() {
     currentGrid[i] = currentGrid[i] > 0 ? 0 : 1;
   }
   seedGrid.set(currentGrid);
+  prevCell = null;
+  lastTriggeredNote = null;
   countPopulation();
+  generateCaBank();
   redrawCaCanvas();
   updateHud();
   status("Grid inverted");
@@ -277,7 +591,10 @@ export function randomizeGrid(density = 25) {
   }
   seedGrid.set(currentGrid);
   generation = 0;
+  prevCell = null;
+  lastTriggeredNote = null;
   countPopulation();
+  generateCaBank();
   redrawCaCanvas();
   updateHud();
   status(`Randomized ${gridSize}×${gridSize} grid (${Math.round(prob * 100)}% density)`, "ok");
@@ -325,7 +642,10 @@ export function loadPreset(preset) {
 
   seedGrid.set(currentGrid);
   generation = 0;
+  prevCell = null;
+  lastTriggeredNote = null;
   countPopulation();
+  generateCaBank();
   redrawCaCanvas();
   updateHud();
   status(`Loaded Life preset: ${preset.name}`, "ok");
@@ -466,6 +786,37 @@ export function renderCaCanvas(canvas) {
     }
   }
 
+  // Draw Crosshairs and Highlight for Active Triggered Note (X = Pitch, Y = Velocity)
+  if (lastTriggeredNote && lastTriggeredNote.x >= 0 && lastTriggeredNote.x < N && lastTriggeredNote.y >= 0 && lastTriggeredNote.y < N) {
+    const tx = lastTriggeredNote.x;
+    const ty = lastTriggeredNote.y;
+    const tcx = tx * cellW;
+    const tcy = ty * cellH;
+
+    // Pitch Column Highlight (X Axis)
+    ctx.fillStyle = isLight ? "rgba(37, 99, 235, 0.14)" : "rgba(56, 189, 248, 0.18)";
+    ctx.fillRect(tcx, 0, cellW, displayH);
+
+    // Velocity Row Highlight (Y Axis)
+    ctx.fillStyle = isLight ? "rgba(245, 158, 11, 0.14)" : "rgba(251, 191, 36, 0.18)";
+    ctx.fillRect(0, tcy, displayW, cellH);
+
+    // Active Triggered Cell Box
+    ctx.fillStyle = "#f59e0b"; // Vibrant Amber
+    ctx.fillRect(tcx, tcy, cellW, cellH);
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(1.5, Math.min(3, cellW * 0.25));
+    ctx.strokeRect(tcx - 0.5, tcy - 0.5, cellW + 1, cellH + 1);
+
+    // Outer Target Rings if cells are large enough
+    if (cellW >= 8) {
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(tcx - 3, tcy - 3, cellW + 6, cellH + 6);
+    }
+  }
+
   // Hover Cell Indicator
   if (hoverCell && hoverCell.x >= 0 && hoverCell.x < N && hoverCell.y >= 0 && hoverCell.y < N) {
     ctx.strokeStyle = isLight ? "#2563eb" : "#38bdf8";
@@ -493,6 +844,9 @@ export function updateHud() {
   const sizeEl = document.getElementById("ca-hud-size");
   const modeEl = document.getElementById("ca-hud-mode");
   const statusEl = document.getElementById("ca-hud-status");
+  const noteEl = document.getElementById("ca-hud-note");
+  const velEl = document.getElementById("ca-hud-vel");
+  const footerNoteEl = document.getElementById("ca-step-hover");
 
   if (genEl) genEl.textContent = String(generation);
   if (popEl) {
@@ -509,6 +863,30 @@ export function updateHud() {
     const running = isLive();
     statusEl.textContent = running ? "▶ RUNNING" : "■ STOPPED";
     statusEl.style.color = running ? "var(--accent)" : "var(--dim)";
+  }
+  if (noteEl) {
+    if (lastTriggeredNote) {
+      const name = midiName(lastTriggeredNote.note);
+      noteEl.textContent = `${name} (${lastTriggeredNote.note})`;
+    } else {
+      noteEl.textContent = isLive() ? "Rest" : "—";
+    }
+  }
+  if (velEl) {
+    if (lastTriggeredNote) {
+      velEl.textContent = String(lastTriggeredNote.vel);
+    } else {
+      velEl.textContent = "—";
+    }
+  }
+  if (footerNoteEl && !hoverCell) {
+    if (lastTriggeredNote) {
+      const name = midiName(lastTriggeredNote.note);
+      const scaleName = SCALE_LABELS[state.caScale] || state.caScale || "Scale";
+      footerNoteEl.textContent = `Active Note: ${name} (${lastTriggeredNote.note}) · Velocity: ${lastTriggeredNote.vel} · Cell (${lastTriggeredNote.x}, ${lastTriggeredNote.y}) · [${scaleName}]`;
+    } else {
+      footerNoteEl.textContent = isLive() ? "Rest (no live cells)" : "—";
+    }
   }
 }
 
@@ -816,7 +1194,72 @@ export function buildCellularPanel(container) {
 
   evoSect.append(transportRow, evoControls);
 
-  // 4. PRESET PATTERNS LIBRARY
+  // 4. NOTE TRIGGERING & SCALE RULES
+  const noteSect = document.createElement("section");
+  noteSect.className = "sect ca-sect";
+  noteSect.innerHTML = `
+    <div class="ca-sect-head">
+      <h3>Note & Pitch Rules</h3>
+      <span class="ca-rule-badge">X: Pitch · Y: Vel</span>
+    </div>
+  `;
+
+  const noteControls = document.createElement("div");
+  noteControls.className = "ca-grid-2col";
+  noteControls.append(
+    R("caNoteRule", dropdown({
+      label: "Cell Picker Rule",
+      options: NOTE_RULES.map((r) => ({ v: r.v, t: r.t })),
+      value: state.caNoteRule || "closest",
+      onInput: (v) => {
+        state.caNoteRule = v;
+        const sel = NOTE_RULES.find((r) => r.v === v);
+        generateCaBank();
+        status(`Note Rule: ${sel ? sel.t : v}`);
+      },
+      tip: "Rule governing which live cell triggers a note at each step. Choose Pitch (X), Velocity (Y), or 2D Spatial/Morphological rules."
+    })),
+    R("caScale", dropdown({
+      label: "Scale Quantize",
+      options: Object.keys(SCALES).map((s) => ({
+        v: s,
+        t: SCALE_LABELS[s] || s
+      })),
+      value: state.caScale || "pentMinor",
+      onInput: (v) => {
+        state.caScale = v;
+        generateCaBank();
+        status(`Scale: ${SCALE_LABELS[v] || v}`);
+      },
+      tip: "Scale for quantizing X-axis pitch (reused from Traditional sequencer)."
+    })),
+    R("caRoot", dropdown({
+      label: "Root Note",
+      options: ROOT_OPTIONS,
+      value: String(state.caRoot ?? 48),
+      onInput: (v) => {
+        state.caRoot = Number(v);
+        generateCaBank();
+        status(`Root Note: ${midiName(Number(v))}`);
+      },
+      tip: "Base root note (lowest pitch at X=0)."
+    })),
+    R("caOctaves", dropdown({
+      label: "Pitch Span",
+      options: OCTAVE_OPTIONS,
+      value: String(state.caOctaves ?? 3),
+      onInput: (v) => {
+        state.caOctaves = Number(v);
+        generateCaBank();
+        status(`Pitch Span: ${v} octaves`);
+      },
+      tip: "Horizontal keyboard span across the X axis."
+    }))
+  );
+
+  noteSect.appendChild(noteControls);
+
+  // 5. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
   presetSect.className = "sect ca-sect";
   presetSect.innerHTML = `
@@ -842,7 +1285,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(gridSect, drawSect, evoSect, presetSect);
+  module.append(gridSect, drawSect, evoSect, noteSect, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -852,8 +1295,10 @@ export function buildCellularPanel(container) {
     <div class="ca-display-header">
       <div class="ca-hud-bar">
         <div class="ca-hud-item"><span class="ca-hud-lbl">GEN</span><b id="ca-hud-gen" class="ca-hud-val">0</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">POPULATION</span><b id="ca-hud-pop" class="ca-hud-val">0 cells</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">POP</span><b id="ca-hud-pop" class="ca-hud-val">0 cells</b></div>
         <div class="ca-hud-item"><span class="ca-hud-lbl">GRID</span><b id="ca-hud-size" class="ca-hud-val">${gridSize} × ${gridSize}</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">NOTE (X)</span><b id="ca-hud-note" class="ca-hud-val ca-hud-highlight">—</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">VEL (Y)</span><b id="ca-hud-vel" class="ca-hud-val ca-hud-highlight">—</b></div>
         <div class="ca-hud-item"><span class="ca-hud-lbl">CYCLE</span><b id="ca-hud-mode" class="ca-hud-val">Loop (64 steps)</b></div>
         <div class="ca-hud-item"><span class="ca-hud-lbl">STATUS</span><b id="ca-hud-status" class="ca-hud-val">■ STOPPED</b></div>
       </div>
@@ -862,7 +1307,7 @@ export function buildCellularPanel(container) {
       <canvas id="ca-canvas" class="ca-canvas"></canvas>
     </div>
     <div class="ca-display-footer">
-      <span class="ca-hint">💡 Click & drag to draw cells · Right-click or Eraser to erase · Global Play (Spacebar) to step evolution</span>
+      <span class="ca-hint">💡 X: Pitch (Scale Quantized) · Y: Velocity · Click/Drag to draw · Global Play (Spacebar) to step</span>
       <span id="ca-step-hover" class="ca-step-hover">—</span>
     </div>
   `;
@@ -875,6 +1320,7 @@ export function buildCellularPanel(container) {
   if (canvas) {
     wireCanvasEvents(canvas);
     setupDefaultPattern();
+    generateCaBank();
     redrawCaCanvas();
     updateHud();
   }
@@ -887,16 +1333,54 @@ export function generateCaBank() {
   let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
   if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
   const tempo = state.tempo || 120;
+  const N = gridSize;
+  const rule = state.caNoteRule || "closest";
+  const isWrap = boundaryMode === "wrap";
+
+  // Pre-simulate pattern from seedGrid to compute notes for each step
+  const simGrid = new Uint8Array(seedGrid);
+  const simNext = new Uint8Array(seedGrid.length);
+  let pCell = null;
+  const precomputedSteps = [];
+
+  for (let i = 0; i < seqLen; i++) {
+    // 1. Gather active cells
+    const liveCells = [];
+    for (let y = 0; y < N; y++) {
+      const rowIdx = y * N;
+      for (let x = 0; x < N; x++) {
+        const age = simGrid[rowIdx + x];
+        if (age > 0) liveCells.push({ x, y, age });
+      }
+    }
+
+    // 2. Pick cell and map to note
+    const picked = pickCell(liveCells, rule, pCell, simGrid, N);
+    let stepNotes = [];
+    if (picked) {
+      pCell = { x: picked.x, y: picked.y };
+      const mapped = mapCellToNote(picked, N);
+      if (mapped) stepNotes = [{ note: mapped.note, vel: mapped.vel }];
+    }
+
+    precomputedSteps.push({
+      notes: stepNotes,
+      rate: rateIdx,
+      gate: state.gate ?? 50
+    });
+
+    // 3. Advance simulation 1 step
+    stepGrid(simGrid, simNext, N, isWrap);
+    simGrid.set(simNext);
+  }
 
   for (let s = 0; s < 16; s++) {
-    const steps = [];
-    for (let i = 0; i < seqLen; i++) {
-      steps.push({
-        notes: [], // Visual sequence focus first; note rules will be added in follow-up step
-        rate: rateIdx,
-        gate: state.gate ?? 50
-      });
-    }
+    const steps = precomputedSteps.map((st) => ({
+      notes: st.notes.map((n) => ({ ...n })),
+      rate: st.rate,
+      gate: st.gate
+    }));
+
     bank.push({
       length: seqLen,
       rate: rateIdx,
@@ -926,23 +1410,55 @@ export function initCellular() {
   // Hook step clock advancement from live transport loop
   onStep((stepIndex) => {
     if (stepIndex === null) {
+      lastTriggeredNote = null;
+      redrawCaCanvas();
       updateHud();
       return;
     }
     const modelEl = document.getElementById("model-cellular");
     if (!modelEl || modelEl.style.display === "none") return;
 
-    // Check loop mode
+    // Check loop mode: reset to seed when wrapping around
     if (loopMode === "loop") {
       const loopLen = Math.max(1, Math.min(64, state.length || 64));
-      if (generation >= loopLen) {
-        // Reset to initial seed pattern at loop boundary
+      if (stepIndex === 0 && generation > 0) {
         resetToSeed();
-        return;
       }
     }
 
-    // Step 1 generation of Conway's Game of Life
+    // 1. Collect all live cells from currentGrid
+    const N = gridSize;
+    const liveCells = [];
+    for (let y = 0; y < N; y++) {
+      const rowIdx = y * N;
+      for (let x = 0; x < N; x++) {
+        const age = currentGrid[rowIdx + x];
+        if (age > 0) liveCells.push({ x, y, age });
+      }
+    }
+
+    // 2. Pick cell using active rule
+    const rule = state.caNoteRule || "closest";
+    const picked = pickCell(liveCells, rule, prevCell, currentGrid, N);
+
+    const bank = getBank();
+    const curP = bank[getSelected()];
+
+    if (picked) {
+      prevCell = { x: picked.x, y: picked.y };
+      const mapped = mapCellToNote(picked, N);
+      lastTriggeredNote = mapped;
+      if (curP?.steps?.[stepIndex]) {
+        curP.steps[stepIndex].notes = [{ note: mapped.note, vel: mapped.vel }];
+      }
+    } else {
+      lastTriggeredNote = null;
+      if (curP?.steps?.[stepIndex]) {
+        curP.steps[stepIndex].notes = [];
+      }
+    }
+
+    // 3. Step 1 generation of Conway's Game of Life
     stepConway();
     redrawCaCanvas();
     updateHud();

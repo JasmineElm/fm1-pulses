@@ -1054,6 +1054,10 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
+.ca-hud-val.ca-hud-highlight {
+  color: var(--accent);
+  font-weight: 800;
+}
 
 .ca-canvas-wrap {
   width: 100%;

@@ -188,7 +188,7 @@ function skew(v, bias) {
 }
 
 // ---- quantize a note value to a scale, `strength` = snap probability ----
-function quantize(note, scale, root, strength, rng) {
+export function quantize(note, scale, root, strength = 1, rng = () => 0) {
   const n = Math.round(note);
   if (rng() > strength) return n;
   // Nearest note of the scale in ANY octave: for each degree take its closest
