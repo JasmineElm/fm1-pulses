@@ -58,7 +58,8 @@ export const SCALE_LABELS = {
   augmented: "Augmented",
   inSen: "In Sen (Japanese)",
   hijaz: "Hijaz (Arabic)",
-  chromatic: "Chromatic"
+  chromatic: "Chromatic",
+  custom: "Custom (User Defined)"
 };
 
 export const ROOT_OPTIONS = [];
@@ -303,7 +304,8 @@ export function stepConway() {
 export function mapCellToNote(cell, N) {
   if (!cell) return null;
   const scaleName = state.caScale || "pentMinor";
-  const scale = SCALES[scaleName] || SCALES.pentMinor;
+  let scale = (scaleName === "custom" && state.caCustomScale) ? state.caCustomScale : (SCALES[scaleName] || SCALES.pentMinor);
+  if (!scale || scale.length === 0) scale = [0];
   const root = typeof state.caRoot === "number" ? state.caRoot : 48;
   const octaves = typeof state.caOctaves === "number" ? state.caOctaves : 3;
   const minVel = typeof state.caMinVel === "number" ? state.caMinVel : 30;
@@ -1006,6 +1008,93 @@ function wireCanvasEvents(canvas) {
   });
 }
 
+// Scale Notes Programmer Tracking & Logic
+let scaleButtons = [];
+let scaleInfoEl = null;
+let activeNotePcs = new Set();
+
+function findPredefinedScale(intervals) {
+  const target = intervals.join(",");
+  for (const [key, ivs] of Object.entries(SCALES)) {
+    if (key === "custom") continue;
+    if (ivs.length === intervals.length && [...ivs].sort((a, b) => a - b).join(",") === target) {
+      return key;
+    }
+  }
+  return null;
+}
+
+export function syncScaleButtons() {
+  if (!scaleButtons.length) return;
+  const rootPc = (state.caRoot ?? 48) % 12;
+  const scaleName = state.caScale || "pentMinor";
+  const intervals = (scaleName === "custom" && state.caCustomScale) ? state.caCustomScale : (SCALES[scaleName] || SCALES.pentMinor);
+  activeNotePcs = new Set(intervals.map((iv) => (rootPc + iv) % 12));
+
+  scaleButtons.forEach((btn, idx) => {
+    const isActive = activeNotePcs.has(idx);
+    const isRoot = idx === rootPc;
+    btn.classList.toggle("active", isActive);
+    btn.classList.toggle("is-root", isRoot);
+    btn.setAttribute("aria-checked", isActive ? "true" : "false");
+    const noteName = NOTE_NAMES[idx];
+    btn.title = `${noteName}${isRoot ? " (Root)" : ""}: ${isActive ? "Active in scale (click to exclude)" : "Excluded (click to include)"}`;
+  });
+
+  if (scaleInfoEl) {
+    const activeSorted = Array.from(activeNotePcs).sort((a, b) => a - b);
+    scaleInfoEl.textContent = `${activeNotePcs.size} active: ${activeSorted.map((pc) => NOTE_NAMES[pc]).join(" ")}`;
+  }
+}
+
+function onNoteButtonClick(noteIdx) {
+  const rootPc = (state.caRoot ?? 48) % 12;
+  if (activeNotePcs.has(noteIdx)) {
+    if (activeNotePcs.size <= 1) {
+      status("Scale must have at least one note", "err");
+      return;
+    }
+    activeNotePcs.delete(noteIdx);
+  } else {
+    activeNotePcs.add(noteIdx);
+  }
+
+  const intervals = Array.from(activeNotePcs)
+    .map((pc) => (pc - rootPc + 12) % 12)
+    .sort((a, b) => a - b);
+
+  const matched = findPredefinedScale(intervals);
+  if (matched) {
+    state.caScale = matched;
+    if (refs.caScale) refs.caScale.setValue(matched);
+    status(`Scale: ${SCALE_LABELS[matched] || matched}`);
+  } else {
+    state.caScale = "custom";
+    state.caCustomScale = intervals;
+    SCALES.custom = intervals;
+    if (refs.caScale) refs.caScale.setValue("custom");
+    const activeNames = Array.from(activeNotePcs).sort((a, b) => a - b).map((pc) => NOTE_NAMES[pc]).join(" ");
+    status(`Custom Scale: ${activeNames}`);
+  }
+
+  scaleButtons.forEach((btn, idx) => {
+    const isActive = activeNotePcs.has(idx);
+    const isRoot = idx === rootPc;
+    btn.classList.toggle("active", isActive);
+    btn.classList.toggle("is-root", isRoot);
+    btn.setAttribute("aria-checked", isActive ? "true" : "false");
+    const noteName = NOTE_NAMES[idx];
+    btn.title = `${noteName}${isRoot ? " (Root)" : ""}: ${isActive ? "Active in scale (click to exclude)" : "Excluded (click to include)"}`;
+  });
+
+  if (scaleInfoEl) {
+    const activeSorted = Array.from(activeNotePcs).sort((a, b) => a - b);
+    scaleInfoEl.textContent = `${activeNotePcs.size} active: ${activeSorted.map((pc) => NOTE_NAMES[pc]).join(" ")}`;
+  }
+
+  generateCaBank();
+}
+
 // BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
   container.innerHTML = "";
@@ -1157,6 +1246,7 @@ export function buildCellularPanel(container) {
       value: state.caScale || "pentMinor",
       onInput: (v) => {
         state.caScale = v;
+        syncScaleButtons();
         generateCaBank();
         status(`Scale: ${SCALE_LABELS[v] || v}`);
       },
@@ -1168,6 +1258,7 @@ export function buildCellularPanel(container) {
       value: String(state.caRoot ?? 48),
       onInput: (v) => {
         state.caRoot = Number(v);
+        syncScaleButtons();
         generateCaBank();
         status(`Root Note: ${midiName(Number(v))}`);
       },
@@ -1186,7 +1277,43 @@ export function buildCellularPanel(container) {
     }))
   );
 
-  noteSect.appendChild(noteControls);
+  // Scale Notes 12-Button Selector ("scale" div)
+  const scaleBox = document.createElement("div");
+  scaleBox.className = "ca-scale-box";
+
+  const scaleHeader = document.createElement("div");
+  scaleHeader.className = "ca-scale-header";
+  scaleHeader.innerHTML = `
+    <span class="ca-scale-title">Scale</span>
+    <span class="ca-scale-info" id="caScaleInfo"></span>
+  `;
+  scaleInfoEl = scaleHeader.querySelector(".ca-scale-info");
+
+  const scaleDiv = document.createElement("div");
+  scaleDiv.className = "scale";
+  scaleDiv.id = "caScaleDiv";
+  scaleDiv.setAttribute("role", "group");
+  scaleDiv.setAttribute("aria-label", "Scale Note Quantizer (12 Chromatic Notes)");
+
+  scaleButtons = [];
+  const accidentals = new Set([1, 3, 6, 8, 10]); // C#, D#, F#, G#, A#
+  NOTE_NAMES.forEach((name, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ca-scale-btn" + (accidentals.has(idx) ? " is-accidental" : "");
+    btn.dataset.note = String(idx);
+    btn.setAttribute("role", "checkbox");
+    btn.innerHTML = `<span class="ca-scale-note">${name}</span>`;
+    btn.addEventListener("click", () => onNoteButtonClick(idx));
+    scaleDiv.appendChild(btn);
+    scaleButtons.push(btn);
+  });
+
+  scaleBox.append(scaleHeader, scaleDiv);
+  noteSect.append(noteControls, scaleBox);
+
+  // Initialize initial button states
+  syncScaleButtons();
 
   // 4. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
@@ -1416,6 +1543,7 @@ export function activateCellularModel() {
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
+  syncScaleButtons();
   doGenerate(false);
   redrawCaCanvas();
   updateHud();

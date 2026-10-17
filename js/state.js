@@ -26,6 +26,7 @@ export const DEFAULT = {
   caMapping: "matrix",
   caNoteRule: "closest",
   caScale: "pentMinor",
+  caCustomScale: [0, 3, 5, 7, 10],
   caRoot: 48,
   caOctaves: 3,
   caMinVel: 30,

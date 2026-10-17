@@ -26,6 +26,7 @@ export const SCALES = {
   augmented: [0, 3, 4, 7, 8, 11],
   inSen: [0, 1, 5, 7, 10],
   hijaz: [0, 1, 4, 5, 7, 8, 10],
+  custom: [0, 3, 5, 7, 10],
 };
 
 export const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -197,7 +198,8 @@ export function quantize(note, scale, root, strength = 1, rng = () => 0) {
   // nearest degree is C (0, one semitone up) dropped a full octave: 59 -> 48
   // instead of 60. Ties go to the higher note.
   let best = null, bestD = 99;
-  for (const iv of scale) {
+  const sc = (scale && scale.length > 0) ? scale : [0];
+  for (const iv of sc) {
     const cand = root + iv + 12 * Math.round((n - root - iv) / 12);
     const d = Math.abs(cand - n);
     if (d < bestD || (d === bestD && best != null && cand > best)) { bestD = d; best = cand; }

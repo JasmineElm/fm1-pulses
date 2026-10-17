@@ -987,6 +987,96 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   margin-top: 4px;
 }
 
+/* Scale Notes Programmer ("scale" div) */
+.ca-scale-box {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.ca-scale-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.ca-scale-title {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.ca-scale-info {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.scale {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+  width: 100%;
+}
+.ca-scale-btn {
+  font: inherit;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 8.5px;
+  font-weight: 700;
+  position: relative;
+  transition: all .12s ease;
+  user-select: none;
+}
+.ca-scale-btn.is-accidental {
+  background: color-mix(in srgb, var(--panel) 82%, black);
+}
+[data-theme="light"] .ca-scale-btn.is-accidental {
+  background: color-mix(in srgb, var(--panel) 88%, #cbd5e1);
+}
+.ca-scale-btn:hover {
+  border-color: var(--dim);
+  color: var(--fg);
+}
+.ca-scale-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.ca-scale-btn.is-root::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ca-scale-btn.active.is-root::after {
+  background: #ffffff;
+}
+.ca-scale-note {
+  line-height: 1;
+}
+
 /* Preset patterns grid */
 .ca-preset-grid {
   display: grid;
