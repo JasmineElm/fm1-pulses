@@ -5,8 +5,10 @@ import { renderScope } from "./scope.js";
 
 let editStep = -1;
 let onSelectSlotCallback = null;
+const bufferRenderCallbacks = new Set();
 
 export function onSelectSlot(fn) { onSelectSlotCallback = fn; }
+export function onBufferRender(fn) { bufferRenderCallbacks.add(fn); return () => bufferRenderCallbacks.delete(fn); }
 
 export function noteCount(p) {
   return p ? p.steps.slice(0, p.length).reduce((a, s) => a + s.notes.length, 0) : 0;
@@ -126,6 +128,9 @@ export function renderBuffer() {
   renderEditor();
   fitSteps();
   renderScope();
+  for (const fn of bufferRenderCallbacks) {
+    try { fn(); } catch (_) {}
+  }
 }
 
 export function fitSteps() {

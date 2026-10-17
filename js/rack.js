@@ -6,7 +6,7 @@ import {
   getCurrentModelRandomizer
 } from "./state.js";
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=213";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
@@ -14,8 +14,9 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=211";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=211";
+import { createNotesSection } from "./scale.js?v=213";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=213";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=213";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -26,6 +27,7 @@ onRegen(() => {
   if (getActiveModel() === "traditional") {
     applyLocks();
     renderBuffer();
+    syncRhythmGrid();
   }
 });
 
@@ -164,7 +166,7 @@ export function buildGlobalBar() {
       tip: "Step note value"
     })),
     R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
-      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); },
+      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); syncRhythmGrid(); },
       tip: "Pattern length in steps (1 to 64)." }))
   );
 }
@@ -509,6 +511,7 @@ refreshLoopRanges();
 buildTransport();
 buildEditor();
 initScope();
+initRhythm(document.getElementById("rhythm-bar"));
 initCellular();
 doGenerate(true);
 initMidi();
@@ -519,6 +522,7 @@ initModes({
       fitSteps();
       renderScope();
       renderBuffer();
+      syncRhythmGrid();
     } else if (modelId === "cellular") {
       activateCellularModel();
     }

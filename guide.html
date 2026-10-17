@@ -90,6 +90,13 @@
 
   <h2>Rhythm</h2>
   <div class="param">
+    <h3>16×4 Step Grid &amp; Rhythm Controls <span class="kind">panel</span></h3>
+    <p>A full-width step sequencer with a dedicated button for all 64 steps, arranged into a 16×4 grid (four 16-step bars). Each bar is grouped into 4-step beats with downbeat indicators. Tap any step to toggle its gate on or off. When playing, a live playhead tracks across the grid.</p>
+    <p><b>Euclid:</b> Select from classic world rhythms (Tresillo, Cinquillo, Son/Rumba Clave, Bossa Nova, Soukous, Samba, Gahu, Aksak, Bembé) or specify custom Hits (N) and Division (M) and click <b>Apply</b>.<br>
+    <b>Rotate:</b> Shift the pattern steps cyclically with <b>◀ Rot</b> and <b>Rot ▶</b>.<br>
+    <b>Batch Tools:</b> <b>All On</b>, <b>All Off</b> (clear gates), <b>Invert</b> (flip all gates), <b>Bar 1 → All</b> (duplicate the first 16 steps across bars 2–4), and <b>Random</b> (stochastically rolls gates using current density).</p>
+  </div>
+  <div class="param">
     <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
     <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
   </div>

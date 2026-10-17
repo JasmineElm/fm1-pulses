@@ -1197,3 +1197,354 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   RHYTHM CONTROLS (Full-Width 16x4 Step Grid & Euclid Controls)
+   ========================================================================== */
+.rhythm-bar {
+  width: 100%;
+  margin-bottom: 11px;
+  box-sizing: border-box;
+}
+
+.rhythm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+}
+
+.rhythm-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rhythm-title-wrap h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.rhythm-badge {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--dim);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: 0.4px;
+}
+
+.rhythm-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.rhythm-tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.rhythm-tool-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-right: 2px;
+}
+
+.rhythm-select,
+.rhythm-select-sm {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  outline: none;
+  cursor: pointer;
+  height: 22px;
+}
+
+.rhythm-select:hover,
+.rhythm-select-sm:hover {
+  border-color: var(--dim);
+}
+
+.rhythm-select:focus,
+.rhythm-select-sm:focus {
+  border-color: var(--accent);
+}
+
+.rhythm-euclid-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  color: var(--dim);
+}
+
+.rhythm-euclid-inputs label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.rhythm-num-input {
+  width: 32px;
+  height: 22px;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 0 2px;
+  outline: none;
+}
+
+.rhythm-num-input:focus {
+  border-color: var(--accent);
+}
+
+.rhythm-btn {
+  font-family: inherit;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  outline: none;
+  transition: all 0.12s ease;
+}
+
+.rhythm-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rhythm-btn:active {
+  transform: translateY(1px);
+}
+
+.rhythm-btn.primary {
+  background: color-mix(in srgb, var(--accent) 20%, var(--panel2));
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.rhythm-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.rhythm-rot-display {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--fg);
+  min-width: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 16x4 Grid Container ---- */
+.rhythm-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.rhythm-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+.rhythm-bar-label {
+  flex: 0 0 54px;
+  width: 54px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: inherit;
+  user-select: none;
+}
+
+.rhythm-bar-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.rhythm-bar-range {
+  font-size: 7.5px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.rhythm-row-steps {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 3px;
+}
+
+/* Beat spacing: slightly larger separator after steps 4, 8, 12 */
+.rhythm-step-btn:nth-child(4n):not(:last-child) {
+  margin-right: 4px;
+}
+
+/* ---- Step Buttons ---- */
+.rhythm-step-btn {
+  height: 34px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  outline: none;
+  position: relative;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.08s;
+  user-select: none;
+}
+
+.rhythm-step-btn:hover {
+  border-color: var(--dim);
+  background: color-mix(in srgb, var(--panel2) 70%, var(--panel));
+}
+
+.rhythm-step-btn:active {
+  transform: scale(0.96);
+}
+
+/* Beat Downbeats (steps 1, 5, 9, 13) */
+.rhythm-step-btn.is-downbeat {
+  border-top: 2px solid color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+/* Active Gate State */
+.rhythm-step-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 26%, var(--panel));
+  border-color: var(--accent);
+  color: var(--fg);
+  box-shadow: inset 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent),
+              0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.rhythm-step-btn.is-active:hover {
+  background: color-mix(in srgb, var(--accent) 36%, var(--panel));
+}
+
+.rhythm-step-btn.is-active .r-step-led {
+  background: var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+}
+
+.rhythm-step-btn.is-active .r-step-note {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Running Playhead Cursor */
+.rhythm-step-btn.now {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 8px #ffffff, inset 0 0 6px #ffffff !important;
+  filter: brightness(1.25);
+  transform: scale(1.04);
+  z-index: 2;
+}
+
+/* Dimmed if step is beyond pattern length */
+.rhythm-step-btn.is-off-length {
+  opacity: 0.28;
+  filter: grayscale(0.8);
+}
+
+/* Button Internal Elements */
+.r-step-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1px;
+  pointer-events: none;
+}
+
+.r-step-num {
+  font-size: 7.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.r-step-led {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background-color 0.1s, box-shadow 0.1s;
+}
+
+.r-step-note {
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  pointer-events: none;
+}
+
