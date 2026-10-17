@@ -1548,3 +1548,92 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   pointer-events: none;
 }
 
+/* ==========================================================================
+   HUMANISE SECTION (Humanize Timing Jitter & Swing Groove)
+   ========================================================================== */
+.humanise-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.humanise-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.humanise-head h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.humanise-badge {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--dim);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 1px 5px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+
+.humanise-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.humanise-presets-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: -2px;
+  margin-bottom: 2px;
+}
+
+.humanise-preset-tag {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-right: 2px;
+}
+
+.humanise-pill-btn {
+  font-family: inherit;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  outline: none;
+  line-height: 1.2;
+}
+
+.humanise-pill-btn:hover {
+  border-color: var(--dim);
+  color: var(--fg);
+}
+
+.humanise-pill-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel2));
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+

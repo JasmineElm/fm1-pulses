@@ -14,13 +14,15 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=213";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=213";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=213";
+import { createNotesSection } from "./scale.js?v=214";
+import { createHumaniseSection } from "./humanise.js?v=214";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=214";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=214";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
 let traditionalNotesSection = null;
+let traditionalHumaniseSection = null;
 
 // Register hooks
 onRegen(() => {
@@ -89,6 +91,7 @@ export function refreshLoopInfo() {
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
   if (traditionalNotesSection) traditionalNotesSection.sync();
+  if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -259,15 +262,20 @@ export function buildRack() {
         span(R("gate", fader({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate,
           format: (v) => `${Math.round(v)}%`, onInput: setState("gate"), tip: "Gate length: duration of each note as a percentage of step time." })), 4),
         blank(),
-
-        span(R("humanize", fader({ label: "Humanize", min: 0, max: 100, value: state.humanize, def: DEFAULT.humanize,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("humanize"), tip: "Adds subtle timing jitter to make playback feel human." })), 4),
-        blank(),
-
-        span(R("swing", fader({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("swing"), tip: "Delays every other step. 50% is straight, 75% is triplet (2:1)." })), 4),
-        blank(),
       ]);
+    })(),
+
+    (() => {
+      traditionalHumaniseSection = createHumaniseSection({
+        title: "Humanise",
+        humanizeKey: "humanize",
+        swingKey: "swing",
+        span: 6,
+        onChange: () => {
+          scheduleRegen();
+        }
+      });
+      return traditionalHumaniseSection.sectEl;
     })(),
 
     (() => {
@@ -523,6 +531,7 @@ initModes({
       renderScope();
       renderBuffer();
       syncRhythmGrid();
+      if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
     } else if (modelId === "cellular") {
       activateCellularModel();
     }

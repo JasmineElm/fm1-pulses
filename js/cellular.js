@@ -10,7 +10,8 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=211";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=214";
+import { createHumaniseSection } from "./humanise.js?v=214";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -998,6 +999,7 @@ function wireCanvasEvents(canvas) {
 }
 
 let caNotesSection = null;
+let caHumaniseSection = null;
 
 // BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
@@ -1159,7 +1161,19 @@ export function buildCellularPanel(container) {
   triggerControls.append(ruleCtrl, spanCtrl);
   triggerSect.append(triggerControls);
 
-  // 4. UNIFIED NOTES SECTION (Root Note, Root Octave, Scale Dropdown, Note Selection, Quantize, Octave Spread)
+  // 4. UNIFIED HUMANISE SECTION (Humanize Timing Jitter & Swing Groove)
+  caHumaniseSection = createHumaniseSection({
+    title: "Humanise",
+    humanizeKey: "humanize",
+    swingKey: "swing",
+    span: 0,
+    extraClass: "ca-sect",
+    onChange: () => {
+      generateCaBank();
+    }
+  });
+
+  // 5. UNIFIED NOTES SECTION (Root Note, Root Octave, Scale Dropdown, Note Selection, Quantize, Octave Spread)
   caNotesSection = createNotesSection({
     title: "Notes",
     scaleKey: "caScale",
@@ -1203,7 +1217,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(gridSect, evoSect, triggerSect, caNotesSection.sectEl, presetSect);
+  module.append(gridSect, evoSect, triggerSect, caHumaniseSection.sectEl, caNotesSection.sectEl, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -1405,6 +1419,7 @@ export function activateCellularModel() {
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
   if (caNotesSection) caNotesSection.sync();
+  if (caHumaniseSection) caHumaniseSection.sync();
   doGenerate(false);
   redrawCaCanvas();
   updateHud();

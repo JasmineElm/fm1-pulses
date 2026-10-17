@@ -99,11 +99,6 @@
   <div class="param">
     <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
     <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
-  </div>
-  <div class="param">
-    <h3>Swing <span class="rng">50–75%</span><span class="kind">knob</span></h3>
-    <p>Delays every other step. 50% is straight, 75% is triplet (2:1). Heard in the browser and written into the pattern.</p>
-  </div>
   <div class="param">
     <h3>Gate <span class="rng">0–100%</span><span class="kind">knob</span></h3>
     <p><b>Random mode:</b> the chance each step plays a note — 0% silence, 100% every step. <b>Euclid mode:</b> the same knob becomes <i>density</i>: Gate % becomes N hits spread as evenly as possible over the cycle (the Loop length, or 16 steps if the loop is off). E(5,8) = <code>x.xx.xx.</code> (cinquillo), E(4,8) = <code>x.x.x.x.</code>, E(3,8) is a tresillo-family pattern. The loop info line shows the current <code>E(N,M)</code>.</p>
@@ -131,6 +126,16 @@
   <div class="param">
     <h3>Gate length <span class="rng">5–100%</span><span class="kind">knob</span></h3>
     <p>How long each note holds. Low is staccato, high is legato.</p>
+  </div>
+
+  <h2>Humanise</h2>
+  <div class="param">
+    <h3>Humanize <span class="rng">0–100%</span><span class="kind">fader</span></h3>
+    <p>Adds subtle micro-timing jitter to make playback feel human and organic. Includes fast groove pills: Tight (0%), Subtle (20%), Loose (45%), Wild (80%).</p>
+  </div>
+  <div class="param">
+    <h3>Swing <span class="rng">50–75%</span><span class="kind">fader</span></h3>
+    <p>Delays every other step. 50% is straight, 75% is triplet (2:1). Includes quick presets: Straight (50%), Light (54%), MPC (58%), Hard (66%), Triplet (75%). Available across all sequencer models, heard during live playback, and written into FM-1 pattern memory.</p>
   </div>
 
   <h2>Global</h2>
