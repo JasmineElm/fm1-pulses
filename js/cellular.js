@@ -7,11 +7,12 @@ import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
-} from "./state.js";
+} from "./state.js?v=221";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=214";
-import { createHumaniseSection } from "./humanise.js?v=214";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=221";
+import { createHumaniseSection } from "./humanise.js?v=221";
+import { syncRhythmGrid } from "./rhythm.js?v=221";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1434,7 +1435,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(gridSect, evoSect, triggerSect, caHumaniseSection.sectEl, caNotesSection.sectEl, presetSect);
+  module.append(caHumaniseSection.sectEl, caNotesSection.sectEl, gridSect, evoSect, triggerSect, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -1538,6 +1539,7 @@ export function generateCaBank() {
     gridSize: gridSize
   }];
   setBank(bank);
+  syncRhythmGrid();
   return bank;
 }
 
@@ -1610,6 +1612,7 @@ export function initCellular() {
     stepConway();
     redrawCaCanvas();
     updateHud();
+    syncRhythmGrid();
   });
 
   // Hook bank regenerations
@@ -1638,6 +1641,7 @@ export function activateCellularModel() {
   if (caNotesSection) caNotesSection.sync();
   if (caHumaniseSection) caHumaniseSection.sync();
   doGenerate(false);
+  syncRhythmGrid();
   redrawCaCanvas();
   updateHud();
 }

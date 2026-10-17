@@ -1,7 +1,7 @@
 import {
   state, refs, R, setState, scheduleRegen, getBank, status, onRegen, RATE_NAMES,
   getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
-} from "./state.js?v=218";
+} from "./state.js?v=221";
 import {
   euclid, classicName, quantize, midiName, SCALES
 } from "./generator.js";

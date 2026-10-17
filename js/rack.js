@@ -4,7 +4,7 @@ import {
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
   getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
   getCurrentModelRandomizer, refreshLoopInfo
-} from "./state.js?v=218";
+} from "./state.js?v=221";
 
 export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
@@ -16,10 +16,10 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=215";
-import { createHumaniseSection } from "./humanise.js?v=215";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=216";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=218";
+import { createNotesSection } from "./scale.js?v=221";
+import { createHumaniseSection } from "./humanise.js?v=221";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=221";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=221";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
