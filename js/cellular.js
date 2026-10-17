@@ -7,12 +7,12 @@ import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
-} from "./state.js?v=221";
+} from "./state.js?v=223";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=221";
-import { createHumaniseSection } from "./humanise.js?v=221";
-import { syncRhythmGrid } from "./rhythm.js?v=221";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=223";
+import { createHumaniseSection } from "./humanise.js?v=223";
+import { syncRhythmGrid } from "./rhythm.js?v=223";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1525,6 +1525,7 @@ export function generateCaBank() {
 
   const steps = precomputedSteps.map((st) => ({
     notes: st.notes.map((n) => ({ ...n })),
+    _savedNote: st.notes.length > 0 ? { ...st.notes[0] } : null,
     rate: st.rate,
     gate: st.gate
   }));
@@ -1593,18 +1594,26 @@ export function initCellular() {
 
     const bank = getBank();
     const curP = bank[getSelected()];
+    const st = curP?.steps?.[stepIndex];
 
     if (picked) {
       prevCell = { x: picked.x, y: picked.y };
       const mapped = mapCellToNote(picked, N);
-      lastTriggeredNote = mapped;
-      if (curP?.steps?.[stepIndex]) {
-        curP.steps[stepIndex].notes = [{ note: mapped.note, vel: mapped.vel }];
+      if (st && st.notes && st.notes.length > 0) {
+        lastTriggeredNote = mapped;
+      } else {
+        lastTriggeredNote = null;
+      }
+      if (loopMode === "free" && st) {
+        if (st.notes.length > 0 || st._savedNote) {
+          st.notes = [{ note: mapped.note, vel: mapped.vel }];
+        }
       }
     } else {
       lastTriggeredNote = null;
-      if (curP?.steps?.[stepIndex]) {
-        curP.steps[stepIndex].notes = [];
+      if (loopMode === "free" && st) {
+        if (st.notes && st.notes.length > 0) st._savedNote = { ...st.notes[0] };
+        st.notes = [];
       }
     }
 
@@ -1612,7 +1621,6 @@ export function initCellular() {
     stepConway();
     redrawCaCanvas();
     updateHud();
-    syncRhythmGrid();
   });
 
   // Hook bank regenerations

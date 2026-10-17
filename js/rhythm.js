@@ -1,11 +1,11 @@
 import {
   state, refs, R, setState, scheduleRegen, getBank, status, onRegen, RATE_NAMES,
   getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
-} from "./state.js?v=221";
+} from "./state.js?v=223";
 import {
-  euclid, classicName, quantize, midiName, SCALES
+  euclid, classicName, quantize
 } from "./generator.js";
-import { renderBuffer, onBufferRender } from "./grid.js?v=216";
+import { renderBuffer, onBufferRender } from "./grid.js?v=223";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
@@ -77,15 +77,6 @@ export function syncRhythmGrid() {
 
     btn.classList.toggle("is-active", !!hasNotes);
     btn.classList.toggle("is-off-length", !isWithinLen);
-
-    const noteEl = btn.querySelector(".r-step-note");
-    if (noteEl) {
-      if (hasNotes) {
-        noteEl.textContent = midiName(st.notes[0].note);
-      } else {
-        noteEl.textContent = "";
-      }
-    }
   }
 
   if (badgeEl) {
@@ -112,13 +103,13 @@ export function toggleStepGate(stepIndex) {
   if (hasNotes) {
     st._savedNote = { ...st.notes[0] };
     st.notes = [];
-    status(`Step ${stepIndex + 1} off`);
+    status(`Step ${stepIndex + 1} trigger off`);
   } else {
     let noteVal = st._savedNote ? st._savedNote.note : getDefaultNoteForStep(stepIndex);
     const vel = st._savedNote ? st._savedNote.vel : (state.velocity ?? 100);
     st.notes = [{ note: Math.max(0, Math.min(127, noteVal)), vel: Math.max(1, Math.min(127, vel)) }];
     delete st.echo;
-    status(`Step ${stepIndex + 1} on (${midiName(noteVal)})`);
+    status(`Step ${stepIndex + 1} trigger on`);
   }
 
   syncRhythmGrid();
@@ -836,10 +827,11 @@ export function initRhythm(containerEl) {
 
       btnHeader.append(numSpan, ledSpan);
 
-      const noteSpan = document.createElement("span");
-      noteSpan.className = "r-step-note";
+      const trigBar = document.createElement("span");
+      trigBar.className = "r-step-trig";
+      trigBar.setAttribute("aria-hidden", "true");
 
-      btn.append(btnHeader, noteSpan);
+      btn.append(btnHeader, trigBar);
 
       btn.addEventListener("click", () => {
         toggleStepGate(stepIdx);

@@ -1486,9 +1486,9 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 
 /* ---- Step Buttons ---- */
 .rhythm-step-btn {
-  height: 34px;
+  height: 30px;
   min-width: 0;
-  padding: 2px;
+  padding: 3px 2px;
   border-radius: 4px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1536,9 +1536,10 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   box-shadow: 0 0 5px var(--accent);
 }
 
-.rhythm-step-btn.is-active .r-step-note {
-  color: var(--accent);
-  font-weight: 700;
+.rhythm-step-btn.is-active .r-step-trig {
+  background: var(--accent);
+  opacity: 1;
+  box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
 /* Running Playhead Cursor */
@@ -1582,16 +1583,13 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   transition: background-color 0.1s, box-shadow 0.1s;
 }
 
-.r-step-note {
-  font-size: 7.5px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.2px;
-  color: var(--dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+.r-step-trig {
+  width: 100%;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--line);
+  opacity: 0.35;
+  transition: background-color 0.1s, box-shadow 0.1s, opacity 0.1s;
   pointer-events: none;
 }
 
