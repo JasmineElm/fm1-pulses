@@ -960,7 +960,7 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 /* Evolution & Seed buttons */
 .ca-transport-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin-bottom: 6px;
 }

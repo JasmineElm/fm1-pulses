@@ -14,7 +14,7 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=204";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -84,7 +84,6 @@ export function refreshLoopInfo() {
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
-  if (refs.caSpeed && state.rate !== undefined) refs.caSpeed.setValue(String(state.rate), false);
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -153,7 +152,6 @@ export function buildGlobalBar() {
       value: state.rate,
       onInput: (v) => {
         state.rate = Number(v);
-        if (refs.caSpeed) refs.caSpeed.setValue(String(v));
         refreshLoopRanges();
         scheduleRegen();
       },

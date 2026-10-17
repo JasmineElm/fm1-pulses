@@ -1062,73 +1062,7 @@ export function buildCellularPanel(container) {
   );
   gridSect.appendChild(gridForm);
 
-  // 2. DRAW & EDIT TOOLS
-  const drawSect = document.createElement("section");
-  drawSect.className = "sect ca-sect";
-  drawSect.innerHTML = `
-    <div class="ca-sect-head">
-      <h3>Draw & Edit Tools</h3>
-      <span class="ca-hint-inline">Click & drag to paint</span>
-    </div>
-  `;
-
-  const toolsWrap = document.createElement("div");
-  toolsWrap.className = "ca-tools-bar";
-
-  const penBtn = document.createElement("button");
-  penBtn.className = `ca-tool-btn ${activeTool === "pen" ? "active" : ""}`;
-  penBtn.innerHTML = `✏️ Pen`;
-  penBtn.title = "Pen: Draw live cells (drag to paint, click alive to erase)";
-  penBtn.addEventListener("click", () => {
-    activeTool = "pen";
-    penBtn.classList.add("active");
-    eraserBtn.classList.remove("active");
-  });
-
-  const eraserBtn = document.createElement("button");
-  eraserBtn.className = `ca-tool-btn ${activeTool === "eraser" ? "active" : ""}`;
-  eraserBtn.innerHTML = `🧹 Eraser`;
-  eraserBtn.title = "Eraser: Drag to clear cells";
-  eraserBtn.addEventListener("click", () => {
-    activeTool = "eraser";
-    eraserBtn.classList.add("active");
-    penBtn.classList.remove("active");
-  });
-
-  const brushWrap = document.createElement("div");
-  brushWrap.className = "ca-brush-sizes";
-  [1, 2, 3].forEach((b) => {
-    const bBtn = document.createElement("button");
-    bBtn.className = `ca-brush-btn ${brushSize === b ? "active" : ""}`;
-    bBtn.textContent = `${b}px`;
-    bBtn.title = `Brush width: ${b} cell${b > 1 ? "s" : ""}`;
-    bBtn.addEventListener("click", () => {
-      brushSize = b;
-      brushWrap.querySelectorAll(".ca-brush-btn").forEach((el) => el.classList.remove("active"));
-      bBtn.classList.add("active");
-    });
-    brushWrap.appendChild(bBtn);
-  });
-
-  toolsWrap.append(penBtn, eraserBtn, brushWrap);
-
-  const editActions = document.createElement("div");
-  editActions.className = "ca-edit-actions";
-  editActions.append(
-    actionBtn("Clear", () => clearGrid(), "Clear all cells"),
-    actionBtn("Invert", () => invertGrid(), "Invert all cells"),
-    actionBtn("Randomize", () => randomizeGrid(state.caDensity ?? 25), "Spawn random soup"),
-    R("caSoupDensity", fader({
-      label: "Soup %", min: 10, max: 60, value: state.caDensity ?? 25, def: 25,
-      format: (v) => `${Math.round(v)}%`,
-      onInput: setState("caDensity"),
-      tip: "Live cell probability density when randomizing."
-    }))
-  );
-
-  drawSect.append(toolsWrap, editActions);
-
-  // 3. EVOLUTION & SEED CONTROLS
+  // 2. EVOLUTION & SEED CONTROLS
   const evoSect = document.createElement("section");
   evoSect.className = "sect ca-sect";
   evoSect.innerHTML = `
@@ -1158,24 +1092,19 @@ export function buildCellularPanel(container) {
     storeAsSeed();
   });
 
-  transportRow.append(resetBtn, storeBtn);
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "ca-transport-btn";
+  clearBtn.textContent = "✕ Clear Grid";
+  clearBtn.title = "Clear all living cells from the grid";
+  clearBtn.addEventListener("click", () => {
+    clearGrid();
+  });
 
-  const evoControls = document.createElement("div");
-  evoControls.className = "ca-grid-2col";
-  evoControls.append(
-    R("caSpeed", dropdown({
-      label: "Speed",
-      options: RATE_NAMES.map((t, v) => ({ v: String(v), t })),
-      value: String(state.rate ?? 6),
-      onInput: (v) => {
-        state.rate = Number(v);
-        if (refs.rate) refs.rate.setValue(Number(v));
-        generateCaBank();
-        scheduleRegen();
-        status(`Speed: ${RATE_NAMES[Number(v)]}`);
-      },
-      tip: "Speed of Conway evolution (borrowed from traditional sequencer, defaults to 16th notes)."
-    })),
+  transportRow.append(resetBtn, storeBtn, clearBtn);
+
+  const loopWrap = document.createElement("div");
+  loopWrap.className = "ca-loop-mode-wrap";
+  loopWrap.append(
     R("caLoopMode", dropdown({
       label: "Cycle Mode",
       options: [
@@ -1192,9 +1121,9 @@ export function buildCellularPanel(container) {
     }))
   );
 
-  evoSect.append(transportRow, evoControls);
+  evoSect.append(transportRow, loopWrap);
 
-  // 4. NOTE TRIGGERING & SCALE RULES
+  // 3. NOTE TRIGGERING & SCALE RULES
   const noteSect = document.createElement("section");
   noteSect.className = "sect ca-sect";
   noteSect.innerHTML = `
@@ -1259,7 +1188,7 @@ export function buildCellularPanel(container) {
 
   noteSect.appendChild(noteControls);
 
-  // 5. PRESET PATTERNS LIBRARY
+  // 4. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
   presetSect.className = "sect ca-sect";
   presetSect.innerHTML = `
@@ -1285,7 +1214,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(gridSect, drawSect, evoSect, noteSect, presetSect);
+  module.append(gridSect, evoSect, noteSect, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -1486,7 +1415,7 @@ export function activateCellularModel() {
   setModelGenerator(generateCaBank);
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
-  if (refs.caSpeed) refs.caSpeed.setValue(String(state.rate));
+  if (refs.rate) refs.rate.setValue(state.rate);
   doGenerate(false);
   redrawCaCanvas();
   updateHud();
