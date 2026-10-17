@@ -14,8 +14,8 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=209";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=209";
+import { createNotesSection } from "./scale.js?v=210";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=210";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -149,7 +149,13 @@ export function buildGlobalBar() {
     R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "sm",
       format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
       tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
-    R("seed", seedControl({ label: "Seed", value: state.seed, onInput: (v) => { state.seed = v; scheduleRegen(); }, tip: "Pattern seed (numeric or text)" })),
+    R("seed", seedControl({
+      label: "Seed",
+      value: state.seed,
+      onInput: (v) => { state.seed = v; scheduleRegen(); },
+      onRandomize: () => { randomize(); },
+      tip: "Pattern seed (numeric or text)"
+    })),
     R("rate", dropdown({
       label: "Note",
       options: RATE_NAMES.map((t, v) => ({ v, t })),
@@ -399,7 +405,6 @@ export function buildRack() {
 
 function buildTransport() {
   document.getElementById("gen")?.addEventListener("click", () => doGenerate(true));
-  document.getElementById("rand")?.addEventListener("click", randomize);
   document.getElementById("audition")?.addEventListener("click", toggleLive);
   buildAudioControls();
   document.getElementById("export")?.addEventListener("click", exportState);

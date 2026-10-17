@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=209";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=210";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1315,8 +1315,10 @@ export function generateCaBank() {
 
 // Randomize active CA configuration
 export function randomizeCa() {
+  state.seed = (Math.random() * 1e9) | 0;
+  if (refs.seed?.setValue) refs.seed.setValue(state.seed, false);
   randomizeGrid(state.caDensity ?? 25);
-  status("Randomized Cellular Automata pattern", "ok");
+  status(`Randomized Cellular Automata pattern · seed ${state.seed >>> 0}`, "ok");
 }
 
 // INITIALIZATION

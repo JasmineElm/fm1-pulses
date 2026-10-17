@@ -18,7 +18,7 @@ export function parseSeed(str) {
   return h >>> 0;
 }
 
-export function seedControl({ label = "Seed", value = 0, onInput, tip = "Pattern seed (numeric or text)" }) {
+export function seedControl({ label = "Seed", value = 0, onInput, onRandomize, tip = "Pattern seed (numeric or text)" }) {
   const wrap = document.createElement("div");
   wrap.className = "seed-wrap";
 
@@ -30,16 +30,20 @@ export function seedControl({ label = "Seed", value = 0, onInput, tip = "Pattern
   rndBtn.type = "button";
   rndBtn.className = "toggle seed-rnd-btn";
   rndBtn.textContent = "Randomise";
-  rndBtn.title = "Generate a new random seed (keeps all other parameters unchanged)";
+  rndBtn.title = "Randomise parameters and seed";
   rndBtn.style.width = "calc(100% - 8px)";
   rndBtn.style.maxWidth = "64px";
   rndBtn.style.boxSizing = "border-box";
   rndBtn.style.margin = "0 auto";
   rndBtn.addEventListener("click", () => {
-    const s = (Math.random() * 1e9) | 0;
-    input.value = String(s >>> 0).slice(0, 10);
-    if (onInput) onInput(s);
-    status(`New seed: ${s >>> 0}`);
+    if (onRandomize) {
+      onRandomize();
+    } else {
+      const s = (Math.random() * 1e9) | 0;
+      input.value = String(s >>> 0).slice(0, 10);
+      if (onInput) onInput(s);
+      status(`New seed: ${s >>> 0}`);
+    }
   });
 
   const input = document.createElement("input");
