@@ -124,5 +124,5 @@ export function exportSysex() {
   const bytes = [];
   for (let i = 0; i < SLOTS; i++) for (const m of encodeWrite(bank[i], i, true)) bytes.push(...m);
   download(`fm1p-${state.seed >>> 0}.syx`, new Uint8Array(bytes), "application/octet-stream");
-  status(`bank .syx downloaded ✓ (${bytes.length} bytes, 16 slots)`);
+  status(`pattern .syx downloaded ✓ (${bytes.length} bytes)`);
 }

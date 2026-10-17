@@ -6,16 +6,16 @@ import {
   getCurrentModelRandomizer
 } from "./state.js";
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
-import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
+import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=210";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=210";
+import { createNotesSection } from "./scale.js?v=211";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=211";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -25,7 +25,6 @@ let traditionalNotesSection = null;
 onRegen(() => {
   if (getActiveModel() === "traditional") {
     applyLocks();
-    renderBank();
     renderBuffer();
   }
 });
@@ -146,9 +145,6 @@ export function buildGlobalBar() {
         });
       },
       tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
-    R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "sm",
-      format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
-      tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
     R("seed", seedControl({
       label: "Seed",
       value: state.seed,
@@ -453,7 +449,6 @@ function buildTransport() {
   }
 
   document.getElementById("freeze")?.addEventListener("click", () => doFreeze(getSelected()));
-  document.getElementById("fill")?.addEventListener("click", doSendAll);
   document.getElementById("clearall")?.addEventListener("click", doClearAll);
   document.getElementById("diag")?.addEventListener("click", dumpGset);
   renderPresets();
@@ -474,16 +469,6 @@ document.addEventListener("keydown", (e) => {
   if (getActiveModel() !== "traditional") return;
   if (e.key === "f" || e.key === "F") doFreeze(getSelected());
   if (e.key === "g" || e.key === "G") doGenerate(true);
-  if (e.key === "ArrowRight") {
-    setSelected((getSelected() + 1) % SLOTS);
-    renderBank();
-    renderBuffer();
-  }
-  if (e.key === "ArrowLeft") {
-    setSelected((getSelected() + SLOTS - 1) % SLOTS);
-    renderBank();
-    renderBuffer();
-  }
 });
 
 // Tab visibility re-sync
@@ -533,7 +518,6 @@ initModes({
       deactivateCellularModel();
       fitSteps();
       renderScope();
-      renderBank();
       renderBuffer();
     } else if (modelId === "cellular") {
       activateCellularModel();

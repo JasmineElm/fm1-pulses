@@ -48,7 +48,7 @@
     <h1>FM-1 <b>PULSES</b></h1>
     <span class="sub">guide</span>
   </div>
-  <p class="intro">Every control on the panel, what it does, and a thing to try. The shape of it: set the settings, generate a bank of 16 patterns, freeze the good ones into the FM-1's own sequencer. <a class="back" href="index.html">← back to the panel</a></p>
+  <p class="intro">Every control on the panel, what it does, and a thing to try. The shape of it: set the settings, generate a pattern, freeze it into the FM-1's own sequencer. <a class="back" href="index.html">← back to the panel</a></p>
 
   <h2>Reading the panel</h2>
   <div class="param">
@@ -57,11 +57,11 @@
   </div>
   <div class="param">
     <h3>Transport</h3>
-    <p><b>Generate</b> rolls a new seed and rebuilds the bank. <b>Randomize</b> rolls settings too. <b>Play</b> loops the selected slot so you can tweak it live. The <b>sound</b> switch picks the browser preview timbre (e-piano, bell, bass, organ, square); the FM-1 plays its own patch when frozen. <b>Freeze</b> writes the selected slot, <b>Send 16</b> writes the whole bank, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme. <b>Freeze needs the FM-1+VA / Baud Girl firmware</b> — the pattern-write SysEx only exists there; on stock firmware the app works as a live MIDI broadcaster (▶ Play).</p>
+    <p><b>Generate</b> rolls a new seed and rebuilds the pattern. <b>Randomize</b> rolls settings too. <b>Play</b> loops the pattern so you can tweak it live. The <b>sound</b> switch picks the browser preview timbre (e-piano, bell, bass, organ, square); the FM-1 plays its own patch when frozen. <b>Freeze</b> writes the pattern, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme. <b>Freeze needs the FM-1+VA / Baud Girl firmware</b> — the pattern-write SysEx only exists there; on stock firmware the app works as a live MIDI broadcaster (▶ Play).</p>
   </div>
   <div class="param">
     <h3>The pattern display</h3>
-    <p>The 16 slots of the bank sit above a 64-step grid, eight wide. Tap a slot to select it. Tap a step to edit it: <b>−</b> and <b>+</b> move it a semitone, <b>✕</b> empties it. Any step you touch is locked, so it survives regeneration. When the loop is on, the tiled region is tinted in the accent colour (its first step a notch brighter), in both the grid and the bank strip.</p>
+    <p>The 64-step grid sits eight wide by eight deep. Tap a step to edit it: <b>−</b> and <b>+</b> move it a semitone, <b>✕</b> empties it. Any step you touch is locked, so it survives regeneration. When the loop is on, the tiled region is tinted in the accent colour (its first step a notch brighter) in the grid.</p>
   </div>
 
   <h2>Presets / export / import</h2>
@@ -71,21 +71,21 @@
   </div>
   <div class="param">
     <h3>export <span class="kind">file</span></h3>
-    <p>Downloads the current state as JSON: every knob, the seed, the locked steps, and the selected slot. The whole bank derives from the seed, so the file <i>is</i> the song — anyone who imports it gets the identical 16 patterns.</p>
+    <p>Downloads the current state as JSON: every knob, the seed, and the locked steps. The pattern derives from the seed, so the file <i>is</i> the song — anyone who imports it gets the identical pattern.</p>
   </div>
   <div class="param">
     <h3>import <span class="kind">file</span></h3>
-    <p>Loads a JSON file exported from FM-1 Pulses. Parameters are validated and clamped, the bank regenerates from the file's seed, and locked steps come back as they were.</p>
+    <p>Loads a JSON file exported from FM-1 Pulses. Parameters are validated and clamped, the pattern regenerates from the file's seed, and locked steps come back as they were.</p>
   </div>
   <div class="param">
     <h3>sysex <span class="kind">file</span></h3>
-    <p>Downloads the whole 16-slot bank as a <code>.syx</code> file — the raw SysEx pattern-write messages, so any other FM-1 tool can push the same bank to the device without the browser.</p>
+    <p>Downloads the pattern as a <code>.syx</code> file — the raw SysEx pattern-write messages, so any other FM-1 tool can push the same pattern to the device without the browser.</p>
   </div>
 
   <h2>Bluetooth</h2>
   <div class="param">
     <h3>bluetooth <span class="kind">link</span></h3>
-    <p>Connects the FM-1 over BLE MIDI for cable-free playback: the ▶ Play loop sends its notes over Bluetooth. <b>Freeze, Send 16, Clear and the device-BPM read still need USB</b> — on this firmware BLE carries notes and controllers only; the pattern SysEx does not ride it (verified on hardware). If the link drops, the app reconnects on its own and shows <i>bluetooth …</i> in the link.</p>
+    <p>Connects the FM-1 over BLE MIDI for cable-free playback: the ▶ Play loop sends its notes over Bluetooth. <b>Freeze, Clear and the device-BPM read still need USB</b> — on this firmware BLE carries notes and controllers only; the pattern SysEx does not ride it (verified on hardware). If the link drops, the app reconnects on its own and shows <i>bluetooth …</i> in the link.</p>
   </div>
 
   <h2>Rhythm</h2>
@@ -128,12 +128,8 @@
 
   <h2>Global</h2>
   <div class="param">
-    <h3>Drift <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>How far the 16 slots evolve away from each other. 0% means they share the settings. 100% means slot 1 and slot 16 are far apart.</p>
-  </div>
-  <div class="param">
     <h3>Seed <span class="kind">knob</span></h3>
-    <p>One number, everything derives from it. Same seed plus same settings gives the same bank. The knob rolls it, so you can hunt for a bank by turning.</p>
+    <p>One number, everything derives from it. Same seed plus same settings gives the same pattern. The knob rolls it, so you can hunt for a pattern by turning.</p>
   </div>
   <div class="param">
     <h3>Note value</h3>
@@ -226,8 +222,8 @@
   <div class="note">
     <p><b>1.</b> Connect the FM-1. The LED lights when it is found.</p>
     <p><b>2.</b> Set Scale, Root, Offset and Amplitude. Hit <b>Generate</b>.</p>
-    <p><b>3.</b> Tap through the 16 slots. Keep the ones you like.</p>
-    <p><b>4.</b> <b>Freeze</b> writes one slot, <b>Send 16</b> writes the bank.</p>
+    <p><b>3.</b> Audition and tweak the pattern live with <b>▶ Play</b>.</p>
+    <p><b>4.</b> <b>Freeze</b> writes the pattern into the FM-1.</p>
     <p><b>5.</b> Unplug it and the FM-1 plays on its own.</p>
   </div>
   <div class="note" style="border-left-color: var(--err)">

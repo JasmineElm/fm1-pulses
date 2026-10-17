@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=210";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=211";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1246,7 +1246,6 @@ export function buildCellularPanel(container) {
 
 // Generate Bank of 16 Patterns for SysEx / Player compatibility
 export function generateCaBank() {
-  const bank = [];
   const seqLen = Math.max(1, Math.min(64, state.length || 64));
   let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
   if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
@@ -1292,23 +1291,21 @@ export function generateCaBank() {
     simGrid.set(simNext);
   }
 
-  for (let s = 0; s < 16; s++) {
-    const steps = precomputedSteps.map((st) => ({
-      notes: st.notes.map((n) => ({ ...n })),
-      rate: st.rate,
-      gate: st.gate
-    }));
+  const steps = precomputedSteps.map((st) => ({
+    notes: st.notes.map((n) => ({ ...n })),
+    rate: st.rate,
+    gate: st.gate
+  }));
 
-    bank.push({
-      length: seqLen,
-      rate: rateIdx,
-      tempo: tempo,
-      gate: state.gate ?? 50,
-      swing: state.swing ?? 50,
-      steps: steps,
-      gridSize: gridSize
-    });
-  }
+  const bank = [{
+    length: seqLen,
+    rate: rateIdx,
+    tempo: tempo,
+    gate: state.gate ?? 50,
+    swing: state.swing ?? 50,
+    steps: steps,
+    gridSize: gridSize
+  }];
   setBank(bank);
   return bank;
 }

@@ -16,7 +16,7 @@ export function applyLocks() {
   const bank = getBank();
   for (const [key, notes] of locks) {
     const [s, i] = key.split(":").map(Number);
-    const p = bank[s];
+    const p = bank[s] || bank[0];
     if (p && p.steps[i]) p.steps[i].notes = notes.map((n) => ({ ...n }));
   }
 }
@@ -30,41 +30,6 @@ export function renderBank() {
   const el = document.getElementById("bank");
   if (!el) return;
   el.innerHTML = "";
-  const bank = getBank();
-  const selected = getSelected();
-  const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);   // loop region, 0-based
-  const ln = Math.round(state.loop ?? 0);
-  for (let s = 0; s < SLOTS; s++) {
-    const p = bank[s];
-    const cell = document.createElement("button");
-    cell.className = "bankcell" + (s === selected ? " sel" : "");
-    const num = document.createElement("span"); num.className = "bn"; num.textContent = s + 1;
-    const mini = document.createElement("div"); mini.className = "mini";
-    const loopOn = p && ln >= 2 && ls + ln <= p.length;
-    for (let i = 0; i < 64; i++) {
-      const d = document.createElement("i");
-      const cls = [];
-      if (p && i < p.length && p.steps[i] && p.steps[i].notes.length) cls.push("on");
-      if (loopOn && i >= ls && i < ls + ln) {
-        cls.push("loop");
-        if (i === ls) cls.push("loopstart");
-      }
-      d.className = cls.join(" ");
-      mini.appendChild(d);
-    }
-    const cnt = document.createElement("span"); cnt.className = "bc"; cnt.textContent = noteCount(p);
-    cell.append(num, mini, cnt);
-    cell.title = `slot ${s + 1}: ${noteCount(p)} notes`;
-    cell.addEventListener("click", () => {
-      setSelected(s);
-      renderBank();
-      renderBuffer();
-      if (onSelectSlotCallback) onSelectSlotCallback(s);
-    });
-    el.appendChild(cell);
-  }
-  const el2 = document.getElementById("bufinfo");
-  if (el2) el2.textContent = bank.length ? `drift ${state.drift}%` : "";
 }
 
 export function renderEditor() {
@@ -106,12 +71,12 @@ export function setStepNote(i, note) {
   }
   delete p.steps[i].echo;   // an edited step is no longer a pure copy of the motif
   locks.set(`${selected}:${i}`, p.steps[i].notes.map((n) => ({ ...n })));
-  renderBank(); renderBuffer(); refreshLockCount();
+  renderBuffer(); refreshLockCount();
 }
 
 export function clearLocks() {
   locks.clear();
-  renderBank(); renderBuffer(); refreshLockCount();
+  renderBuffer(); refreshLockCount();
   status("locks cleared");
 }
 

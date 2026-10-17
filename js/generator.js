@@ -376,60 +376,10 @@ export const LFO_RATES = [1, 2, 4, 8, 16, 32, 64];
 export const SPREADS = ["constant", "bell", "uniform", "extremes"];
 
 /**
- * generateBank(base, driftPct) -> 16 patterns.
- *
- * All 16 are derived from `base.seed` (so the bank is reproducible) but the
- * character parameters *evolve* across them: slot 0 is the base, slot 15 is
- * drifted furthest along a seeded direction. Notes are quantised to the same
- * scale/root, so the bank reads as one evolving idea rather than 16 randoms.
+ * generateBank(base) -> [pattern]
+ * Generates a single pattern bank without 15 variants.
  */
-export function generateBank(base, driftPct = 50) {
-  const drift = Math.max(0, Math.min(100, driftPct)) / 100;
-  const seed = base.seed >>> 0;
-  const r = mulberry32(seed ^ 0x9e3779b9);
-  // seeded drift direction per parameter
-  const dir = {
-    gateProb: r() < 0.5 ? -1 : 1,
-    gateBlend: r() < 0.5 ? -1 : 1,
-    lfoAmp: r() < 0.5 ? -1 : 1,
-    bias: r() < 0.5 ? -1 : 1,
-    lfoOffset: r() < 0.5 ? -1 : 1,
-    lfoRate: r() < 0.5 ? -1 : 1,
-    lfoShape: r() < 0.5 ? -1 : 1,
-    spread: r() < 0.5 ? -1 : 1,
-    humanize: r() < 0.5 ? -1 : 1,
-    octave: r() < 0.5 ? -1 : 1,
-    gravity: r() < 0.5 ? -1 : 1,
-    gateQuant: r() < 0.5 ? -1 : 1,
-    euclidRot: r() < 0.5 ? -1 : 1,
-  };
-  const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
-
-  const bank = [];
-  for (let i = 0; i < 16; i++) {
-    const t = (i / 15) * drift;                 // 0 .. drift
-    const p = {
-      ...base,
-      // 16 DISTINCT generations, all derived from the one seed (so the bank is
-      // reproducible). Drift is the optional evolution on top: at 0% the 16 are
-      // 16 fresh takes on the same parameters; higher, the parameters themselves
-      // move from slot 1 to slot 16.
-      seed: (seed + i * 0x9e3779b1) >>> 0,
-      gateProb: clamp(base.gateProb + dir.gateProb * t * 40, 5, 100),
-      gateBlend: clamp((base.gateBlend ?? 0) + dir.gateBlend * t * 30, 0, 100),
-      lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
-      bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
-      lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
-      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 16),
-      lfoShape: clamp((base.lfoShape ?? 0) + dir.lfoShape * t * 30, 0, 100),
-      spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
-      humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
-      octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
-      gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
-      gateQuant: clamp((base.gateQuant ?? 0) + dir.gateQuant * t * 25, 0, 100),   // gentle
-      euclidRot: (base.euclidRot ?? 0) + Math.round(dir.euclidRot * t * 6),
-    };
-    bank.push(generate(p));
-  }
-  return bank;
+export function generateBank(base) {
+  return [generate(base)];
 }
+

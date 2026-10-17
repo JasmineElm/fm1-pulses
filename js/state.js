@@ -3,7 +3,7 @@ import { generateBank } from "./generator.js";
 
 export const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 export const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
-export const SLOTS = 16;
+export const SLOTS = 1;
 export const PRESET_N = 5;
 export const STATE_VERSION = 1;
 
@@ -11,7 +11,6 @@ export const DEFAULT = {
   randVel: false,
   randVelAmt: 0,
   seed: (Math.random() * 1e9) | 0,
-  drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, velMin: 1, velMax: 127, humanize: 0, gateQuant: 0, snapGrid: 4,
   gateBlend: 0, euclidRot: 0, euclidDiv: "auto",
@@ -105,12 +104,12 @@ export function doGenerate(newSeed = false) {
   if (newSeed) state.seed = (Math.random() * 1e9) | 0;
   refs.seed?.setValue(state.seed, false);
   if (currentModelGenerator) {
-    bank = currentModelGenerator(state, state.drift);
+    bank = currentModelGenerator(state);
   } else {
-    bank = generateBank(state, state.drift);
+    bank = generateBank(state);
   }
   triggerRegenHooks();
-  status(`16 slots · seed ${state.seed >>> 0}`);
+  status(`pattern · seed ${state.seed >>> 0}`);
 }
 
 let regenTimer = null;
@@ -118,9 +117,9 @@ export function scheduleRegen() {
   clearTimeout(regenTimer);
   regenTimer = setTimeout(() => {
     if (currentModelGenerator) {
-      bank = currentModelGenerator(state, state.drift);
+      bank = currentModelGenerator(state);
     } else {
-      bank = generateBank(state, state.drift);
+      bank = generateBank(state);
     }
     triggerRegenHooks();
   }, 40);
