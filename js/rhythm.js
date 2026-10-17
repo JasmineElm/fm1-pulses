@@ -1,11 +1,11 @@
-// rhythm.js — Full-width Rhythm Controls & 16x4 64-Step Grid Sequencer for FM-1 Pulses.
 import {
-  state, refs, getBank, status, onRegen, RATE_NAMES
-} from "./state.js";
+  state, refs, R, setState, scheduleRegen, getBank, status, onRegen, RATE_NAMES,
+  getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
+} from "./state.js?v=218";
 import {
   euclid, classicName, quantize, midiName, SCALES
 } from "./generator.js";
-import { renderBuffer, onBufferRender } from "./grid.js?v=213";
+import { renderBuffer, onBufferRender } from "./grid.js?v=216";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
@@ -239,6 +239,11 @@ export function rotatePattern(direction) {
 
   syncRhythmGrid();
   renderBuffer();
+  state.euclidRot = ((rotOffset % 16) + 16) % 16;
+  if (rotDisplayEl) {
+    rotDisplayEl.textContent = rotOffset > 0 ? `+${rotOffset}` : `${rotOffset}`;
+  }
+  refreshLoopInfo();
   status(`Rotated rhythm ${direction > 0 ? "right (+1)" : "left (-1)"} · shift ${rotOffset}`);
 }
 
@@ -408,6 +413,7 @@ export function initRhythm(containerEl) {
   toolbar.className = "rhythm-toolbar";
 
   // --- Euclid Controls ---
+  // --- Euclid Controls ---
   const euclidGroup = document.createElement("div");
   euclidGroup.className = "rhythm-tool-group";
 
@@ -429,38 +435,127 @@ export function initRhythm(containerEl) {
   euclidInputsWrap.className = "rhythm-euclid-inputs";
 
   const hitsLabel = document.createElement("label");
-  hitsLabel.title = "Euclidean hits (N)";
+  hitsLabel.title = "Euclidean hits / Gate density";
   hitsLabel.textContent = "Hits ";
   euclidHitsInput = document.createElement("input");
   euclidHitsInput.type = "number";
   euclidHitsInput.className = "rhythm-num-input";
   euclidHitsInput.min = "0";
   euclidHitsInput.max = "64";
-  euclidHitsInput.value = "5";
+  const initDiv = state.euclidDiv === "auto" ? 16 : (parseInt(state.euclidDiv, 10) || 16);
+  euclidHitsInput.value = String(Math.round(((state.gateProb ?? 70) / 100) * initDiv));
   hitsLabel.appendChild(euclidHitsInput);
 
   const divLabel = document.createElement("label");
-  divLabel.title = "Cycle length in steps (M)";
+  divLabel.title = "Cycle length in steps (Division)";
   divLabel.textContent = "Div ";
   euclidDivSelect = document.createElement("select");
   euclidDivSelect.className = "rhythm-select-sm";
-  for (const d of [16, 12, 8, 7, 6, 5, 4, 32, 64]) {
+  const divOptions = [
+    { v: "auto", t: "Auto" },
+    { v: "16", t: "16" },
+    { v: "12", t: "12" },
+    { v: "8", t: "8" },
+    { v: "7", t: "7" },
+    { v: "6", t: "6" },
+    { v: "5", t: "5" },
+    { v: "4", t: "4" },
+    { v: "3", t: "3" },
+    { v: "32", t: "32" },
+    { v: "64", t: "64" },
+  ];
+  for (const d of divOptions) {
     const opt = document.createElement("option");
-    opt.value = String(d);
-    opt.textContent = String(d);
-    if (d === 16) opt.selected = true;
+    opt.value = d.v;
+    opt.textContent = d.t;
+    if (String(state.euclidDiv || "auto") === d.v) opt.selected = true;
     euclidDivSelect.appendChild(opt);
   }
   divLabel.appendChild(euclidDivSelect);
+
+  const blendLabel = document.createElement("label");
+  blendLabel.title = "Euclidean blend: 0% = random placement, 100% = even Euclidean spacing";
+  blendLabel.textContent = "Blend ";
+  const blendInput = document.createElement("input");
+  blendInput.type = "range";
+  blendInput.min = "0";
+  blendInput.max = "100";
+  blendInput.value = String(state.gateBlend ?? 0);
+  blendInput.className = "rhythm-slider";
+
+  const blendVal = document.createElement("span");
+  blendVal.className = "rhythm-val";
+  blendVal.textContent = state.gateBlend <= 0 ? "Rnd" : state.gateBlend >= 100 ? "Euc" : `${Math.round(state.gateBlend)}%`;
+
+  const rndCheck = document.createElement("input");
+  rndCheck.type = "checkbox";
+  rndCheck.checked = state.gateBlend <= 0;
+  rndCheck.title = "Override Euclid to Random (0%)";
+  rndCheck.className = "rhythm-checkbox";
+
+  blendLabel.append(blendInput, blendVal, rndCheck);
 
   const applyEuclidBtn = document.createElement("button");
   applyEuclidBtn.className = "rhythm-btn primary";
   applyEuclidBtn.title = "Apply Euclidean rhythm pattern";
   applyEuclidBtn.textContent = "Apply";
+
+  euclidHitsInput.addEventListener("input", (e) => {
+    const h = parseInt(e.target.value, 10) || 0;
+    const dVal = euclidDivSelect.value;
+    const dNum = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
+    state.gateProb = Math.min(100, Math.max(0, Math.round((h / dNum) * 100)));
+    refreshLoopInfo();
+    scheduleRegen();
+  });
+
+  euclidDivSelect.addEventListener("change", (e) => {
+    state.euclidDiv = e.target.value;
+    refreshLoopInfo();
+    scheduleRegen();
+  });
+
+  blendInput.addEventListener("input", (e) => {
+    const v = Number(e.target.value);
+    state.gateBlend = v;
+    if (v > 0) setPrevGateBlend(v);
+    rndCheck.checked = v <= 0;
+    blendVal.textContent = v <= 0 ? "Rnd" : v >= 100 ? "Euc" : `${v}%`;
+    refreshLoopInfo();
+    scheduleRegen();
+  });
+
+  rndCheck.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
+      state.gateBlend = 0;
+      blendInput.value = "0";
+      blendVal.textContent = "Rnd";
+      refreshLoopInfo();
+      scheduleRegen();
+      status("Euclid overridden to random (0%)");
+    } else {
+      const restored = getPrevGateBlend() > 0 ? getPrevGateBlend() : 100;
+      state.gateBlend = restored;
+      blendInput.value = String(restored);
+      blendVal.textContent = restored >= 100 ? "Euc" : `${Math.round(restored)}%`;
+      refreshLoopInfo();
+      scheduleRegen();
+      status(`Euclid restored to ${Math.round(restored)}%`);
+    }
+  });
+
   applyEuclidBtn.addEventListener("click", () => {
     const h = parseInt(euclidHitsInput.value, 10) || 0;
-    const d = parseInt(euclidDivSelect.value, 10) || 16;
-    applyEuclidPattern(h, d, 0);
+    const dVal = euclidDivSelect.value;
+    const dNum = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
+    state.gateProb = Math.min(100, Math.max(0, Math.round((h / dNum) * 100)));
+    state.gateBlend = 100;
+    blendInput.value = "100";
+    blendVal.textContent = "Euc";
+    rndCheck.checked = false;
+    applyEuclidPattern(h, dNum, rotOffset);
+    refreshLoopInfo();
   });
 
   euclidSelect.addEventListener("change", () => {
@@ -470,12 +565,133 @@ export function initRhythm(containerEl) {
     if (preset && preset.n !== undefined) {
       euclidHitsInput.value = String(preset.n);
       euclidDivSelect.value = String(preset.m);
+      state.euclidDiv = String(preset.m);
+      state.gateProb = Math.min(100, Math.max(0, Math.round((preset.n / preset.m) * 100)));
+      state.gateBlend = 100;
+      blendInput.value = "100";
+      blendVal.textContent = "Euc";
+      rndCheck.checked = false;
+      rotOffset = preset.rot || 0;
+      state.euclidRot = rotOffset;
+      if (rotDisplayEl) rotDisplayEl.textContent = rotOffset > 0 ? `+${rotOffset}` : `${rotOffset}`;
       applyEuclidPattern(preset.n, preset.m, preset.rot || 0);
+      refreshLoopInfo();
     }
   });
 
-  euclidInputsWrap.append(hitsLabel, divLabel, applyEuclidBtn);
+  euclidInputsWrap.append(hitsLabel, divLabel, blendLabel, applyEuclidBtn);
   euclidGroup.append(euclidLabel, euclidSelect, euclidInputsWrap);
+
+  // --- Snap Controls ---
+  const snapGroup = document.createElement("div");
+  snapGroup.className = "rhythm-tool-group";
+
+  const snapLabel = document.createElement("span");
+  snapLabel.className = "rhythm-tool-label";
+  snapLabel.textContent = "Snap";
+
+  const snapPctLabel = document.createElement("label");
+  snapPctLabel.title = "Grid snap: probability a note survives only if it lands on a grid line (0–100%)";
+  snapPctLabel.textContent = "Prob ";
+
+  const snapInput = document.createElement("input");
+  snapInput.type = "range";
+  snapInput.min = "0";
+  snapInput.max = "100";
+  snapInput.value = String(state.gateQuant ?? 0);
+  snapInput.className = "rhythm-slider";
+
+  const snapVal = document.createElement("span");
+  snapVal.className = "rhythm-val";
+  snapVal.textContent = `${Math.round(state.gateQuant ?? 0)}%`;
+
+  snapInput.addEventListener("input", (e) => {
+    const v = Number(e.target.value);
+    state.gateQuant = v;
+    snapVal.textContent = `${v}%`;
+    scheduleRegen();
+  });
+
+  const snapGridLabel = document.createElement("label");
+  snapGridLabel.title = "Grid spacing in steps (2–8)";
+  snapGridLabel.textContent = "Grid ";
+
+  const snapGridSelect = document.createElement("select");
+  snapGridSelect.className = "rhythm-select-sm";
+  for (const n of [2, 3, 4, 5, 6, 7, 8]) {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = String(n);
+    if (n === (state.snapGrid ?? 4)) opt.selected = true;
+    snapGridSelect.appendChild(opt);
+  }
+
+  snapGridSelect.addEventListener("change", (e) => {
+    state.snapGrid = Number(e.target.value);
+    scheduleRegen();
+  });
+
+  snapPctLabel.append(snapInput, snapVal);
+  snapGridLabel.appendChild(snapGridSelect);
+  snapGroup.append(snapLabel, snapPctLabel, snapGridLabel);
+
+  // Register refs for synchronization
+  R("gateProb", {
+    setValue: (v) => {
+      state.gateProb = Number(v) || 0;
+      const dVal = euclidDivSelect.value;
+      const d = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
+      euclidHitsInput.value = String(Math.round((state.gateProb / 100) * d));
+    },
+    get value() { return state.gateProb; }
+  });
+
+  R("gateBlend", {
+    setValue: (v) => {
+      state.gateBlend = Number(v) || 0;
+      blendInput.value = String(state.gateBlend);
+      blendVal.textContent = state.gateBlend <= 0 ? "Rnd" : state.gateBlend >= 100 ? "Euc" : `${Math.round(state.gateBlend)}%`;
+      rndCheck.checked = state.gateBlend <= 0;
+    },
+    setCheckbox: (c) => {
+      rndCheck.checked = !!c;
+    },
+    get value() { return state.gateBlend; }
+  });
+
+  R("euclidDiv", {
+    setValue: (v) => {
+      state.euclidDiv = String(v);
+      euclidDivSelect.value = String(v);
+    },
+    get value() { return state.euclidDiv; }
+  });
+
+  R("euclidRot", {
+    setValue: (v) => {
+      rotOffset = Number(v) || 0;
+      state.euclidRot = rotOffset;
+      if (rotDisplayEl) rotDisplayEl.textContent = rotOffset > 0 ? `+${rotOffset}` : `${rotOffset}`;
+    },
+    get value() { return state.euclidRot; }
+  });
+
+  R("gateQuant", {
+    setValue: (v) => {
+      state.gateQuant = Number(v) || 0;
+      snapInput.value = String(state.gateQuant);
+      snapVal.textContent = `${Math.round(state.gateQuant)}%`;
+    },
+    get value() { return state.gateQuant; }
+  });
+
+  R("snapGrid", {
+    setValue: (v) => {
+      state.snapGrid = Number(v) || 4;
+      snapGridSelect.value = String(state.snapGrid);
+    },
+    get value() { return state.snapGrid; }
+  });
 
   // --- Genre Presets ---
   const genreGroup = document.createElement("div");
@@ -572,7 +788,7 @@ export function initRhythm(containerEl) {
   batchBtnGroup.append(allOnBtn, allOffBtn, invertBtn, copyBar1Btn, randomBtn);
   batchGroup.append(batchLabel, batchBtnGroup);
 
-  toolbar.append(euclidGroup, genreGroup, rotGroup, batchGroup);
+  toolbar.append(euclidGroup, snapGroup, rotGroup, genreGroup, batchGroup);
   header.append(titleWrap, toolbar);
 
   // 2. 16x4 Step Buttons Grid

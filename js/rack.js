@@ -3,8 +3,10 @@ import {
   state, DEFAULT, refs, R, setState, RATE_NAMES, SLOTS, status,
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
   getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
-  getCurrentModelRandomizer
-} from "./state.js";
+  getCurrentModelRandomizer, refreshLoopInfo
+} from "./state.js?v=218";
+
+export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
 import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=215";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
@@ -17,7 +19,7 @@ import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js?v=215";
 import { createHumaniseSection } from "./humanise.js?v=215";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=216";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=215";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=218";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -67,26 +69,7 @@ export function refreshLoopRanges() {
   refreshLoopInfo();
 }
 
-export function refreshLoopInfo() {
-  const el = document.getElementById("loopinfo");
-  if (!el) return;
-  const L = Math.max(3, Math.round(state.length || 64));
-  const a = Math.round(refs.loopFrom?.value ?? 1);
-  const n = Math.round(refs.loop?.value ?? 8);
-  const reps = (L - a + 1) / n;
-  const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
-  if (state.gateBlend > 0) {
-    const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
-    const divSetting = state.euclidDiv;
-    const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
-      ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
-      : Math.max(2, n >= 2 ? n : 16);
-    const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
-    const rot = ((state.euclidRot ?? 0) % M + M) % M;
-    const classic = classicName(N, M);
-    el.textContent = `${loopTxt} · E(${N},${M})${classic ? " (" + classic + ")" : ""}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
-  } else el.textContent = loopTxt;
-}
+
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
@@ -170,7 +153,10 @@ export function buildGlobalBar() {
     })),
     R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
       format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); syncRhythmGrid(); },
-      tip: "Pattern length in steps (1 to 64)." }))
+      tip: "Pattern length in steps (1 to 64)." })),
+    R("gate", knob({ label: "Gate Len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate, size: "sm",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("gate"),
+      tip: "Gate length: duration of each note as a percentage of step time." }))
   );
 }
 
@@ -181,90 +167,6 @@ export function buildRack() {
   panel.innerHTML = "";
 
   panel.append(
-    (() => {
-      const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
-      const blank = () => span(document.createElement("div"), 2);
-
-      return sect("Rhythm", 6, [
-        span(R("gateProb", fader({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb,
-          format: (v) => `${Math.round(v)}%`,
-          onInput: (v) => { state.gateProb = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "random mode: chance each step fires. euclid mode: the DENSITY — Gate % becomes N hits evenly spaced over the cycle (see the loop info line)." })), 4),
-        blank(),
-
-        span(R("gateBlend", fader({ label: "Euclid", min: 0, max: 100, value: state.gateBlend, def: DEFAULT.gateBlend,
-          format: (v) => v <= 0 ? "random" : v >= 100 ? "euclid" : `${Math.round(v)}%`,
-          checkbox: {
-            value: state.gateBlend <= 0,
-            tip: "Random override: checked = random (0%); unchecked = restore Euclid %",
-            onInput: (checked) => {
-              if (checked) {
-                if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
-                state.gateBlend = 0;
-                refs.gateBlend.setValue(0);
-                refreshLoopInfo();
-                scheduleRegen();
-                status("Euclid overridden to random (0%)");
-              } else {
-                const restored = getPrevGateBlend() > 0 ? getPrevGateBlend() : 100;
-                state.gateBlend = restored;
-                refs.gateBlend.setValue(restored);
-                refreshLoopInfo();
-                scheduleRegen();
-                status(`Euclid restored to ${Math.round(restored)}%`);
-              }
-            }
-          },
-          onInput: (v) => {
-            state.gateBlend = v;
-            if (v > 0) setPrevGateBlend(v);
-            refs.gateBlend?.setCheckbox(v <= 0);
-            refreshLoopInfo();
-            scheduleRegen();
-          },
-          tip: "Gradient between random placement (0%) and even Euclidean spacing (100%). In between, each step rolls which law it follows — Gate % is the density either way." })), 4),
-        span(R("euclidDiv", dropdown({
-          label: "Division",
-          options: [
-            { v: "auto", t: "Auto" },
-            { v: "16", t: "16" },
-            { v: "12", t: "12" },
-            { v: "8", t: "8" },
-            { v: "7", t: "7" },
-            { v: "6", t: "6" },
-            { v: "5", t: "5" },
-            { v: "4", t: "4" },
-            { v: "3", t: "3" },
-          ],
-          value: state.euclidDiv || "auto",
-          onInput: (v) => { state.euclidDiv = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "Euclidean pattern cycle division (total steps per cycle)",
-          labelPos: "right"
-        })), 2),
-
-        span(R("euclidRot", fader({ label: "Rotate", min: 0, max: 15, step: 1, value: state.euclidRot, def: DEFAULT.euclidRot,
-          format: (v) => `${Math.round(v)}`,
-          onInput: (v) => { state.euclidRot = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "Rotates the Euclidean hit pattern within its cycle (wraps). Only affects the euclid side of the gradient." })), 4),
-        blank(),
-
-        span(R("gateQuant", fader({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant"), tip: "Grid snap: probability a note survives only if it lands on a grid line." })), 4),
-        span(R("snapGrid", dropdown({
-          label: "Snap Grid",
-          options: [2, 3, 4, 5, 6, 7, 8].map((n) => ({ v: n, t: String(n) })),
-          value: state.snapGrid,
-          onInput: (v) => { state.snapGrid = Number(v); scheduleRegen(); },
-          tip: "Grid spacing in steps for the grid snap probability",
-          labelPos: "right"
-        })), 2),
-
-        span(R("gate", fader({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("gate"), tip: "Gate length: duration of each note as a percentage of step time." })), 4),
-        blank(),
-      ]);
-    })(),
-
     (() => {
       traditionalHumaniseSection = createHumaniseSection({
         title: "Humanise",

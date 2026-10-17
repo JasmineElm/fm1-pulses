@@ -88,44 +88,36 @@
     <p>Connects the FM-1 over BLE MIDI for cable-free playback: the ▶ Play loop sends its notes over Bluetooth. <b>Freeze, Clear and the device-BPM read still need USB</b> — on this firmware BLE carries notes and controllers only; the pattern SysEx does not ride it (verified on hardware). If the link drops, the app reconnects on its own and shows <i>bluetooth …</i> in the link.</p>
   </div>
 
+  <h2>Global</h2>
+  <div class="param">
+    <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
+    <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
+  </div>
+  <div class="param">
+    <h3>Pattern <span class="kind">button</span></h3>
+    <p>Randomises the pattern and seed (R or G) to instantly generate a new melodic contour and rhythm.</p>
+  </div>
+  <div class="param">
+    <h3>Note <span class="kind">dropdown</span></h3>
+    <p>Step note rate (1/16, 1/8, 1/4, triplets, etc.) governing sequence playback speed relative to BPM.</p>
+  </div>
+  <div class="param">
+    <h3>Length <span class="rng">1–64 steps</span><span class="kind">knob</span></h3>
+    <p>Pattern length in steps. Active steps light up in the 16×4 grid; steps beyond Length are dimmed and muted.</p>
+  </div>
+  <div class="param">
+    <h3>Gate length <span class="rng">5–100%</span><span class="kind">knob</span></h3>
+    <p>How long each note holds as a percentage of step time. Low is staccato, high is legato. Applied globally across all sequencers.</p>
+  </div>
+
   <h2>Rhythm</h2>
   <div class="param">
     <h3>16×4 Step Grid &amp; Rhythm Controls <span class="kind">panel</span></h3>
     <p>A full-width step sequencer with a dedicated button for all 64 steps, arranged into a 16×4 grid (four 16-step bars). Each bar is grouped into 4-step beats with downbeat indicators. Tap any step to toggle its gate on or off. When playing, a live playhead tracks across the grid.</p>
-    <p><b>Euclid:</b> Select from classic world rhythms (Tresillo, Cinquillo, Son/Rumba Clave, Bossa Nova, Soukous, Samba, Gahu, Aksak, Bembé) or specify custom Hits (N) and Division (M) and click <b>Apply</b>.<br>
+    <p><b>Euclid:</b> Select from classic world rhythms (Tresillo, Cinquillo, Son/Rumba Clave, Bossa Nova, Soukous, Samba, Gahu, Aksak, Bembé) or specify custom Hits (N), Division (M), and Blend (random 0% to even Euclidean spacing 100%), with a fast Rnd override checkbox.<br>
+    <b>Snap:</b> Probability (0–100%) and grid interval (2–8 steps) that filters notes to land on grid lines.<br>
     <b>Rotate:</b> Shift the pattern steps cyclically with <b>◀ Rot</b> and <b>Rot ▶</b>.<br>
     <b>Batch Tools:</b> <b>All On</b>, <b>All Off</b> (clear gates), <b>Invert</b> (flip all gates), <b>Bar 1 → All</b> (duplicate the first 16 steps across bars 2–4), and <b>Random</b> (stochastically rolls gates using current density).</p>
-  </div>
-  <div class="param">
-    <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
-    <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
-  <div class="param">
-    <h3>Gate <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p><b>Random mode:</b> the chance each step plays a note — 0% silence, 100% every step. <b>Euclid mode:</b> the same knob becomes <i>density</i>: Gate % becomes N hits spread as evenly as possible over the cycle (the Loop length, or 16 steps if the loop is off). E(5,8) = <code>x.xx.xx.</code> (cinquillo), E(4,8) = <code>x.x.x.x.</code>, E(3,8) is a tresillo-family pattern. The loop info line shows the current <code>E(N,M)</code>.</p>
-  </div>
-  <div class="param">
-    <h3>Euclid <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>The gradient between two ways of placing the hits. <b>0% = random</b>: each step rolls the Gate chance (white noise, no structure). <b>100% = euclid</b>: the hits sit at the evenest positions of the cycle — the maths behind clave, tresillo and most world-music rhythms. In between, each step rolls which law it follows, so a pattern erodes gradually from clean Euclid to loose random. Gate % is the density on both ends, and the loop info line names the classics when you land on one:</p>
-    <p><code>tresillo</code> x..x..x. — Gate 37%, Loop 8<br>
-    <code>cinquillo</code> x.xx.xx. — Gate 62%, Loop 8<br>
-    <code>son clave</code> x..x..x...x.x... — Gate 31%, Loop 16<br>
-    The cycle is the Loop length (16 steps if the loop is off); Rotate turns the pattern.</p>
-  </div>
-  <div class="param">
-    <h3>Rotate <span class="rng">0–15</span><span class="kind">knob</span></h3>
-    <p>Euclid mode: turns the hit pattern within its cycle, like rotating a clave. Wraps when the cycle is shorter than 16.</p>
-  </div>
-  <div class="param">
-    <h3>Grid snap <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance a note is kept only if it lands on a grid line. Off-grid notes become rests. Gate still decides how many of those lines fire, so the two work together.</p>
-  </div>
-  <div class="param">
-    <h3>Snap grid <span class="rng">2–8 steps</span><span class="kind">knob</span></h3>
-    <p>Spacing of those grid lines. 4 is one beat at 1/16. Odd values like 3 and 5 do not divide the bar, so they land lopsided and drift.</p>
-  </div>
-  <div class="param">
-    <h3>Gate length <span class="rng">5–100%</span><span class="kind">knob</span></h3>
-    <p>How long each note holds. Low is staccato, high is legato.</p>
   </div>
 
   <h2>Humanise</h2>

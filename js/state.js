@@ -1,5 +1,5 @@
 // state.js — Central state, parameter definitions, and shared references.
-import { generateBank } from "./generator.js";
+import { generateBank, classicName } from "./generator.js";
 
 export const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 export const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
@@ -63,6 +63,27 @@ export function setPrevGateBlend(v) { prevGateBlend = v; }
 export function status(msg, cls = "") {
   const el = document.getElementById("status");
   if (el) { el.textContent = msg; el.className = "status " + cls; }
+}
+
+export function refreshLoopInfo() {
+  const el = document.getElementById("loopinfo");
+  if (!el) return;
+  const L = Math.max(3, Math.round(state.length || 64));
+  const a = Math.round(refs.loopFrom?.value ?? state.loopFrom ?? 1);
+  const n = Math.round(refs.loop?.value ?? state.loop ?? 8);
+  const reps = (L - a + 1) / n;
+  const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
+  if (state.gateBlend > 0) {
+    const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
+    const divSetting = state.euclidDiv;
+    const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
+      ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
+      : Math.max(2, n >= 2 ? n : 16);
+    const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
+    const rot = ((state.euclidRot ?? 0) % M + M) % M;
+    const classic = classicName(N, M);
+    el.textContent = `${loopTxt} · E(${N},${M})${classic ? " (" + classic + ")" : ""}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
+  } else el.textContent = loopTxt;
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

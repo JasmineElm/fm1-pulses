@@ -1321,6 +1321,61 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   border-color: var(--accent);
 }
 
+.rhythm-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  outline: none;
+  cursor: pointer;
+  margin: 0 3px;
+  vertical-align: middle;
+}
+
+.rhythm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.rhythm-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.rhythm-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+.rhythm-val {
+  font-family: inherit;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--fg);
+  min-width: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  margin-right: 2px;
+}
+
+.rhythm-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0 2px 0 3px;
+  vertical-align: middle;
+}
+
 .rhythm-btn {
   font-family: inherit;
   font-size: 8.5px;
