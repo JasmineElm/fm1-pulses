@@ -14,8 +14,8 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createScalePicker } from "./scale.js?v=207";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=207";
+import { createScalePicker } from "./scale.js?v=208";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=208";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 

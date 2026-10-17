@@ -1045,12 +1045,6 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   transition: all .12s ease;
   user-select: none;
 }
-.ca-scale-btn.is-accidental {
-  background: color-mix(in srgb, var(--panel) 82%, black);
-}
-[data-theme="light"] .ca-scale-btn.is-accidental {
-  background: color-mix(in srgb, var(--panel) 88%, #cbd5e1);
-}
 .ca-scale-btn:hover {
   border-color: var(--dim);
   color: var(--fg);

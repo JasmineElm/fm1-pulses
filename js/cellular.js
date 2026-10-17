@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createScalePicker, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=207";
+import { createScalePicker, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=208";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported

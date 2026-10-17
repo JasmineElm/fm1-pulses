@@ -213,11 +213,10 @@ export function createScalePicker({
   scaleDiv.setAttribute("aria-label", "Scale Note Quantizer (12 Chromatic Notes)");
 
   scaleButtons = [];
-  const accidentals = new Set([1, 3, 6, 8, 10]); // C#, D#, F#, G#, A#
   NOTE_NAMES.forEach((name, idx) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "ca-scale-btn" + (accidentals.has(idx) ? " is-accidental" : "");
+    btn.className = "ca-scale-btn";
     btn.dataset.note = String(idx);
     btn.setAttribute("role", "checkbox");
     btn.innerHTML = `<span class="ca-scale-note">${name}</span>`;
