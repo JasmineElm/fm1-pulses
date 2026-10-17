@@ -57,7 +57,7 @@
   </div>
   <div class="param">
     <h3>Transport</h3>
-    <p><b>Generate</b> rolls a new seed and rebuilds the pattern. <b>Randomize</b> rolls settings too. <b>Play</b> loops the pattern so you can tweak it live. The <b>sound</b> switch picks the browser preview timbre (e-piano, bell, bass, organ, square); the FM-1 plays its own patch when frozen. <b>Freeze</b> writes the pattern, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme. <b>Freeze needs the FM-1+VA / Baud Girl firmware</b> — the pattern-write SysEx only exists there; on stock firmware the app works as a live MIDI broadcaster (▶ Play).</p>
+    <p><b>Randomise</b> rolls settings and derives a fresh pattern from a new random seed (R or G). <b>Play</b> loops the pattern so you can tweak it live. The <b>sound</b> switch picks the browser preview timbre (e-piano, bell, bass, organ, square); the FM-1 plays its own patch when frozen. <b>Freeze</b> writes the pattern, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme. <b>Freeze needs the FM-1+VA / Baud Girl firmware</b> — the pattern-write SysEx only exists there; on stock firmware the app works as a live MIDI broadcaster (▶ Play).</p>
   </div>
   <div class="param">
     <h3>The pattern display</h3>
@@ -140,8 +140,8 @@
 
   <h2>Global</h2>
   <div class="param">
-    <h3>Seed <span class="kind">knob</span></h3>
-    <p>One number, everything derives from it. Same seed plus same settings gives the same pattern. The knob rolls it, so you can hunt for a pattern by turning.</p>
+    <h3>Randomise <span class="kind">button</span></h3>
+    <p>Rolls fresh parameters and generates a new pattern from a new random seed. Press <b>R</b> or <b>G</b> to roll at any time.</p>
   </div>
   <div class="param">
     <h3>Note value</h3>
@@ -233,7 +233,7 @@
   <h2>Workflow</h2>
   <div class="note">
     <p><b>1.</b> Connect the FM-1. The LED lights when it is found.</p>
-    <p><b>2.</b> Set Scale, Root, Offset and Amplitude. Hit <b>Generate</b>.</p>
+    <p><b>2.</b> Choose a scale, root note, and timbre. Hit <b>Randomise</b> (or press R/G) to roll a pattern.</p>
     <p><b>3.</b> Audition and tweak the pattern live with <b>▶ Play</b>.</p>
     <p><b>4.</b> <b>Freeze</b> writes the pattern into the FM-1.</p>
     <p><b>5.</b> Unplug it and the FM-1 plays on its own.</p>

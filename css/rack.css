@@ -460,32 +460,24 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   flex: 0 0 auto; margin: 0; text-align: left; font-size: 8px; letter-spacing: .6px; white-space: nowrap;
 }
 
-/* ---- seed control with randomise button and text input ---- */
+/* ---- pattern randomise control in global bar ---- */
 .seed-wrap {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   width: 100%; min-width: 0; padding: 1px 2px; gap: 4px;
 }
 .seed-wrap .k-lab {
   font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
-  text-align: center; line-height: 1.2; font-weight: 700; margin-bottom: 1px;
+  text-align: center; line-height: 1.2; font-weight: 700; margin-bottom: 5px;
 }
 .seed-rnd-btn {
-  width: calc(100% - 8px); max-width: 64px; margin: 0 auto;
+  width: calc(100% - 4px); max-width: 64px; margin: 0 auto;
   font: inherit; font-size: 8.5px; font-weight: 700; letter-spacing: .5px;
-  text-transform: uppercase; padding: 4px 2px; text-align: center;
+  text-transform: uppercase; padding: 5px 3px; text-align: center;
   box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.seed-input {
-  font: inherit; font-family: var(--mono, ui-monospace, monospace);
-  font-size: 9px; font-weight: 600; letter-spacing: .2px;
-  color: var(--fg); background-color: var(--panel2); border: 1px solid var(--line);
-  border-radius: 4px; padding: 4px 2px; width: calc(100% - 8px); max-width: 64px; margin: 0 auto;
-  outline: none; text-align: center; font-variant-numeric: tabular-nums;
-  box-sizing: border-box;
-  transition: border-color .12s;
-}
-.seed-input:hover { border-color: var(--dim); color: var(--fg); }
-.seed-input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---- dual min/max velocity bounds knobs ---- */
 .vel-bounds-wrap {

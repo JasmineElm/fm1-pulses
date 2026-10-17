@@ -100,7 +100,7 @@ export function getCurrentModelRandomizer() {
   return currentModelRandomizer;
 }
 
-export function doGenerate(newSeed = false) {
+export function doGenerate(newSeed = true) {
   if (newSeed) state.seed = (Math.random() * 1e9) | 0;
   refs.seed?.setValue(state.seed, false);
   if (currentModelGenerator) {

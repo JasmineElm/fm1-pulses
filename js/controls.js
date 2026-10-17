@@ -18,20 +18,25 @@ export function parseSeed(str) {
   return h >>> 0;
 }
 
-export function seedControl({ label = "Seed", value = 0, onInput, onRandomize, tip = "Pattern seed (numeric or text)" }) {
+export function seedControl({ label = "Pattern", value = 0, onInput, onRandomize, tip = "Randomise pattern and seed (R or G)" }) {
   const wrap = document.createElement("div");
   wrap.className = "seed-wrap";
 
-  const lab = document.createElement("div");
-  lab.className = "k-lab";
-  lab.textContent = label;
+  let _val = parseSeed(value);
+
+  if (label) {
+    const lab = document.createElement("div");
+    lab.className = "k-lab";
+    lab.textContent = label;
+    wrap.appendChild(lab);
+  }
 
   const rndBtn = document.createElement("button");
   rndBtn.type = "button";
   rndBtn.className = "toggle seed-rnd-btn";
   rndBtn.textContent = "Randomise";
-  rndBtn.title = "Randomise parameters and seed";
-  rndBtn.style.width = "calc(100% - 8px)";
+  rndBtn.title = tip;
+  rndBtn.style.width = "calc(100% - 4px)";
   rndBtn.style.maxWidth = "64px";
   rndBtn.style.boxSizing = "border-box";
   rndBtn.style.margin = "0 auto";
@@ -40,49 +45,18 @@ export function seedControl({ label = "Seed", value = 0, onInput, onRandomize, t
       onRandomize();
     } else {
       const s = (Math.random() * 1e9) | 0;
-      input.value = String(s >>> 0).slice(0, 10);
+      _val = s >>> 0;
       if (onInput) onInput(s);
       status(`New seed: ${s >>> 0}`);
     }
   });
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "seed-input";
-  input.maxLength = 10;
-  input.size = 1;
-  input.value = String(value >>> 0).slice(0, 10);
-  input.title = tip;
-  input.spellcheck = false;
-  input.autocomplete = "off";
-  input.style.width = "calc(100% - 8px)";
-  input.style.maxWidth = "64px";
-  input.style.boxSizing = "border-box";
-  input.style.margin = "0 auto";
-
-  const update = () => {
-    const s = parseSeed(input.value);
-    if (onInput) onInput(s);
-  };
-
-  input.addEventListener("input", update);
-  input.addEventListener("change", () => {
-    const s = parseSeed(input.value);
-    input.value = String(s >>> 0).slice(0, 10);
-    if (onInput) onInput(s);
-  });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") input.blur();
-  });
-  input.addEventListener("pointerdown", (e) => e.stopPropagation());
-
-  wrap.append(lab, rndBtn, input);
+  wrap.appendChild(rndBtn);
 
   wrap.setValue = (v) => {
-    const s = parseSeed(v);
-    input.value = String(s >>> 0).slice(0, 10);
+    _val = parseSeed(v);
   };
-  Object.defineProperty(wrap, "value", { get: () => parseSeed(input.value) });
+  Object.defineProperty(wrap, "value", { get: () => _val });
   return wrap;
 }
 

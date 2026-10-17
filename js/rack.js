@@ -6,7 +6,7 @@ import {
   getCurrentModelRandomizer
 } from "./state.js";
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=213";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=215";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
@@ -14,10 +14,10 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=214";
-import { createHumaniseSection } from "./humanise.js?v=214";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=214";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=214";
+import { createNotesSection } from "./scale.js?v=215";
+import { createHumaniseSection } from "./humanise.js?v=215";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=215";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=215";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -151,11 +151,11 @@ export function buildGlobalBar() {
       },
       tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
     R("seed", seedControl({
-      label: "Seed",
+      label: "Pattern",
       value: state.seed,
       onInput: (v) => { state.seed = v; scheduleRegen(); },
       onRandomize: () => { randomize(); },
-      tip: "Pattern seed (numeric or text)"
+      tip: "Randomise pattern and seed (R or G)"
     })),
     R("rate", dropdown({
       label: "Note",
@@ -410,7 +410,6 @@ export function buildRack() {
 }
 
 function buildTransport() {
-  document.getElementById("gen")?.addEventListener("click", () => doGenerate(true));
   document.getElementById("audition")?.addEventListener("click", toggleLive);
   buildAudioControls();
   document.getElementById("export")?.addEventListener("click", exportState);
@@ -476,9 +475,12 @@ document.addEventListener("keydown", (e) => {
     status(m ? "browser audio muted" : "browser audio on");
     return;
   }
+  if (e.key === "r" || e.key === "R" || e.key === "g" || e.key === "G") {
+    randomize();
+    return;
+  }
   if (getActiveModel() !== "traditional") return;
   if (e.key === "f" || e.key === "F") doFreeze(getSelected());
-  if (e.key === "g" || e.key === "G") doGenerate(true);
 });
 
 // Tab visibility re-sync
