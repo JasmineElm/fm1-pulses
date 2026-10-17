@@ -14,9 +14,12 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=206";
+import { createScalePicker } from "./scale.js?v=207";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=207";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
+
+let traditionalScalePicker = null;
 
 // Register hooks
 onRegen(() => {
@@ -84,6 +87,7 @@ export function refreshLoopInfo() {
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
+  if (traditionalScalePicker) traditionalScalePicker.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -267,10 +271,24 @@ export function buildRack() {
       const blank = () => span(document.createElement("div"), 2);
       const hr = () => span(document.createElement("hr"), 6);
 
+      traditionalScalePicker = createScalePicker({
+        scaleKey: "scale",
+        customScaleKey: "customScale",
+        rootKey: "root",
+        rootNoteKey: "rootNote",
+        rootOctaveKey: "rootOctave",
+        defaultOctave: 4,
+        scaleLabel: "Scale",
+        onChange: () => {
+          scheduleRegen();
+        }
+      });
+
       return sect("Shape", 6, [
-        span(R("root", fader({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root,
-          format: (v) => midiName(v), onInput: setState("root"), tip: "Scale root note (MIDI pitch). At Amp 0 every note lands on Offset." })), 4),
-        span(R("scale", dropdown({ label: "Scale", options: Object.keys(SCALES).map((s) => ({ v: s, t: s })), value: state.scale, onInput: (v) => { state.scale = v; scheduleRegen(); }, tip: "Musical scale for pitch quantization", labelPos: "right" })), 2),
+        span(traditionalScalePicker.rootNoteCtrl, 2),
+        span(traditionalScalePicker.rootOctCtrl, 2),
+        span(traditionalScalePicker.scaleCtrl, 2),
+        span(traditionalScalePicker.scaleBox, 6),
 
         span(R("quantSteps", fader({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps,
           format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps"),

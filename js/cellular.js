@@ -10,6 +10,8 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
+import { createScalePicker, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=207";
+export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
 export const GRID_SIZES = [16, 32, 48, 64, 80, 96, 128];
@@ -38,47 +40,6 @@ export const NOTE_RULES = [
   { v: "oldest", t: "Oldest Cells (Still-Life)", desc: "Prioritizes oldest surviving cells — anchors repetitive tonal pedal points" },
   { v: "random", t: "Random Cell (Stochastic)", desc: "Picks a random live cell uniformly — unpredictable generative textures" }
 ];
-
-export const SCALE_LABELS = {
-  pentMinor: "Pentatonic Minor",
-  pentMajor: "Pentatonic Major",
-  minor: "Natural Minor (Aeolian)",
-  major: "Major (Ionian)",
-  dorian: "Dorian",
-  mixolydian: "Mixolydian",
-  blues: "Blues",
-  harmonicMinor: "Harmonic Minor",
-  melodicMinor: "Melodic Minor",
-  phrygian: "Phrygian",
-  lydian: "Lydian",
-  locrian: "Locrian",
-  wholeTone: "Whole Tone",
-  dimHalfWhole: "Diminished (Half-Whole)",
-  dimWholeHalf: "Diminished (Whole-Half)",
-  augmented: "Augmented",
-  inSen: "In Sen (Japanese)",
-  hijaz: "Hijaz (Arabic)",
-  chromatic: "Chromatic",
-  custom: "Custom (User Defined)"
-};
-
-export const ROOT_NOTE_OPTIONS = NOTE_NAMES.map((name, idx) => ({
-  v: String(idx),
-  t: name
-}));
-
-export const ROOT_OCTAVE_OPTIONS = [
-  { v: "1", t: "Octave 1" },
-  { v: "2", t: "Octave 2" },
-  { v: "3", t: "Octave 3" },
-  { v: "4", t: "Octave 4" },
-  { v: "5", t: "Octave 5" }
-];
-
-export const ROOT_OPTIONS = [];
-for (let n = 24; n <= 72; n++) {
-  ROOT_OPTIONS.push({ v: String(n), t: `${midiName(n)} (${n})` });
-}
 
 export const OCTAVE_OPTIONS = [
   { v: "1", t: "1 Octave (12 semitones)" },
@@ -1021,92 +982,7 @@ function wireCanvasEvents(canvas) {
   });
 }
 
-// Scale Notes Programmer Tracking & Logic
-let scaleButtons = [];
-let scaleInfoEl = null;
-let activeNotePcs = new Set();
-
-function findPredefinedScale(intervals) {
-  const target = intervals.join(",");
-  for (const [key, ivs] of Object.entries(SCALES)) {
-    if (key === "custom") continue;
-    if (ivs.length === intervals.length && [...ivs].sort((a, b) => a - b).join(",") === target) {
-      return key;
-    }
-  }
-  return null;
-}
-
-export function syncScaleButtons() {
-  if (!scaleButtons.length) return;
-  const rootPc = (state.caRoot ?? 48) % 12;
-  const scaleName = state.caScale || "pentMinor";
-  const intervals = (scaleName === "custom" && state.caCustomScale) ? state.caCustomScale : (SCALES[scaleName] || SCALES.pentMinor);
-  activeNotePcs = new Set(intervals.map((iv) => (rootPc + iv) % 12));
-
-  scaleButtons.forEach((btn, idx) => {
-    const isActive = activeNotePcs.has(idx);
-    const isRoot = idx === rootPc;
-    btn.classList.toggle("active", isActive);
-    btn.classList.toggle("is-root", isRoot);
-    btn.setAttribute("aria-checked", isActive ? "true" : "false");
-    const noteName = NOTE_NAMES[idx];
-    btn.title = `${noteName}${isRoot ? " (Root)" : ""}: ${isActive ? "Active in scale (click to exclude)" : "Excluded (click to include)"}`;
-  });
-
-  if (scaleInfoEl) {
-    const activeSorted = Array.from(activeNotePcs).sort((a, b) => a - b);
-    scaleInfoEl.textContent = `${activeNotePcs.size} active: ${activeSorted.map((pc) => NOTE_NAMES[pc]).join(" ")}`;
-  }
-}
-
-function onNoteButtonClick(noteIdx) {
-  const rootPc = (state.caRoot ?? 48) % 12;
-  if (activeNotePcs.has(noteIdx)) {
-    if (activeNotePcs.size <= 1) {
-      status("Scale must have at least one note", "err");
-      return;
-    }
-    activeNotePcs.delete(noteIdx);
-  } else {
-    activeNotePcs.add(noteIdx);
-  }
-
-  const intervals = Array.from(activeNotePcs)
-    .map((pc) => (pc - rootPc + 12) % 12)
-    .sort((a, b) => a - b);
-
-  const matched = findPredefinedScale(intervals);
-  if (matched) {
-    state.caScale = matched;
-    if (refs.caScale) refs.caScale.setValue(matched);
-    status(`Scale: ${SCALE_LABELS[matched] || matched}`);
-  } else {
-    state.caScale = "custom";
-    state.caCustomScale = intervals;
-    SCALES.custom = intervals;
-    if (refs.caScale) refs.caScale.setValue("custom");
-    const activeNames = Array.from(activeNotePcs).sort((a, b) => a - b).map((pc) => NOTE_NAMES[pc]).join(" ");
-    status(`Custom Scale: ${activeNames}`);
-  }
-
-  scaleButtons.forEach((btn, idx) => {
-    const isActive = activeNotePcs.has(idx);
-    const isRoot = idx === rootPc;
-    btn.classList.toggle("active", isActive);
-    btn.classList.toggle("is-root", isRoot);
-    btn.setAttribute("aria-checked", isActive ? "true" : "false");
-    const noteName = NOTE_NAMES[idx];
-    btn.title = `${noteName}${isRoot ? " (Root)" : ""}: ${isActive ? "Active in scale (click to exclude)" : "Excluded (click to include)"}`;
-  });
-
-  if (scaleInfoEl) {
-    const activeSorted = Array.from(activeNotePcs).sort((a, b) => a - b);
-    scaleInfoEl.textContent = `${activeNotePcs.size} active: ${activeSorted.map((pc) => NOTE_NAMES[pc]).join(" ")}`;
-  }
-
-  generateCaBank();
-}
+let caScalePicker = null;
 
 // BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
@@ -1252,56 +1128,22 @@ export function buildCellularPanel(container) {
   }));
   ruleCtrl.classList.add("ca-span-full");
 
-  const currentRoot = typeof state.caRoot === "number" ? state.caRoot : 48;
-  if (state.caRootNote === undefined) state.caRootNote = ((currentRoot % 12) + 12) % 12;
-  if (state.caRootOctave === undefined) state.caRootOctave = Math.floor(currentRoot / 12) - 1;
-
-  const rootNoteCtrl = R("caRootNote", dropdown({
-    label: "Root Note",
-    options: ROOT_NOTE_OPTIONS,
-    value: String(state.caRootNote),
-    onInput: (v) => {
-      state.caRootNote = Number(v);
-      const oct = typeof state.caRootOctave === "number" ? state.caRootOctave : 3;
-      state.caRoot = (oct + 1) * 12 + state.caRootNote;
-      syncScaleButtons();
+  caScalePicker = createScalePicker({
+    scaleKey: "caScale",
+    customScaleKey: "caCustomScale",
+    rootKey: "caRoot",
+    rootNoteKey: "caRootNote",
+    rootOctaveKey: "caRootOctave",
+    defaultOctave: 3,
+    scaleLabel: "Scale Quantize",
+    onChange: () => {
       generateCaBank();
-      status(`Root Note: ${midiName(state.caRoot)} (${state.caRoot})`);
-    },
-    tip: "Pitch class of the root note (C through B)."
-  }));
-
-  const rootOctCtrl = R("caRootOctave", dropdown({
-    label: "Root Octave",
-    options: ROOT_OCTAVE_OPTIONS,
-    value: String(state.caRootOctave),
-    onInput: (v) => {
-      state.caRootOctave = Number(v);
-      const noteIdx = typeof state.caRootNote === "number" ? state.caRootNote : 0;
-      state.caRoot = (state.caRootOctave + 1) * 12 + noteIdx;
-      generateCaBank();
-      status(`Root Octave: Octave ${state.caRootOctave} (${midiName(state.caRoot)})`);
-    },
-    tip: "Base octave for the root note."
-  }));
+    }
+  });
 
   noteControls.append(
     ruleCtrl,
-    R("caScale", dropdown({
-      label: "Scale Quantize",
-      options: Object.keys(SCALES).map((s) => ({
-        v: s,
-        t: SCALE_LABELS[s] || s
-      })),
-      value: state.caScale || "pentMinor",
-      onInput: (v) => {
-        state.caScale = v;
-        syncScaleButtons();
-        generateCaBank();
-        status(`Scale: ${SCALE_LABELS[v] || v}`);
-      },
-      tip: "Scale for quantizing X-axis pitch (reused from Traditional sequencer)."
-    })),
+    caScalePicker.scaleCtrl,
     R("caOctaves", dropdown({
       label: "Pitch Span",
       options: OCTAVE_OPTIONS,
@@ -1313,47 +1155,11 @@ export function buildCellularPanel(container) {
       },
       tip: "Horizontal keyboard span across the X axis."
     })),
-    rootNoteCtrl,
-    rootOctCtrl
+    caScalePicker.rootNoteCtrl,
+    caScalePicker.rootOctCtrl
   );
 
-  // Scale Notes 12-Button Selector ("scale" div)
-  const scaleBox = document.createElement("div");
-  scaleBox.className = "ca-scale-box";
-
-  const scaleHeader = document.createElement("div");
-  scaleHeader.className = "ca-scale-header";
-  scaleHeader.innerHTML = `
-    <span class="ca-scale-title">Scale</span>
-    <span class="ca-scale-info" id="caScaleInfo"></span>
-  `;
-  scaleInfoEl = scaleHeader.querySelector(".ca-scale-info");
-
-  const scaleDiv = document.createElement("div");
-  scaleDiv.className = "scale";
-  scaleDiv.id = "caScaleDiv";
-  scaleDiv.setAttribute("role", "group");
-  scaleDiv.setAttribute("aria-label", "Scale Note Quantizer (12 Chromatic Notes)");
-
-  scaleButtons = [];
-  const accidentals = new Set([1, 3, 6, 8, 10]); // C#, D#, F#, G#, A#
-  NOTE_NAMES.forEach((name, idx) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ca-scale-btn" + (accidentals.has(idx) ? " is-accidental" : "");
-    btn.dataset.note = String(idx);
-    btn.setAttribute("role", "checkbox");
-    btn.innerHTML = `<span class="ca-scale-note">${name}</span>`;
-    btn.addEventListener("click", () => onNoteButtonClick(idx));
-    scaleDiv.appendChild(btn);
-    scaleButtons.push(btn);
-  });
-
-  scaleBox.append(scaleHeader, scaleDiv);
-  noteSect.append(noteControls, scaleBox);
-
-  // Initialize initial button states
-  syncScaleButtons();
+  noteSect.append(noteControls, caScalePicker.scaleBox);
 
   // 4. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
@@ -1583,12 +1389,7 @@ export function activateCellularModel() {
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
-  const cur = typeof state.caRoot === "number" ? state.caRoot : 48;
-  if (state.caRootNote === undefined) state.caRootNote = ((cur % 12) + 12) % 12;
-  if (state.caRootOctave === undefined) state.caRootOctave = Math.floor(cur / 12) - 1;
-  if (refs.caRootNote) refs.caRootNote.setValue(String(state.caRootNote));
-  if (refs.caRootOctave) refs.caRootOctave.setValue(String(state.caRootOctave));
-  syncScaleButtons();
+  if (caScalePicker) caScalePicker.sync();
   doGenerate(false);
   redrawCaCanvas();
   updateHud();

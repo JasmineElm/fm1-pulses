@@ -15,7 +15,11 @@ export const DEFAULT = {
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, velMin: 1, velMax: 127, humanize: 0, gateQuant: 0, snapGrid: 4,
   gateBlend: 0, euclidRot: 0, euclidDiv: "auto",
-  scale: "pentMinor", root: 60,
+  scale: "pentMinor",
+  customScale: [0, 3, 5, 7, 10],
+  root: 60,
+  rootNote: 0,
+  rootOctave: 4,
   lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, octaveMode: "up", gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
 

@@ -226,7 +226,9 @@ export function generate(params) {
   const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
   const loopRng = mulberry32((params.seed ^ 0x2545f491) >>> 0); // separate stream: the loop must not shift pitch draws
   const snapRng = mulberry32((params.seed ^ 0x165667b1) >>> 0); // separate stream: grid snap must not shift pitch draws
-  const scale = SCALES[params.scale] || SCALES.pentMinor;
+  const scale = (params.scale === "custom" && params.customScale)
+    ? params.customScale
+    : (SCALES[params.scale] || SCALES.pentMinor);
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
   const offset = (params.lfoOffset ?? 0) / 100;         // -1..1
