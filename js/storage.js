@@ -2,7 +2,7 @@
 import { state, refs, locks, getBank, getSelected, setSelected, DEFAULT, SLOTS, PRESET_N, STATE_VERSION, status, doGenerate } from "./state.js";
 import { syncHeader } from "./device.js";
 import { encodeWrite } from "./pattern.js";
-import { renderBuffer, refreshLockCount } from "./grid.js?v=213";
+import { renderBuffer, refreshLockCount } from "./grid.js";
 
 const PRESET_KEY = "fm1p.presets";
 let presetArm = null;   // "save" | "load" | null

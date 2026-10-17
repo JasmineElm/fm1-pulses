@@ -7,12 +7,13 @@ import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
-} from "./state.js?v=224";
+} from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=224";
-import { createHumaniseSection } from "./humanise.js?v=224";
-import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js?v=224";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
+import { createHumaniseSection } from "./humanise.js";
+import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
+import { getActiveModel } from "./modes.js";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1580,6 +1581,7 @@ export function initCellular() {
       updateHud();
       return;
     }
+    if (getActiveModel && getActiveModel() !== "cellular") return;
     const modelEl = document.getElementById("model-cellular");
     if (!modelEl || modelEl.style.display === "none") return;
 
@@ -1656,6 +1658,7 @@ export function initCellular() {
 
 // When activating Cellular Automata Model
 export function activateCellularModel() {
+  setSelected(0);
   setModelGenerator(generateCaBank);
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;

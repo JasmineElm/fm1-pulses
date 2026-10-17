@@ -4,11 +4,11 @@ import {
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
   getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
   getCurrentModelRandomizer, refreshLoopInfo
-} from "./state.js?v=224";
+} from "./state.js";
 
 export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=224";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
@@ -16,10 +16,10 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=224";
-import { createHumaniseSection } from "./humanise.js?v=224";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=224";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=224";
+import { createNotesSection } from "./scale.js";
+import { createHumaniseSection } from "./humanise.js";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 

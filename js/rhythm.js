@@ -1,11 +1,11 @@
 import {
   state, refs, R, setState, scheduleRegen, getBank, status, onRegen, RATE_NAMES,
   getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
-} from "./state.js?v=224";
+} from "./state.js";
 import {
   euclid, classicName, quantize
 } from "./generator.js";
-import { renderBuffer, onBufferRender } from "./grid.js?v=224";
+import { renderBuffer, onBufferRender } from "./grid.js";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
