@@ -50,7 +50,7 @@ export function renderScope() {
   const X = (i) => SCOPE_PADX + i / (n - 1) * (w - 2 * SCOPE_PADX);
 
   // C-octave reference lines + labels (left)
-  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
+  ctx.font = "9px system-ui, -apple-system, sans-serif";
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
   for (let c = Math.ceil(lo / 12) * 12; c <= hi; c += 12) {
@@ -153,7 +153,7 @@ export function renderScope() {
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   ctx.fillStyle = dimColor;
-  ctx.font = "9px 'Barlow Semi Condensed', sans-serif";
+  ctx.font = "10px system-ui, -apple-system, sans-serif";
   ctx.fillText(`${state.lfoWave ?? "sine"} · ${cycles} cyc · div ${div.toFixed(1)}`, 4, 2);
   if (scopeHover != null) {
     const i = scopeHover;
