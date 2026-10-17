@@ -42,6 +42,21 @@ export const DEFAULT = {
   caDensity: 85,
   caInitDensity: 35,
   caVelocity: 100,
+
+  // Turing Machine model parameters
+  turingLength: 16,
+  turingProb: 0,
+  turingSpan: 2,
+  turingDacBits: 8,
+  turingScale: "pentMinor",
+  turingCustomScale: [0, 3, 5, 7, 10],
+  turingRoot: 48,
+  turingRootNote: 0,
+  turingRootOctave: 3,
+  turingQuantSteps: 100,
+  turingOctave: 0,
+  turingOctaveMode: "up",
+  turingSlip: 0,
 };
 
 export const state = { ...DEFAULT };

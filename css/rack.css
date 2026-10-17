@@ -1207,6 +1207,152 @@ body {
 }
 
 /* ==========================================================================
+   TURING MACHINE (SHIFT-REGISTER) MODEL STYLES
+   ========================================================================== */
+.turing-layout {
+  display: block;
+}
+@media (min-width: 768px) {
+  .turing-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+}
+
+.turing-module {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.turing-sect {
+  margin-bottom: 0;
+}
+
+.turing-tape-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.turing-tape-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.turing-tape-header h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.turing-tape-hint {
+  font-size: 8.5px;
+  color: var(--dim);
+}
+
+.turing-bit-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 4px;
+}
+
+@media (max-width: 860px) {
+  .turing-bit-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+.turing-bit-btn {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 2px;
+  min-height: 42px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--dim);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .1s ease, border-color .1s ease, color .1s ease;
+  position: relative;
+}
+
+.turing-bit-btn:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.turing-bit-btn.is-one {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.turing-bit-btn.is-zero {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--dim);
+}
+
+.turing-bit-btn.in-dac {
+  box-shadow: inset 0 0 0 2px var(--accent2, #f59e0b);
+}
+
+.turing-bit-btn.now {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.turing-bit-num {
+  font-size: 7.5px;
+  font-weight: 600;
+  opacity: 0.75;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.turing-bit-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.turing-contour-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.turing-dac-canvas {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  margin-top: 6px;
+}
+
+/* ==========================================================================
    RHYTHM CONTROLS (Full-Width 16x4 Step Grid & Euclid Controls)
    ========================================================================== */
 .rhythm-bar {

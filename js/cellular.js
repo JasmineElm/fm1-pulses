@@ -13,7 +13,7 @@ import { onStep, isLive } from "./player.js";
 import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
 import { createHumaniseSection } from "./humanise.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
-import { getActiveModel } from "./modes.js";
+import { getActiveModel } from "./modes.js?v=236";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported

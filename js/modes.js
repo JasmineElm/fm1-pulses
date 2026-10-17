@@ -21,9 +21,9 @@ export const MODELS = [
     id: "turing",
     name: "Turing Machine",
     kicker: "Shift Register · Bit Slip · Mutation",
-    badge: "Coming Soon",
-    badgeClass: "badge-wip",
-    available: false,
+    badge: "Active",
+    badgeClass: "badge-active",
+    available: true,
     desc: "Shift-register melody generator inspired by Tom Whitwell's Turing Machine. A circulating loop of bits slowly mutates according to a write probability, locking into hypnotic melodic cycles or drifting into ever-changing variations.",
     tags: ["Shift Register", "Lock Loop", "Bit Slip", "Probabilistic Write"],
     icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -141,6 +141,7 @@ export function showLanding(updateHash = true) {
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
+  const modelTuring = document.getElementById("model-turing");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
 
@@ -148,6 +149,7 @@ export function showLanding(updateHash = true) {
   if (viewWorkspace) viewWorkspace.style.display = "none";
   if (modelTraditional) modelTraditional.style.display = "none";
   if (modelCellular) modelCellular.style.display = "none";
+  if (modelTuring) modelTuring.style.display = "none";
   if (btnBack) btnBack.style.display = "none";
   if (modeTag) modeTag.style.display = "none";
 
@@ -157,12 +159,13 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "traditional" && id !== "cellular") return;
+  if (id !== "traditional" && id !== "cellular" && id !== "turing") return;
 
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
+  const modelTuring = document.getElementById("model-turing");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
 
@@ -172,9 +175,12 @@ export function showModel(id, updateHash = true) {
   if (viewWorkspace) viewWorkspace.style.display = "block";
   if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
   if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
+  if (modelTuring) modelTuring.style.display = id === "turing" ? "block" : "none";
   if (btnBack) btnBack.style.display = "inline-flex";
   if (modeTag) {
-    modeTag.textContent = id === "traditional" ? "Traditional" : "Cellular Automata";
+    if (id === "traditional") modeTag.textContent = "Traditional";
+    else if (id === "cellular") modeTag.textContent = "Cellular Automata";
+    else if (id === "turing") modeTag.textContent = "Turing Machine";
     modeTag.style.display = "inline-block";
   }
 
@@ -211,6 +217,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
       if (activeModelId !== "traditional") showModel("traditional", false);
     } else if (h === "#cellular") {
       if (activeModelId !== "cellular") showModel("cellular", false);
+    } else if (h === "#turing") {
+      if (activeModelId !== "turing") showModel("turing", false);
     } else {
       if (activeModelId !== null) showLanding(false);
     }
@@ -222,6 +230,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
     showModel("traditional", false);
   } else if (initialHash === "#cellular") {
     showModel("cellular", false);
+  } else if (initialHash === "#turing") {
+    showModel("turing", false);
   } else {
     showLanding(false);
   }

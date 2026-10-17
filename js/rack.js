@@ -14,11 +14,12 @@ import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, in
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
-import { initModes, getActiveModel } from "./modes.js";
+import { initModes, getActiveModel } from "./modes.js?v=236";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js";
 import { createHumaniseSection } from "./humanise.js";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
@@ -425,19 +426,25 @@ buildEditor();
 initScope();
 initRhythm(document.getElementById("rhythm-bar"));
 initCellular();
+initTuring();
 doGenerate(true);
 initMidi();
 initModes({
   onEnterModel: (modelId) => {
     if (modelId === "traditional") {
       deactivateCellularModel();
+      deactivateTuringModel();
       fitSteps();
       renderScope();
       renderBuffer();
       syncRhythmGrid();
       if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
     } else if (modelId === "cellular") {
+      deactivateTuringModel();
       activateCellularModel();
+    } else if (modelId === "turing") {
+      deactivateCellularModel();
+      activateTuringModel();
     }
   },
   onLeaveModel: () => {
@@ -445,6 +452,7 @@ initModes({
       stopLive();
     }
     deactivateCellularModel();
+    deactivateTuringModel();
   }
 });
 setTimeout(applyTips, 0);
