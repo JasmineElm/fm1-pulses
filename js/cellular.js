@@ -574,13 +574,228 @@ export function invertGrid() {
   status("Grid inverted");
 }
 
-// Randomize cells (soup) using Seed and density
-export function randomizeGrid(density = 25) {
-  const prng = mulberry32(state.seed ^ 0x6e657773);
-  const prob = Math.max(0.05, Math.min(0.85, (density || 25) / 100));
-  for (let i = 0; i < currentGrid.length; i++) {
-    currentGrid[i] = prng() < prob ? 1 : 0;
+// Helper: find connected components (8-connected groups) of active cells
+function getConnectedGroups(grid, N) {
+  const visited = new Uint8Array(N * N);
+  const groups = [];
+
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const idx = y * N + x;
+      if (grid[idx] === 0 || visited[idx]) continue;
+
+      const queue = [idx];
+      visited[idx] = 1;
+      const cells = [];
+      let minX = x, maxX = x, minY = y, maxY = y;
+
+      let head = 0;
+      while (head < queue.length) {
+        const curIdx = queue[head++];
+        const cx = curIdx % N;
+        const cy = Math.floor(curIdx / N);
+        cells.push(curIdx);
+
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N) {
+              const nidx = ny * N + nx;
+              if (grid[nidx] > 0 && !visited[nidx]) {
+                visited[nidx] = 1;
+                queue.push(nidx);
+              }
+            }
+          }
+        }
+      }
+
+      groups.push({
+        cells,
+        minX, maxX, width: maxX - minX + 1,
+        minY, maxY, height: maxY - minY + 1
+      });
+    }
   }
+
+  return groups;
+}
+
+// Randomize cells respecting constraints:
+// 1. Total active cells <= 5% of grid
+// 2. Every active cell has at least 2 active neighbours vertically or horizontally
+// 3. Every group of highlighted cells has width < 50% of grid width
+export function randomizeGrid(density = 25) {
+  const N = gridSize;
+  const prng = mulberry32(state.seed ^ 0x6e657773);
+  currentGrid.fill(0);
+
+  const maxAllowedCells = Math.floor(0.05 * N * N);
+  const maxGroupWidth = Math.max(2, Math.floor(0.5 * N) - 1); // Strictly less than 50%
+
+  // Target budget: between 2% and 4.5% of grid (never exceeding maxAllowedCells)
+  const minBudget = Math.max(4, Math.floor(0.02 * N * N));
+  const maxBudget = Math.min(maxAllowedCells, Math.max(minBudget, Math.floor(0.045 * N * N)));
+  const cellBudget = minBudget + Math.floor(prng() * (maxBudget - minBudget + 1));
+
+  // Determine number of clusters based on N and budget
+  let numClusters = 1;
+  if (N >= 64) numClusters = 2 + Math.floor(prng() * 3); // 2 to 4 clusters
+  else if (N >= 32) numClusters = 1 + Math.floor(prng() * 2); // 1 to 2 clusters
+  else numClusters = 1;
+
+  const perClusterBudget = Math.max(4, Math.floor(cellBudget / numClusters));
+  const placedBoxes = [];
+
+  for (let c = 0; c < numClusters; c++) {
+    // Cluster bounding box: width strictly less than 50% grid width
+    const maxBoxDim = Math.min(maxGroupWidth, Math.max(4, Math.floor(N * 0.35)));
+    const boxW = Math.min(maxGroupWidth, 4 + Math.floor(prng() * Math.max(1, maxBoxDim - 3)));
+    const boxH = Math.min(maxGroupWidth, 4 + Math.floor(prng() * Math.max(1, maxBoxDim - 3)));
+
+    // Find position with at least 2 cells gap from other clusters and 1 cell border
+    let placedX = -1, placedY = -1;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const tx = 1 + Math.floor(prng() * (N - boxW - 2));
+      const ty = 1 + Math.floor(prng() * (N - boxH - 2));
+
+      let collides = false;
+      for (const b of placedBoxes) {
+        if (
+          tx < b.x + b.w + 2 &&
+          tx + boxW + 2 > b.x &&
+          ty < b.y + b.h + 2 &&
+          ty + boxH + 2 > b.y
+        ) {
+          collides = true;
+          break;
+        }
+      }
+
+      if (!collides) {
+        placedX = tx;
+        placedY = ty;
+        break;
+      }
+    }
+
+    if (placedX === -1) continue;
+    placedBoxes.push({ x: placedX, y: placedY, w: boxW, h: boxH });
+
+    // Build cluster shapes using union of 2x2 blocks or hollow frames
+    const style = Math.floor(prng() * 4);
+    const clusterCells = new Set();
+
+    const addBlock = (bx, by) => {
+      const clampedX = Math.max(placedX, Math.min(placedX + boxW - 2, bx));
+      const clampedY = Math.max(placedY, Math.min(placedY + boxH - 2, by));
+      clusterCells.add(clampedY * N + clampedX);
+      clusterCells.add(clampedY * N + (clampedX + 1));
+      clusterCells.add((clampedY + 1) * N + clampedX);
+      clusterCells.add((clampedY + 1) * N + (clampedX + 1));
+    };
+
+    if (style === 0 && boxW >= 5 && boxH >= 5) {
+      // Hollow 3x3 or 4x4 frame
+      const frameDim = (prng() < 0.5 && boxW >= 6 && boxH >= 6) ? 4 : 3;
+      const fx = placedX + Math.floor((boxW - frameDim) / 2);
+      const fy = placedY + Math.floor((boxH - frameDim) / 2);
+      for (let r = 0; r < frameDim; r++) {
+        for (let col = 0; col < frameDim; col++) {
+          if (r === 0 || r === frameDim - 1 || col === 0 || col === frameDim - 1) {
+            clusterCells.add((fy + r) * N + (fx + col));
+          }
+        }
+      }
+      if (prng() < 0.5 && clusterCells.size + 4 <= perClusterBudget) {
+        addBlock(fx - 1, fy - 1);
+      }
+    } else {
+      // Organic union of 2x2 blocks
+      let curX = placedX + Math.floor(prng() * Math.max(1, boxW - 2));
+      let curY = placedY + Math.floor(prng() * Math.max(1, boxH - 2));
+      addBlock(curX, curY);
+
+      const targetStamps = 1 + Math.floor(perClusterBudget / 4);
+      for (let s = 1; s < targetStamps && clusterCells.size < perClusterBudget; s++) {
+        const dx = (Math.floor(prng() * 3) - 1);
+        const dy = (Math.floor(prng() * 3) - 1);
+        curX = Math.max(placedX, Math.min(placedX + boxW - 2, curX + dx));
+        curY = Math.max(placedY, Math.min(placedY + boxH - 2, curY + dy));
+        addBlock(curX, curY);
+      }
+    }
+
+    for (const idx of clusterCells) {
+      currentGrid[idx] = 1;
+    }
+  }
+
+  // 1. Neighbor enforcement: Every active cell MUST have >= 2 active neighbours vertically or horizontally
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const idx = y * N + x;
+        if (currentGrid[idx] === 0) continue;
+        let count = 0;
+        if (y > 0 && currentGrid[(y - 1) * N + x] > 0) count++;
+        if (y < N - 1 && currentGrid[(y + 1) * N + x] > 0) count++;
+        if (x > 0 && currentGrid[y * N + (x - 1)] > 0) count++;
+        if (x < N - 1 && currentGrid[y * N + (x + 1)] > 0) count++;
+        if (count < 2) {
+          currentGrid[idx] = 0;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // 2. Validate group width: Every connected group must be < 50% grid width
+  const groups = getConnectedGroups(currentGrid, N);
+  for (const g of groups) {
+    if (g.width > maxGroupWidth) {
+      for (const idx of g.cells) currentGrid[idx] = 0;
+    }
+  }
+
+  // 3. Validate total active count <= 5%
+  let totalActive = 0;
+  for (let i = 0; i < currentGrid.length; i++) {
+    if (currentGrid[i] > 0) totalActive++;
+  }
+
+  if (totalActive > maxAllowedCells) {
+    const remaining = getConnectedGroups(currentGrid, N);
+    remaining.sort((a, b) => b.cells.length - a.cells.length);
+    while (totalActive > maxAllowedCells && remaining.length > 1) {
+      const dropped = remaining.pop();
+      for (const idx of dropped.cells) {
+        currentGrid[idx] = 0;
+        totalActive--;
+      }
+    }
+  }
+
+  // 4. Fallback if empty: place a single 2x2 block at center
+  if (totalActive === 0) {
+    const cx = Math.floor(N / 2) - 1;
+    const cy = Math.floor(N / 2) - 1;
+    currentGrid[cy * N + cx] = 1;
+    currentGrid[cy * N + (cx + 1)] = 1;
+    currentGrid[(cy + 1) * N + cx] = 1;
+    currentGrid[(cy + 1) * N + (cx + 1)] = 1;
+    totalActive = 4;
+  }
+
   seedGrid.set(currentGrid);
   generation = 0;
   prevCell = null;
@@ -589,7 +804,9 @@ export function randomizeGrid(density = 25) {
   generateCaBank();
   redrawCaCanvas();
   updateHud();
-  status(`Randomized ${gridSize}×${gridSize} grid (${Math.round(prob * 100)}% density)`, "ok");
+
+  const pct = ((totalActive / (N * N)) * 100).toFixed(1);
+  status(`Randomized ${gridSize}×${gridSize} grid (${totalActive} cells · ${pct}%)`, "ok");
 }
 
 // Stamp or load a preset into the center of the grid
