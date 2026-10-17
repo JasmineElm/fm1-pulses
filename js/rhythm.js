@@ -1,11 +1,11 @@
 import {
   state, refs, R, setState, scheduleRegen, getBank, status, onRegen, RATE_NAMES,
   getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
-} from "./state.js?v=223";
+} from "./state.js?v=224";
 import {
   euclid, classicName, quantize
 } from "./generator.js";
-import { renderBuffer, onBufferRender } from "./grid.js?v=223";
+import { renderBuffer, onBufferRender } from "./grid.js?v=224";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
@@ -359,6 +359,55 @@ export function randomizeGates() {
   syncRhythmGrid();
   renderBuffer();
   status(`Randomized gates (density ${Math.round(prob * 100)}%)`);
+}
+
+/**
+ * Fully randomises the rhythm pattern (density, Euclidean parameters or presets, and gates).
+ */
+export function randomizeRhythm() {
+  const bank = getBank();
+  const p = bank[0];
+  if (!p || !p.steps) return;
+
+  // 1. Pick a random musical density between 35% and 75%
+  const density = Math.floor(Math.random() * 41) + 35;
+  state.gateProb = density;
+  if (refs.gateProb?.setValue) refs.gateProb.setValue(density);
+
+  // 2. Decide style: 65% Euclidean rhythm preset/division, 35% stochastic/density pattern
+  const useEuclid = Math.random() < 0.65;
+
+  if (useEuclid) {
+    const validPresets = EUCLID_PRESETS.slice(1);
+    const chosen = validPresets[Math.floor(Math.random() * validPresets.length)];
+    const rot = Math.floor(Math.random() * chosen.m);
+    rotOffset = rot;
+    state.euclidRot = rot;
+    state.euclidDiv = String(chosen.m);
+    state.gateBlend = 100;
+    if (refs.euclidRot?.setValue) refs.euclidRot.setValue(rot);
+    if (refs.euclidDiv?.setValue) refs.euclidDiv.setValue(chosen.m);
+    if (refs.gateBlend?.setValue) refs.gateBlend.setValue(100);
+    if (rotDisplayEl) rotDisplayEl.textContent = rot > 0 ? `+${rot}` : `${rot}`;
+    if (euclidHitsInput) euclidHitsInput.value = String(chosen.n);
+    if (euclidDivSelect) euclidDivSelect.value = String(chosen.m);
+    applyEuclidPattern(chosen.n, chosen.m, rot);
+  } else {
+    rotOffset = 0;
+    state.euclidRot = 0;
+    state.gateBlend = 0;
+    if (refs.gateBlend?.setValue) refs.gateBlend.setValue(0);
+    if (refs.euclidRot?.setValue) refs.euclidRot.setValue(0);
+    if (rotDisplayEl) rotDisplayEl.textContent = "0";
+    randomizeGates();
+    // 50% chance to repeat Bar 1 across all 4 bars for coherent rhythmic phrasing
+    if (Math.random() < 0.5) {
+      copyBar1ToAll();
+    }
+  }
+
+  syncRhythmGrid();
+  renderBuffer();
 }
 
 /**

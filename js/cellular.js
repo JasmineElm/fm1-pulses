@@ -7,12 +7,12 @@ import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
-} from "./state.js?v=223";
+} from "./state.js?v=224";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=223";
-import { createHumaniseSection } from "./humanise.js?v=223";
-import { syncRhythmGrid } from "./rhythm.js?v=223";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=224";
+import { createHumaniseSection } from "./humanise.js?v=224";
+import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js?v=224";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1523,12 +1523,25 @@ export function generateCaBank() {
     simGrid.set(simNext);
   }
 
-  const steps = precomputedSteps.map((st) => ({
-    notes: st.notes.map((n) => ({ ...n })),
-    _savedNote: st.notes.length > 0 ? { ...st.notes[0] } : null,
-    rate: st.rate,
-    gate: st.gate
-  }));
+  const curBank = getBank();
+  const existingSteps = curBank?.[0]?.steps;
+  const hasExistingRhythm = existingSteps && existingSteps.length > 0;
+
+  const steps = precomputedSteps.map((st, i) => {
+    const simNote = st.notes.length > 0 ? { ...st.notes[0] } : null;
+    const isStepActive = hasExistingRhythm
+      ? (existingSteps[i]?.notes && existingSteps[i].notes.length > 0)
+      : (simNote !== null);
+
+    const savedNote = simNote || existingSteps?.[i]?._savedNote || null;
+
+    return {
+      notes: (isStepActive && savedNote) ? [{ ...savedNote }] : [],
+      _savedNote: savedNote ? { ...savedNote } : null,
+      rate: st.rate,
+      gate: st.gate
+    };
+  });
 
   const bank = [{
     length: seqLen,
@@ -1544,12 +1557,13 @@ export function generateCaBank() {
   return bank;
 }
 
-// Randomize active CA configuration
+// Randomize active CA configuration and rhythm
 export function randomizeCa() {
   state.seed = (Math.random() * 1e9) | 0;
   if (refs.seed?.setValue) refs.seed.setValue(state.seed, false);
   randomizeGrid(state.caDensity ?? 25);
-  status(`Randomized Cellular Automata pattern · seed ${state.seed >>> 0}`, "ok");
+  randomizeRhythm();
+  status(`Randomized Cellular Automata pattern & Rhythm · seed ${state.seed >>> 0}`, "ok");
 }
 
 // INITIALIZATION
@@ -1595,24 +1609,24 @@ export function initCellular() {
     const bank = getBank();
     const curP = bank[getSelected()];
     const st = curP?.steps?.[stepIndex];
+    const isRhythmActive = st && st.notes && st.notes.length > 0;
 
     if (picked) {
       prevCell = { x: picked.x, y: picked.y };
       const mapped = mapCellToNote(picked, N);
-      if (st && st.notes && st.notes.length > 0) {
-        lastTriggeredNote = mapped;
-      } else {
-        lastTriggeredNote = null;
-      }
-      if (loopMode === "free" && st) {
-        if (st.notes.length > 0 || st._savedNote) {
+      if (st) {
+        st._savedNote = { note: mapped.note, vel: mapped.vel };
+        if (isRhythmActive) {
+          lastTriggeredNote = mapped;
           st.notes = [{ note: mapped.note, vel: mapped.vel }];
+        } else {
+          lastTriggeredNote = null;
+          st.notes = [];
         }
       }
     } else {
       lastTriggeredNote = null;
-      if (loopMode === "free" && st) {
-        if (st.notes && st.notes.length > 0) st._savedNote = { ...st.notes[0] };
+      if (st) {
         st.notes = [];
       }
     }
