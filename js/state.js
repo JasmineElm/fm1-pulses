@@ -1,5 +1,5 @@
 // state.js — Central state, parameter definitions, and shared references.
-import { generateBank } from "./generator.js?v=100";
+import { generateBank } from "./generator.js";
 
 export const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 export const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];

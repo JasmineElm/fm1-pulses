@@ -1,6 +1,6 @@
 // controls.js — UI control components for the rack interface.
-import { knob, sw, toggle, dropdown, fader } from "./knob.js?v=100";
-import { state, status, scheduleRegen } from "./state.js?v=100";
+import { knob, sw, toggle, dropdown, fader } from "./knob.js";
+import { state, status, scheduleRegen } from "./state.js";
 
 export { knob, sw, toggle, dropdown, fader };
 

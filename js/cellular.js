@@ -2,14 +2,14 @@
 // Inspired by Reaktor's Newscool: resizable square grid (defaults to 64x64),
 // interactive cell drawing, Conway's B3/S23 evolution, and real-time generation updates.
 
-import { mulberry32 } from "./generator.js?v=100";
+import { mulberry32 } from "./generator.js";
 import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
-} from "./state.js?v=106";
-import { fader, dropdown, actionBtn } from "./controls.js?v=106";
-import { onStep, isLive } from "./player.js?v=106";
+} from "./state.js";
+import { fader, dropdown, actionBtn } from "./controls.js";
+import { onStep, isLive } from "./player.js";
 
 // Grid sizes supported
 export const GRID_SIZES = [16, 32, 48, 64, 80, 96, 128];
@@ -782,9 +782,22 @@ export function buildCellularPanel(container) {
 
   transportRow.append(resetBtn, storeBtn);
 
-  const loopModeWrap = document.createElement("div");
-  loopModeWrap.className = "ca-loop-mode-wrap";
-  loopModeWrap.append(
+  const evoControls = document.createElement("div");
+  evoControls.className = "ca-grid-2col";
+  evoControls.append(
+    R("caSpeed", dropdown({
+      label: "Speed",
+      options: RATE_NAMES.map((t, v) => ({ v: String(v), t })),
+      value: String(state.rate ?? 6),
+      onInput: (v) => {
+        state.rate = Number(v);
+        if (refs.rate) refs.rate.setValue(Number(v));
+        generateCaBank();
+        scheduleRegen();
+        status(`Speed: ${RATE_NAMES[Number(v)]}`);
+      },
+      tip: "Speed of Conway evolution (borrowed from traditional sequencer, defaults to 16th notes)."
+    })),
     R("caLoopMode", dropdown({
       label: "Cycle Mode",
       options: [
@@ -801,7 +814,7 @@ export function buildCellularPanel(container) {
     }))
   );
 
-  evoSect.append(transportRow, loopModeWrap);
+  evoSect.append(transportRow, evoControls);
 
   // 4. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
@@ -886,7 +899,7 @@ export function generateCaBank() {
     }
     bank.push({
       length: seqLen,
-      rate: rate,
+      rate: rateIdx,
       tempo: tempo,
       gate: state.gate ?? 50,
       swing: state.swing ?? 50,
@@ -916,7 +929,8 @@ export function initCellular() {
       updateHud();
       return;
     }
-    if (container.style.display === "none") return;
+    const modelEl = document.getElementById("model-cellular");
+    if (!modelEl || modelEl.style.display === "none") return;
 
     // Check loop mode
     if (loopMode === "loop") {
@@ -955,6 +969,8 @@ export function initCellular() {
 export function activateCellularModel() {
   setModelGenerator(generateCaBank);
   setModelRandomizer(randomizeCa);
+  if (state.rate === undefined) state.rate = 6;
+  if (refs.caSpeed) refs.caSpeed.setValue(String(state.rate));
   doGenerate(false);
   redrawCaCanvas();
   updateHud();

@@ -1,5 +1,5 @@
 // themes.js — FM-1 display themes management.
-import { renderScope } from "./scope.js?v=100";
+import { renderScope } from "./scope.js";
 
 export const THEMES = [
   { id: "dark", name: "Dark", icon: "🌙", accent: "#3b82f6" },

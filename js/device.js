@@ -1,7 +1,7 @@
 // device.js — FM-1 hardware device communication, SysEx writes, and tempo sync.
-import { state, refs, getBank, getSelected, RATE_NAMES, SLOTS, status } from "./state.js?v=100";
-import * as midi from "./midi.js?v=100";
-import { encodeWrite, emptyPattern } from "./pattern.js?v=100";
+import { state, refs, getBank, getSelected, RATE_NAMES, SLOTS, status } from "./state.js";
+import * as midi from "./midi.js";
+import { encodeWrite, emptyPattern } from "./pattern.js";
 
 const GSET_ADDR = 0x01C0E840 + 5816;
 const GSET_LEN = 137;

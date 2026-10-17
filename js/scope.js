@@ -1,6 +1,6 @@
 // scope.js — Canvas wave and trigger scope visualization.
-import { state, getBank, getSelected } from "./state.js?v=100";
-import { midiName } from "./generator.js?v=100";
+import { state, getBank, getSelected } from "./state.js";
+import { midiName } from "./generator.js";
 
 const SCOPE_PADT = 14, SCOPE_PADB = 16, SCOPE_PADX = 20;
 let scopeNow = null;

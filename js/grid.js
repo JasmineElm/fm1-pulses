@@ -1,7 +1,7 @@
 // grid.js — Pattern grid, bank slot selector, and step note editor.
-import { state, getBank, getSelected, setSelected, locks, RATE_NAMES, SLOTS, status } from "./state.js?v=100";
-import { midiName } from "./generator.js?v=100";
-import { renderScope } from "./scope.js?v=100";
+import { state, getBank, getSelected, setSelected, locks, RATE_NAMES, SLOTS, status } from "./state.js";
+import { midiName } from "./generator.js";
+import { renderScope } from "./scope.js";
 
 let editStep = -1;
 let onSelectSlotCallback = null;

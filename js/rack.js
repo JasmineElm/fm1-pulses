@@ -4,19 +4,19 @@ import {
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
   getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
   getCurrentModelRandomizer
-} from "./state.js?v=106";
-import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=106";
-import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=100";
-import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=106";
-import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js?v=100";
-import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js?v=100";
-import { buildTheme } from "./themes.js?v=100";
-import { initScope, renderScope } from "./scope.js?v=100";
-import { initModes, getActiveModel } from "./modes.js?v=106";
-import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=100";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=106";
-import * as midi from "./midi.js?v=100";
-import * as audio from "./audio.js?v=100";
+} from "./state.js";
+import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
+import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
+import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
+import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
+import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
+import { buildTheme } from "./themes.js";
+import { initScope, renderScope } from "./scope.js";
+import { initModes, getActiveModel } from "./modes.js";
+import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
+import * as midi from "./midi.js";
+import * as audio from "./audio.js";
 
 // Register hooks
 onRegen(() => {
@@ -84,6 +84,7 @@ export function refreshLoopInfo() {
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
+  if (refs.caSpeed && state.rate !== undefined) refs.caSpeed.setValue(String(state.rate), false);
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -146,7 +147,18 @@ export function buildGlobalBar() {
       format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
       tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
     R("seed", seedControl({ label: "Seed", value: state.seed, onInput: (v) => { state.seed = v; scheduleRegen(); }, tip: "Pattern seed (numeric or text)" })),
-    R("rate", dropdown({ label: "Note", options: RATE_NAMES.map((t, v) => ({ v, t })), value: state.rate, onInput: (v) => { state.rate = Number(v); refreshLoopRanges(); scheduleRegen(); }, tip: "Step note value" })),
+    R("rate", dropdown({
+      label: "Note",
+      options: RATE_NAMES.map((t, v) => ({ v, t })),
+      value: state.rate,
+      onInput: (v) => {
+        state.rate = Number(v);
+        if (refs.caSpeed) refs.caSpeed.setValue(String(v));
+        refreshLoopRanges();
+        scheduleRegen();
+      },
+      tip: "Step note value"
+    })),
     R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
       format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); },
       tip: "Pattern length in steps (1 to 64)." }))
@@ -436,15 +448,16 @@ function buildTransport() {
 // Global keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  if (getActiveModel() !== "traditional") return;
-  if (e.code === "Space") { e.preventDefault(); toggleLive(); }
+  if (e.code === "Space") { e.preventDefault(); toggleLive(); return; }
   if (e.key === "m" || e.key === "M") {
     const muteBtn = document.getElementById("mute");
     const m = !audio.isMuted();
     audio.setMuted(m);
     if (muteBtn) muteBtn.textContent = m ? "🔇" : "🔊";
     status(m ? "browser audio muted" : "browser audio on");
+    return;
   }
+  if (getActiveModel() !== "traditional") return;
   if (e.key === "f" || e.key === "F") doFreeze(getSelected());
   if (e.key === "g" || e.key === "G") doGenerate(true);
   if (e.key === "ArrowRight") {
