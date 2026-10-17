@@ -6,10 +6,10 @@ import { mulberry32 } from "./generator.js?v=100";
 import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
-  setModelGenerator, setModelRandomizer
-} from "./state.js?v=104";
-import { fader, dropdown, actionBtn } from "./controls.js?v=104";
-import { onStep, isLive, toggleLive } from "./player.js?v=104";
+  setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
+} from "./state.js?v=106";
+import { fader, dropdown, actionBtn } from "./controls.js?v=106";
+import { onStep, isLive } from "./player.js?v=106";
 
 // Grid sizes supported
 export const GRID_SIZES = [16, 32, 48, 64, 80, 96, 128];
@@ -492,7 +492,7 @@ export function updateHud() {
   const popEl = document.getElementById("ca-hud-pop");
   const sizeEl = document.getElementById("ca-hud-size");
   const modeEl = document.getElementById("ca-hud-mode");
-  const runBtn = document.getElementById("ca-run-btn");
+  const statusEl = document.getElementById("ca-hud-status");
 
   if (genEl) genEl.textContent = String(generation);
   if (popEl) {
@@ -505,14 +505,10 @@ export function updateHud() {
     const loopLen = Math.max(1, Math.min(64, state.length || 64));
     modeEl.textContent = loopMode === "loop" ? `Loop (${loopLen} steps)` : "Free Run (Continuous)";
   }
-  if (runBtn) {
-    const playing = isLive();
-    runBtn.textContent = playing ? "■ Pause" : "▶ Run";
-    if (playing) {
-      runBtn.classList.add("running");
-    } else {
-      runBtn.classList.remove("running");
-    }
+  if (statusEl) {
+    const running = isLive();
+    statusEl.textContent = running ? "▶ RUNNING" : "■ STOPPED";
+    statusEl.style.color = running ? "var(--accent)" : "var(--dim)";
   }
 }
 
@@ -754,39 +750,18 @@ export function buildCellularPanel(container) {
 
   drawSect.append(toolsWrap, editActions);
 
-  // 3. EVOLUTION & TRANSPORT CONTROLS
+  // 3. EVOLUTION & SEED CONTROLS
   const evoSect = document.createElement("section");
   evoSect.className = "sect ca-sect";
   evoSect.innerHTML = `
     <div class="ca-sect-head">
-      <h3>Evolution & Transport</h3>
+      <h3>Evolution & Seed</h3>
       <span class="ca-rule-badge">Conway B3/S23</span>
     </div>
   `;
 
   const transportRow = document.createElement("div");
   transportRow.className = "ca-transport-row";
-
-  const runBtn = document.createElement("button");
-  runBtn.id = "ca-run-btn";
-  runBtn.className = "ca-transport-btn ca-run-btn";
-  runBtn.textContent = isLive() ? "■ Pause" : "▶ Run";
-  runBtn.title = "Start/Stop Conway evolution (synchronized with Global Transport)";
-  runBtn.addEventListener("click", () => {
-    toggleLive();
-    updateHud();
-  });
-
-  const stepBtn = document.createElement("button");
-  stepBtn.className = "ca-transport-btn";
-  stepBtn.textContent = "▶| Step";
-  stepBtn.title = "Advance by 1 generation manually";
-  stepBtn.addEventListener("click", () => {
-    stepConway();
-    redrawCaCanvas();
-    updateHud();
-    status(`Advanced to Generation ${generation}`);
-  });
 
   const resetBtn = document.createElement("button");
   resetBtn.className = "ca-transport-btn";
@@ -805,7 +780,7 @@ export function buildCellularPanel(container) {
     storeAsSeed();
   });
 
-  transportRow.append(runBtn, stepBtn, resetBtn, storeBtn);
+  transportRow.append(resetBtn, storeBtn);
 
   const loopModeWrap = document.createElement("div");
   loopModeWrap.className = "ca-loop-mode-wrap";
@@ -866,14 +841,15 @@ export function buildCellularPanel(container) {
         <div class="ca-hud-item"><span class="ca-hud-lbl">GEN</span><b id="ca-hud-gen" class="ca-hud-val">0</b></div>
         <div class="ca-hud-item"><span class="ca-hud-lbl">POPULATION</span><b id="ca-hud-pop" class="ca-hud-val">0 cells</b></div>
         <div class="ca-hud-item"><span class="ca-hud-lbl">GRID</span><b id="ca-hud-size" class="ca-hud-val">${gridSize} × ${gridSize}</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">MODE</span><b id="ca-hud-mode" class="ca-hud-val">Loop (64 steps)</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">CYCLE</span><b id="ca-hud-mode" class="ca-hud-val">Loop (64 steps)</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">STATUS</span><b id="ca-hud-status" class="ca-hud-val">■ STOPPED</b></div>
       </div>
     </div>
     <div class="ca-canvas-wrap">
       <canvas id="ca-canvas" class="ca-canvas"></canvas>
     </div>
     <div class="ca-display-footer">
-      <span class="ca-hint">💡 Click & drag to draw cells · Right-click or Eraser to erase · Spacebar to Run/Pause</span>
+      <span class="ca-hint">💡 Click & drag to draw cells · Right-click or Eraser to erase · Global Play (Spacebar) to step evolution</span>
       <span id="ca-step-hover" class="ca-step-hover">—</span>
     </div>
   `;
@@ -895,7 +871,8 @@ export function buildCellularPanel(container) {
 export function generateCaBank() {
   const bank = [];
   const seqLen = Math.max(1, Math.min(64, state.length || 64));
-  const rate = state.rate || "1/16";
+  let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
+  if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
   const tempo = state.tempo || 120;
 
   for (let s = 0; s < 16; s++) {
@@ -903,7 +880,7 @@ export function generateCaBank() {
     for (let i = 0; i < seqLen; i++) {
       steps.push({
         notes: [], // Visual sequence focus first; note rules will be added in follow-up step
-        rate: rate,
+        rate: rateIdx,
         gate: state.gate ?? 50
       });
     }
@@ -944,7 +921,7 @@ export function initCellular() {
     // Check loop mode
     if (loopMode === "loop") {
       const loopLen = Math.max(1, Math.min(64, state.length || 64));
-      if (stepIndex === 0 && generation > 0) {
+      if (generation >= loopLen) {
         // Reset to initial seed pattern at loop boundary
         resetToSeed();
         return;

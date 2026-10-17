@@ -957,18 +957,18 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   margin-top: 2px;
 }
 
-/* Evolution & Transport buttons */
+/* Evolution & Seed buttons */
 .ca-transport-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr;
-  gap: 5px;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
   margin-bottom: 6px;
 }
 .ca-transport-btn {
   font: inherit;
   font-size: 9px;
   font-weight: 700;
-  padding: 6px 3px;
+  padding: 6px 4px;
   border-radius: 4px;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -981,15 +981,6 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
 .ca-transport-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
-}
-.ca-run-btn {
-  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.ca-run-btn.running {
-  background: var(--accent);
-  color: #ffffff;
 }
 
 .ca-loop-mode-wrap {

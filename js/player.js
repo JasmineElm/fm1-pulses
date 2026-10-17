@@ -1,5 +1,5 @@
 // player.js — Transport audition, playback loop, and live MIDI streaming.
-import { state, getBank, getSelected, RATE_QUARTERS, status, sleep } from "./state.js?v=100";
+import { state, getBank, getSelected, RATE_NAMES, RATE_QUARTERS, status, sleep } from "./state.js?v=105";
 import * as midi from "./midi.js?v=100";
 import * as audio from "./audio.js?v=100";
 import { setScopeNow, renderScope } from "./scope.js?v=100";
@@ -137,7 +137,10 @@ export async function liveLoop(token) {
       const st = p.steps[i];
       const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
-      const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+      const rIdx = typeof st.rate === "number" ? st.rate : RATE_NAMES.indexOf(st.rate);
+      const prIdx = typeof p.rate === "number" ? p.rate : RATE_NAMES.indexOf(p.rate);
+      const qMult = RATE_QUARTERS[rIdx] ?? RATE_QUARTERS[prIdx] ?? 0.25;
+      const stepMs = qMs * qMult;
       const late = i % 2 === 1 ? stepMs * swingFrac() : 0;
       const humFactor = (state.humanize ?? 0) / 100;
       const humJitter = humFactor > 0 ? (Math.random() * 2 - 1) * humFactor * 0.15 * stepMs : 0;
