@@ -1,677 +1,879 @@
-// cellular.js — 1D Elementary Cellular Automata (Wolfram) Sequencer Model.
-//
-// Evolves 64-step musical phrases using Wolfram 1D cellular automata rules
-// (e.g., Rule 30, 90, 110, 150). Maps generations of cell states into
-// quantized polyphonic chords, melodic contours, or split bass/lead lines.
+// cellular.js — 2D Conway's Game of Life Cellular Automata Sequencer Model.
+// Inspired by Reaktor's Newscool: resizable square grid (defaults to 64x64),
+// interactive cell drawing, Conway's B3/S23 evolution, and real-time generation updates.
 
-import { SCALES, NOTE_NAMES, midiName, mulberry32 } from "./generator.js?v=100";
+import { mulberry32 } from "./generator.js?v=100";
 import {
   state, refs, R, setState, scheduleRegen, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer
-} from "./state.js?v=103";
-import { knob, fader, dropdown, actionBtn } from "./controls.js?v=103";
-import { onStep, isLive } from "./player.js?v=103";
+} from "./state.js?v=104";
+import { fader, dropdown, actionBtn } from "./controls.js?v=104";
+import { onStep, isLive, toggleLive } from "./player.js?v=104";
 
-export const WOLFRAM_PRESETS = [
-  { rule: 30, name: "Rule 30", desc: "Chaos / Aperiodic" },
-  { rule: 90, name: "Rule 90", desc: "Sierpinski Fractal" },
-  { rule: 110, name: "Rule 110", desc: "Turing / Gliders" },
-  { rule: 150, name: "Rule 150", desc: "Bilateral Fractal" },
-  { rule: 184, name: "Rule 184", desc: "Traffic / Flow" },
-  { rule: 54, name: "Rule 54", desc: "Glider Cycles" },
-  { rule: 22, name: "Rule 22", desc: "Branching Trees" },
-  { rule: 126, name: "Rule 126", desc: "Percolation" }
+// Grid sizes supported
+export const GRID_SIZES = [16, 32, 48, 64, 80, 96, 128];
+export const DEFAULT_GRID_SIZE = 64;
+
+// Conway Engine State
+let gridSize = DEFAULT_GRID_SIZE;
+let currentGrid = new Uint8Array(gridSize * gridSize);
+let nextGrid = new Uint8Array(gridSize * gridSize);
+let seedGrid = new Uint8Array(gridSize * gridSize);
+
+let generation = 0;
+let population = 0;
+let loopMode = "loop"; // "loop" (resets to seed every sequence-length steps) or "free"
+let boundaryMode = "wrap"; // "wrap" (toroidal) or "wall" (zero borders)
+let activeTool = "pen"; // "pen" or "eraser"
+let brushSize = 1; // 1, 2, or 3
+let hoverCell = null;
+let isPointerDown = false;
+let drawValue = 1; // 1 for drawing alive, 0 for erasing
+
+// Classic Conway's Game of Life Presets
+export const LIFE_PRESETS = [
+  {
+    name: "Glider",
+    desc: "Diagonal traveling spaceship",
+    matrix: [
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 1]
+    ]
+  },
+  {
+    name: "Gosper Glider Gun",
+    desc: "Infinite glider generator stream",
+    coords: [
+      // Left 2x2 square
+      [5, 1], [5, 2], [6, 1], [6, 2],
+      // Left stator/rotor
+      [5, 11], [6, 11], [7, 11], [4, 12], [8, 12], [3, 13], [9, 13], [3, 14], [9, 14],
+      [6, 15], [4, 16], [8, 16], [5, 17], [6, 17], [7, 17], [6, 18],
+      // Right mechanism
+      [3, 21], [4, 21], [5, 21], [3, 22], [4, 22], [5, 22], [2, 23], [6, 23],
+      [1, 25], [2, 25], [6, 25], [7, 25],
+      // Right 2x2 square
+      [3, 35], [4, 35], [3, 36], [4, 36]
+    ]
+  },
+  {
+    name: "Pulsar",
+    desc: "Period 3 geometric cross oscillator",
+    coords: (function () {
+      const pts = [];
+      const offsets = [1, 2, 3, 7, 8, 9];
+      const fixed = [0, 5, 7, 12];
+      for (const r of [0, 5, 7, 12]) {
+        for (const c of offsets) pts.push([r, c]);
+      }
+      for (const c of fixed) {
+        for (const r of offsets) pts.push([r, c]);
+      }
+      return pts;
+    })()
+  },
+  {
+    name: "Acorn",
+    desc: "Methuselah: runs 5,206 generations, spawns 13 gliders",
+    matrix: [
+      [0, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0],
+      [1, 1, 0, 0, 1, 1, 1]
+    ]
+  },
+  {
+    name: "R-Pentomino",
+    desc: "Small 5-cell seed evolving over 1,100 generations",
+    matrix: [
+      [0, 1, 1],
+      [1, 1, 0],
+      [0, 1, 0]
+    ]
+  },
+  {
+    name: "Pentadecathlon",
+    desc: "Period 15 line oscillator",
+    matrix: [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ]
+  },
+  {
+    name: "LWSS",
+    desc: "Lightweight horizontal spaceship",
+    matrix: [
+      [0, 1, 0, 0, 1],
+      [1, 0, 0, 0, 0],
+      [1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 0]
+    ]
+  },
+  {
+    name: "Toad & Beacon",
+    desc: "Classic dual period 2 oscillators",
+    coords: [
+      // Toad
+      [1, 2], [1, 3], [1, 4], [2, 1], [2, 2], [2, 3],
+      // Beacon
+      [5, 8], [5, 9], [6, 8], [6, 9], [7, 10], [7, 11], [8, 10], [8, 11]
+    ]
+  }
 ];
 
-export const CA_WIDTH = 16;
-let caCustomRow = new Uint8Array(CA_WIDTH);
-let activeHoverCell = null;
-let activeCanvasPlayhead = null;
+// Set Grid Size (preserving existing center if possible)
+export function setGridSize(newSize) {
+  newSize = Math.max(16, Math.min(128, Math.round(Number(newSize) || 64)));
+  if (newSize === gridSize && currentGrid.length === newSize * newSize) return;
 
-// Convert 8-bit rule number (0..255) to array of 8 bits [b7..b0]
-export function ruleToBits(rule) {
-  const r = Math.max(0, Math.min(255, Math.round(Number(rule) || 0)));
-  const bits = [];
-  for (let i = 7; i >= 0; i--) {
-    bits.push((r >> i) & 1);
-  }
-  return bits;
-}
+  const oldSize = gridSize;
+  const oldGrid = currentGrid;
+  const oldSeed = seedGrid;
 
-// Convert 8 bits [b7..b0] to rule number
-export function bitsToRule(bits) {
-  let r = 0;
-  for (let i = 0; i < 8; i++) {
-    r |= (bits[i] ? 1 : 0) << (7 - i);
-  }
-  return r;
-}
+  gridSize = newSize;
+  currentGrid = new Uint8Array(newSize * newSize);
+  nextGrid = new Uint8Array(newSize * newSize);
+  seedGrid = new Uint8Array(newSize * newSize);
 
-// Single generation evolution of 1D CA
-export function evolveRow(row, rule, boundary = "wrap") {
-  const W = row.length;
-  const next = new Uint8Array(W);
-  for (let i = 0; i < W; i++) {
-    let left, right;
-    if (boundary === "wrap") {
-      left = row[(i - 1 + W) % W];
-      right = row[(i + 1) % W];
-    } else if (boundary === "mirror") {
-      left = i === 0 ? row[1] : row[i - 1];
-      right = i === W - 1 ? row[W - 2] : row[i + 1];
-    } else { // "zero"
-      left = i === 0 ? 0 : row[i - 1];
-      right = i === W - 1 ? 0 : row[i + 1];
-    }
-    const center = row[i];
-    const pattern = (left << 2) | (center << 1) | right;
-    next[i] = (rule >> pattern) & 1;
-  }
-  return next;
-}
+  const offX = Math.floor((newSize - oldSize) / 2);
+  const offY = Math.floor((newSize - oldSize) / 2);
 
-// Generate the initial row (generation 0)
-export function makeInitialRow(width, genesis, seed, initDensity, custom = null) {
-  const row = new Uint8Array(width);
-  if (genesis === "custom" && custom) {
-    for (let i = 0; i < width; i++) row[i] = custom[i] ? 1 : 0;
-    return row;
-  }
-  if (genesis === "random") {
-    const rng = mulberry32(seed ^ 0x5a5a5a5a);
-    const prob = (initDensity ?? 35) / 100;
-    for (let i = 0; i < width; i++) {
-      row[i] = rng() < prob ? 1 : 0;
-    }
-    // Guarantee at least one cell alive
-    if (!row.some((c) => c === 1)) row[Math.floor(width / 2)] = 1;
-  } else if (genesis === "sparse") {
-    const rng = mulberry32(seed ^ 0x12345678);
-    const pos1 = Math.floor(rng() * width);
-    const pos2 = (pos1 + Math.floor(width / 2) + Math.floor(rng() * 3 - 1)) % width;
-    row[pos1] = 1;
-    row[pos2] = 1;
-  } else if (genesis === "edges") {
-    row[0] = 1;
-    row[width - 1] = 1;
-  } else {
-    // "center" default
-    row[Math.floor(width / 2)] = 1;
-  }
-  return row;
-}
-
-// Run CA for N steps, returning array of rows
-export function runAutomata(stepsCount, width, rule, genesis, boundary, seed, initDensity, custom) {
-  const grid = [];
-  let current = makeInitialRow(width, genesis, seed, initDensity, custom);
-  grid.push(current);
-  for (let s = 1; s < stepsCount; s++) {
-    current = evolveRow(current, rule, boundary);
-    grid.push(current);
-  }
-  return grid;
-}
-
-// Build array of scale MIDI note numbers for the W columns
-export function buildScalePitches(root, scaleName, count) {
-  const scale = SCALES[scaleName] || SCALES.pentMinor;
-  const pitches = [];
-  const startRoot = Math.max(24, Math.min(84, Math.round(Number(root) || 48)));
-  let deg = 0;
-  while (pitches.length < count) {
-    const oct = Math.floor(deg / scale.length);
-    const note = startRoot + oct * 12 + scale[deg % scale.length];
-    if (note <= 127) pitches.push(note);
-    else break;
-    deg++;
-  }
-  while (pitches.length < count) {
-    pitches.push(pitches[pitches.length - 1] || 60);
-  }
-  return pitches;
-}
-
-// Map a 64-step CA grid to an FM-1 pattern
-export function caGridToPattern(grid, pitches, params, seed) {
-  const len = Math.max(1, Math.min(64, Math.round(params.length || 64)));
-  const steps = [];
-  const contour = [];
-  const gates = [];
-  const mapping = params.caMapping || "matrix";
-  const gateProb = (params.caDensity ?? 85) / 100;
-  const baseVel = Math.max(1, Math.min(127, Math.round(params.caVelocity ?? 100)));
-  const rng = mulberry32(seed ^ 0xca11a110);
-
-  for (let i = 0; i < 64; i++) {
-    if (i >= len) {
-      steps.push({ rate: params.rate, notes: [] });
-      contour.push(pitches[0] || 60);
-      gates.push(0);
-      continue;
-    }
-
-    const row = grid[i] || new Uint8Array(CA_WIDTH);
-    const activeCols = [];
-    for (let c = 0; c < row.length; c++) {
-      if (row[c] === 1) activeCols.push(c);
-    }
-
-    const hasNotes = activeCols.length > 0 && rng() <= gateProb;
-    gates.push(hasNotes ? 1 : 0);
-
-    const stepNotes = [];
-    if (hasNotes) {
-      if (mapping === "matrix") {
-        // Polyphonic: up to 6 simultaneous notes
-        const maxNotes = Math.min(6, activeCols.length);
-        const stride = Math.max(1, Math.floor(activeCols.length / maxNotes));
-        for (let k = 0; k < activeCols.length && stepNotes.length < maxNotes; k += stride) {
-          const col = activeCols[k];
-          const note = pitches[col] ?? 60;
-          // Dynamics influenced by density
-          const vel = Math.max(20, Math.min(127, Math.round(baseVel * (0.8 + (activeCols.length / CA_WIDTH) * 0.4))));
-          stepNotes.push({ note, vel });
-        }
-      } else if (mapping === "contour") {
-        // Melodic lead contour: weighted center of mass
-        let sum = 0;
-        for (const col of activeCols) sum += col;
-        const avgCol = Math.round(sum / activeCols.length);
-        const note = pitches[avgCol] ?? pitches[0] ?? 60;
-        stepNotes.push({ note, vel: baseVel });
-      } else if (mapping === "bassMelody") {
-        // Bass (col < 8) and Lead (col >= 8)
-        const bassCols = activeCols.filter((c) => c < 8);
-        const leadCols = activeCols.filter((c) => c >= 8);
-        if (bassCols.length) {
-          stepNotes.push({ note: pitches[bassCols[0]], vel: Math.min(127, baseVel + 10) });
-        }
-        if (leadCols.length) {
-          stepNotes.push({ note: pitches[leadCols[leadCols.length - 1]], vel: baseVel });
-        }
+  for (let y = 0; y < oldSize; y++) {
+    for (let x = 0; x < oldSize; x++) {
+      const nx = x + offX;
+      const ny = y + offY;
+      if (nx >= 0 && nx < newSize && ny >= 0 && ny < newSize) {
+        const val = oldGrid[y * oldSize + x];
+        currentGrid[ny * newSize + nx] = val;
+        seedGrid[ny * newSize + nx] = oldSeed ? oldSeed[y * oldSize + x] : val;
       }
     }
-
-    steps.push({ rate: params.rate, notes: stepNotes });
-    const primaryNote = stepNotes.length ? stepNotes[0].note : (pitches[Math.floor(CA_WIDTH / 2)] || 60);
-    contour.push(primaryNote);
   }
 
-  return {
-    length: len,
-    rate: params.rate,
-    tempo: params.tempo,
-    gate: params.gate,
-    swing: params.swing,
-    steps,
-    caGrid: grid,
-    pitches,
-    contour,
-    gates
-  };
+  generation = 0;
+  countPopulation();
+  redrawCaCanvas();
+  updateHud();
 }
 
-// Generate the 16-slot bank using CA
-export function generateCaBank(baseParams, driftPct = 50) {
-  const drift = Math.max(0, Math.min(100, driftPct)) / 100;
-  const baseSeed = (baseParams.seed >>> 0);
-  const rule = Math.max(0, Math.min(255, Math.round(baseParams.caRule ?? 30)));
-  const genesis = baseParams.caGenesis || "center";
-  const boundary = baseParams.caBoundary || "wrap";
-  const initDensity = baseParams.caInitDensity ?? 35;
-  const pitches = buildScalePitches(baseParams.caRoot ?? 48, baseParams.caScale || "pentMinor", CA_WIDTH);
+// Count live cells
+export function countPopulation() {
+  let count = 0;
+  for (let i = 0; i < currentGrid.length; i++) {
+    if (currentGrid[i] > 0) count++;
+  }
+  population = count;
+  return count;
+}
 
-  const bank = [];
-  for (let slot = 0; slot < 16; slot++) {
-    const slotSeed = (baseSeed + slot * 0x9e3779b1) >>> 0;
-    const t = (slot / 15) * drift;
+// Conway's Game of Life Evolution Step (B3 / S23)
+export function stepConway() {
+  const N = gridSize;
+  const isWrap = boundaryMode === "wrap";
+  let liveCount = 0;
 
-    // Bank evolution: evolve rule mutation or initial row offset with drift
-    let slotRule = rule;
-    if (t > 0.4 && slot > 0) {
-      // Occasional gentle bit flip in rule for evolutionary drift
-      const rng = mulberry32(slotSeed ^ 0xfeed);
-      if (rng() < t * 0.7) {
-        const bitToFlip = (rng() * 8) | 0;
-        slotRule = rule ^ (1 << bitToFlip);
+  for (let y = 0; y < N; y++) {
+    const ym1 = y === 0 ? (isWrap ? N - 1 : -1) : y - 1;
+    const yp1 = y === N - 1 ? (isWrap ? 0 : -1) : y + 1;
+    const rowMid = y * N;
+    const rowTop = ym1 >= 0 ? ym1 * N : -1;
+    const rowBot = yp1 >= 0 ? yp1 * N : -1;
+
+    for (let x = 0; x < N; x++) {
+      const xm1 = x === 0 ? (isWrap ? N - 1 : -1) : x - 1;
+      const xp1 = x === N - 1 ? (isWrap ? 0 : -1) : x + 1;
+
+      // Sum of 8 neighbors
+      let k = 0;
+      if (rowTop >= 0) {
+        if (xm1 >= 0 && currentGrid[rowTop + xm1] > 0) k++;
+        if (currentGrid[rowTop + x] > 0) k++;
+        if (xp1 >= 0 && currentGrid[rowTop + xp1] > 0) k++;
       }
-    }
+      if (xm1 >= 0 && currentGrid[rowMid + xm1] > 0) k++;
+      if (xp1 >= 0 && currentGrid[rowMid + xp1] > 0) k++;
+      if (rowBot >= 0) {
+        if (xm1 >= 0 && currentGrid[rowBot + xm1] > 0) k++;
+        if (currentGrid[rowBot + x] > 0) k++;
+        if (xp1 >= 0 && currentGrid[rowBot + xp1] > 0) k++;
+      }
 
-    // Offset starting generation or density with drift
-    const startOffset = Math.round(t * 12);
-    const totalGenNeeded = 64 + startOffset;
-    const rawGrid = runAutomata(
-      totalGenNeeded,
-      CA_WIDTH,
-      slotRule,
-      genesis,
-      boundary,
-      slotSeed,
-      initDensity,
-      genesis === "custom" ? caCustomRow : null
-    );
+      const idx = rowMid + x;
+      const age = currentGrid[idx];
+      let nextState = 0;
 
-    const slotGrid = rawGrid.slice(startOffset, startOffset + 64);
-    const pat = caGridToPattern(slotGrid, pitches, baseParams, slotSeed);
-    bank.push(pat);
-  }
-  return bank;
-}
-
-// Randomize Cellular Automata parameters
-export function randomizeCa() {
-  state.seed = (Math.random() * 1e9) | 0;
-  const randomPreset = WOLFRAM_PRESETS[(Math.random() * WOLFRAM_PRESETS.length) | 0];
-  state.caRule = randomPreset ? randomPreset.rule : (Math.random() * 256) | 0;
-  state.caGenesis = ["center", "random", "sparse", "edges"][(Math.random() * 4) | 0];
-  state.caBoundary = ["wrap", "zero", "mirror"][(Math.random() * 3) | 0];
-  state.caMapping = ["matrix", "contour", "bassMelody"][(Math.random() * 3) | 0];
-  state.caScale = Object.keys(SCALES)[(Math.random() * Object.keys(SCALES).length) | 0];
-  state.caRoot = [36, 48, 60][(Math.random() * 3) | 0];
-  state.caDensity = 60 + ((Math.random() * 35) | 0);
-  state.caInitDensity = 25 + ((Math.random() * 40) | 0);
-
-  syncCaControls();
-  doGenerate(true);
-}
-
-// Render the Space-Time Cellular Automata matrix canvas
-export function renderCaCanvas(canvas, pattern, activeStep = null, hover = null) {
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = Math.round(rect.width || 560);
-  const h = Math.round(rect.height || 480);
-
-  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-  }
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  const styles = getComputedStyle(document.documentElement);
-  const bgColor = styles.getPropertyValue("--panel").trim() || "#181a20";
-  const panel2 = styles.getPropertyValue("--panel2").trim() || "#22252e";
-  const fgColor = styles.getPropertyValue("--fg").trim() || "#f3f4f6";
-  const dimColor = styles.getPropertyValue("--dim").trim() || "#9ca3af";
-  const lineColor = styles.getPropertyValue("--line").trim() || "#333846";
-  const accent = styles.getPropertyValue("--accent").trim() || "#3b82f6";
-
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, w, h);
-
-  const pitches = pattern?.pitches || buildScalePitches(state.caRoot ?? 48, state.caScale || "pentMinor", CA_WIDTH);
-  const grid = pattern?.caGrid || [];
-  const stepsCount = Math.max(1, Math.min(64, pattern?.length || state.length || 64));
-
-  const padLeft = 24;
-  const padTop = 22;
-  const padRight = 6;
-  const padBottom = 8;
-  const gridW = w - padLeft - padRight;
-  const gridH = h - padTop - padBottom;
-  const colW = gridW / CA_WIDTH;
-  const rowH = gridH / stepsCount;
-
-  // 1. Column Pitch Headers
-  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  for (let c = 0; c < CA_WIDTH; c++) {
-    const cx = padLeft + c * colW + colW / 2;
-    const noteName = midiName(pitches[c] ?? 60);
-    ctx.fillStyle = (hover && hover.col === c) ? fgColor : dimColor;
-    ctx.fillText(noteName, cx, 11);
-  }
-
-  // 2. Draw Grid Cells
-  for (let r = 0; r < stepsCount; r++) {
-    const row = grid[r] || new Uint8Array(CA_WIDTH);
-    const ry = padTop + r * rowH;
-    const isPlayhead = activeStep === r;
-
-    // Step number on the left (every 4 or 8 steps)
-    if (r === 0 || (r + 1) % 8 === 0 || isPlayhead) {
-      ctx.textAlign = "right";
-      ctx.fillStyle = isPlayhead ? fgColor : dimColor;
-      ctx.font = isPlayhead ? "bold 8.5px 'Barlow Semi Condensed', sans-serif" : "7.5px 'Barlow Semi Condensed', sans-serif";
-      ctx.fillText(String(r + 1), padLeft - 4, ry + rowH / 2);
-    }
-
-    // Playhead row background glow
-    if (isPlayhead) {
-      ctx.fillStyle = styles.getPropertyValue("--panel2") || panel2;
-      ctx.fillRect(padLeft, ry - 0.5, gridW, rowH + 1);
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(padLeft - 1, ry - 0.5, gridW + 2, rowH + 1);
-    }
-
-    for (let c = 0; c < CA_WIDTH; c++) {
-      const rx = padLeft + c * colW;
-      const isAlive = row[c] === 1;
-      const cellPad = rowH > 8 ? 1.5 : 0.8;
-      const cellW = Math.max(1, colW - cellPad * 2);
-      const cellH = Math.max(1, rowH - cellPad * 2);
-
-      if (isAlive) {
-        ctx.fillStyle = isPlayhead ? "#ffffff" : accent;
-        if (cellW > 6 && cellH > 6) {
-          ctx.beginPath();
-          ctx.roundRect(rx + cellPad, ry + cellPad, cellW, cellH, 2);
-          ctx.fill();
-        } else {
-          ctx.fillRect(rx + cellPad, ry + cellPad, cellW, cellH);
+      if (age > 0) {
+        // Survival rule: 2 or 3 neighbors
+        if (k === 2 || k === 3) {
+          nextState = age < 255 ? age + 1 : 255;
+          liveCount++;
         }
       } else {
-        ctx.fillStyle = panel2;
-        ctx.fillRect(rx + cellPad, ry + cellPad, cellW, cellH);
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(rx + cellPad, ry + cellPad, cellW, cellH);
+        // Birth rule: exactly 3 neighbors
+        if (k === 3) {
+          nextState = 1;
+          liveCount++;
+        }
       }
+      nextGrid[idx] = nextState;
+    }
+  }
 
-      // Hover cell highlight
-      if (hover && hover.row === r && hover.col === c) {
-        ctx.strokeStyle = fgColor;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(rx, ry, colW, rowH);
+  // Swap buffers
+  const temp = currentGrid;
+  currentGrid = nextGrid;
+  nextGrid = temp;
+
+  generation++;
+  population = liveCount;
+}
+
+// Reset to initial user-drawn or stamped seed
+export function resetToSeed() {
+  currentGrid.set(seedGrid);
+  generation = 0;
+  countPopulation();
+  redrawCaCanvas();
+  updateHud();
+}
+
+// Save current grid state as the new seed pattern
+export function storeAsSeed() {
+  seedGrid.set(currentGrid);
+  generation = 0;
+  status("Stored current pattern as seed ↺", "ok");
+  updateHud();
+}
+
+// Clear all cells
+export function clearGrid() {
+  currentGrid.fill(0);
+  seedGrid.fill(0);
+  generation = 0;
+  population = 0;
+  redrawCaCanvas();
+  updateHud();
+  status("Grid cleared");
+}
+
+// Invert all cells
+export function invertGrid() {
+  for (let i = 0; i < currentGrid.length; i++) {
+    currentGrid[i] = currentGrid[i] > 0 ? 0 : 1;
+  }
+  seedGrid.set(currentGrid);
+  countPopulation();
+  redrawCaCanvas();
+  updateHud();
+  status("Grid inverted");
+}
+
+// Randomize cells (soup) using Seed and density
+export function randomizeGrid(density = 25) {
+  const prng = mulberry32(state.seed ^ 0x6e657773);
+  const prob = Math.max(0.05, Math.min(0.85, (density || 25) / 100));
+  for (let i = 0; i < currentGrid.length; i++) {
+    currentGrid[i] = prng() < prob ? 1 : 0;
+  }
+  seedGrid.set(currentGrid);
+  generation = 0;
+  countPopulation();
+  redrawCaCanvas();
+  updateHud();
+  status(`Randomized ${gridSize}×${gridSize} grid (${Math.round(prob * 100)}% density)`, "ok");
+}
+
+// Stamp or load a preset into the center of the grid
+export function loadPreset(preset) {
+  currentGrid.fill(0);
+  const N = gridSize;
+
+  if (preset.matrix) {
+    const mRows = preset.matrix.length;
+    const mCols = preset.matrix[0].length;
+    const startY = Math.floor((N - mRows) / 2);
+    const startX = Math.floor((N - mCols) / 2);
+
+    for (let r = 0; r < mRows; r++) {
+      for (let c = 0; c < mCols; c++) {
+        if (preset.matrix[r][c]) {
+          const y = (startY + r + N) % N;
+          const x = (startX + c + N) % N;
+          currentGrid[y * N + x] = 1;
+        }
+      }
+    }
+  } else if (preset.coords) {
+    let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    for (const [r, c] of preset.coords) {
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+      if (c < minC) minC = c;
+      if (c > maxC) maxC = c;
+    }
+    const h = maxR - minR + 1;
+    const w = maxC - minC + 1;
+    const startY = Math.floor((N - h) / 2) - minR;
+    const startX = Math.floor((N - w) / 2) - minC;
+
+    for (const [r, c] of preset.coords) {
+      const y = (r + startY + N) % N;
+      const x = (c + startX + N) % N;
+      currentGrid[y * N + x] = 1;
+    }
+  }
+
+  seedGrid.set(currentGrid);
+  generation = 0;
+  countPopulation();
+  redrawCaCanvas();
+  updateHud();
+  status(`Loaded Life preset: ${preset.name}`, "ok");
+}
+
+// Stamp default pattern on startup (e.g. Glider Gun on 64+, or Glider + Pulsar on smaller)
+function setupDefaultPattern() {
+  if (gridSize >= 48) {
+    const gun = LIFE_PRESETS.find((p) => p.name === "Gosper Glider Gun");
+    if (gun) loadPreset(gun);
+  } else {
+    const glider = LIFE_PRESETS.find((p) => p.name === "Glider");
+    if (glider) loadPreset(glider);
+  }
+}
+
+// Paint cells at (x, y) with current brush size
+function paintCell(cx, cy, val) {
+  const N = gridSize;
+  const r = brushSize - 1;
+
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dy === 0 && dx === 0 ? null : null, dx++) {
+      let x = cx + dx;
+      let y = cy + dy;
+      if (boundaryMode === "wrap") {
+        x = (x + N) % N;
+        y = (y + N) % N;
+      } else {
+        if (x < 0 || x >= N || y < 0 || y >= N) continue;
+      }
+      currentGrid[y * N + x] = val ? 1 : 0;
+    }
+  }
+}
+
+// RENDER 2D GAME OF LIFE CANVAS
+export function renderCaCanvas(canvas) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const displayW = Math.floor(rect.width);
+  const displayH = Math.floor(rect.height);
+
+  if (displayW <= 0 || displayH <= 0) return;
+
+  const targetW = Math.floor(displayW * dpr);
+  const targetH = Math.floor(displayH * dpr);
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width = targetW;
+    canvas.height = targetH;
+  }
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Theme detection
+  const isLight = document.documentElement.getAttribute("data-theme") === "light";
+  const bgCol = isLight ? "#f8fafc" : "#0a0f1d";
+  const gridLineCol = isLight ? "rgba(15, 23, 42, 0.05)" : "rgba(255, 255, 255, 0.04)";
+  const majorLineCol = isLight ? "rgba(15, 23, 42, 0.12)" : "rgba(255, 255, 255, 0.09)";
+
+  // Live cell colors: Newborn vs Mature vs Ancient
+  const newbornCol = isLight ? "#2563eb" : "#38bdf8"; // Bright sky blue / royal blue
+  const matureCol = isLight ? "#4f46e5" : "#818cf8";  // Indigo
+  const ancientCol = isLight ? "#7c3aed" : "#c084fc"; // Violet / Purple
+
+  ctx.fillStyle = bgCol;
+  ctx.fillRect(0, 0, displayW, displayH);
+
+  const N = gridSize;
+  const cellW = displayW / N;
+  const cellH = displayH / N;
+
+  // Draw Grid Lines (subtle, if cell size is large enough)
+  if (cellW >= 4) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = gridLineCol;
+    ctx.beginPath();
+    for (let i = 1; i < N; i++) {
+      const isMajor = i % 8 === 0 || i % 16 === 0;
+      if (isMajor) continue;
+      const x = Math.floor(i * cellW) + 0.5;
+      const y = Math.floor(i * cellH) + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, displayH);
+      ctx.moveTo(0, y);
+      ctx.lineTo(displayW, y);
+    }
+    ctx.stroke();
+
+    // Major grid lines every 8 or 16 cells
+    ctx.strokeStyle = majorLineCol;
+    ctx.beginPath();
+    for (let i = 8; i < N; i += 8) {
+      const x = Math.floor(i * cellW) + 0.5;
+      const y = Math.floor(i * cellH) + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, displayH);
+      ctx.moveTo(0, y);
+      ctx.lineTo(displayW, y);
+    }
+    ctx.stroke();
+  }
+
+  // Draw Live Cells
+  const inset = cellW >= 6 ? 0.6 : 0;
+  for (let y = 0; y < N; y++) {
+    const rowIdx = y * N;
+    const cy = y * cellH;
+    for (let x = 0; x < N; x++) {
+      const age = currentGrid[rowIdx + x];
+      if (age > 0) {
+        if (age === 1) {
+          ctx.fillStyle = newbornCol;
+        } else if (age < 8) {
+          ctx.fillStyle = matureCol;
+        } else {
+          ctx.fillStyle = ancientCol;
+        }
+
+        const cx = x * cellW;
+        if (cellW >= 7) {
+          // Rounded cell rect
+          const rw = cellW - inset * 2;
+          const rh = cellH - inset * 2;
+          const rad = Math.min(2, rw / 4);
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, rw, rh, rad);
+          ctx.fill();
+        } else {
+          ctx.fillRect(cx + inset, cy + inset, cellW - inset * 2, cellH - inset * 2);
+        }
       }
     }
   }
 
-  // Row 0 custom genesis hint
-  ctx.strokeStyle = colorMix(accent, 40);
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 2]);
-  ctx.beginPath();
-  ctx.moveTo(padLeft, padTop + rowH);
-  ctx.lineTo(padLeft + gridW, padTop + rowH);
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
-function colorMix(col, pct) {
-  return `color-mix(in srgb, ${col} ${pct}%, transparent)`;
-}
-
-// Synchronize UI inputs to state
-export function syncCaControls() {
-  for (const [k, el] of Object.entries(refs)) {
-    if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
+  // Hover Cell Indicator
+  if (hoverCell && hoverCell.x >= 0 && hoverCell.x < N && hoverCell.y >= 0 && hoverCell.y < N) {
+    ctx.strokeStyle = isLight ? "#2563eb" : "#38bdf8";
+    ctx.lineWidth = 1.5;
+    const r = brushSize - 1;
+    const hx = (hoverCell.x - r) * cellW;
+    const hy = (hoverCell.y - r) * cellH;
+    const hw = (r * 2 + 1) * cellW;
+    const hh = (r * 2 + 1) * cellH;
+    ctx.strokeRect(hx + 0.5, hy + 0.5, hw - 1, hh - 1);
   }
-  updateRuleBitsDisplay(state.caRule ?? 30);
-  updateCaHeaderInfo();
-  updateCaSlotsDisplay();
+
+  ctx.restore();
 }
 
-function updateRuleBitsDisplay(rule) {
-  const bits = ruleToBits(rule);
-  const container = document.getElementById("ca-rule-bits");
-  if (!container) return;
-  const btns = container.querySelectorAll(".ca-bit-btn");
-  btns.forEach((btn, idx) => {
-    const bitVal = bits[idx];
-    btn.dataset.bitVal = String(bitVal);
-    btn.classList.toggle("active", bitVal === 1);
-    btn.textContent = `${btn.dataset.pattern}: ${bitVal}`;
-    btn.setAttribute("aria-pressed", String(bitVal === 1));
+export function redrawCaCanvas() {
+  const canvas = document.getElementById("ca-canvas");
+  if (canvas) renderCaCanvas(canvas);
+}
+
+// UPDATE HUD & HEADER INFO
+export function updateHud() {
+  const genEl = document.getElementById("ca-hud-gen");
+  const popEl = document.getElementById("ca-hud-pop");
+  const sizeEl = document.getElementById("ca-hud-size");
+  const modeEl = document.getElementById("ca-hud-mode");
+  const runBtn = document.getElementById("ca-run-btn");
+
+  if (genEl) genEl.textContent = String(generation);
+  if (popEl) {
+    const total = gridSize * gridSize;
+    const pct = ((population / total) * 100).toFixed(1);
+    popEl.textContent = `${population} cells (${pct}%)`;
+  }
+  if (sizeEl) sizeEl.textContent = `${gridSize} × ${gridSize}`;
+  if (modeEl) {
+    const loopLen = Math.max(1, Math.min(64, state.length || 64));
+    modeEl.textContent = loopMode === "loop" ? `Loop (${loopLen} steps)` : "Free Run (Continuous)";
+  }
+  if (runBtn) {
+    const playing = isLive();
+    runBtn.textContent = playing ? "■ Pause" : "▶ Run";
+    if (playing) {
+      runBtn.classList.add("running");
+    } else {
+      runBtn.classList.remove("running");
+    }
+  }
+}
+
+// WIRE CANVAS MOUSE & TOUCH INTERACTIONS
+function wireCanvasEvents(canvas) {
+  if (!canvas) return;
+
+  const getCellCoords = (clientX, clientY) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    if (x < 0 || x >= rect.width || y < 0 || y >= rect.height) return null;
+    const col = Math.floor((x / rect.width) * gridSize);
+    const row = Math.floor((y / rect.height) * gridSize);
+    return {
+      x: Math.max(0, Math.min(gridSize - 1, col)),
+      y: Math.max(0, Math.min(gridSize - 1, row))
+    };
+  };
+
+  const handlePointerDown = (clientX, clientY) => {
+    const c = getCellCoords(clientX, clientY);
+    if (!c) return;
+    isPointerDown = true;
+
+    if (activeTool === "eraser") {
+      drawValue = 0;
+    } else {
+      // Toggle mode: if target is currently alive, erase; if dead, draw
+      const curr = currentGrid[c.y * gridSize + c.x];
+      drawValue = curr > 0 ? 0 : 1;
+    }
+
+    paintCell(c.x, c.y, drawValue);
+    seedGrid.set(currentGrid); // Update seed so looping uses latest drawn state
+    countPopulation();
+    redrawCaCanvas();
+    updateHud();
+  };
+
+  const handlePointerMove = (clientX, clientY) => {
+    const c = getCellCoords(clientX, clientY);
+    hoverCell = c;
+
+    if (isPointerDown && c) {
+      paintCell(c.x, c.y, drawValue);
+      countPopulation();
+      redrawCaCanvas();
+      updateHud();
+    } else {
+      redrawCaCanvas();
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (isPointerDown) {
+      isPointerDown = false;
+      seedGrid.set(currentGrid);
+      countPopulation();
+      updateHud();
+    }
+  };
+
+  // Mouse Listeners
+  canvas.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 && e.button !== 2) return;
+    if (e.button === 2) {
+      // Right click erases
+      drawValue = 0;
+    }
+    handlePointerDown(e.clientX, e.clientY);
   });
-  const ruleNumEl = document.getElementById("ca-rule-num-display");
-  if (ruleNumEl) ruleNumEl.textContent = `Rule ${rule}`;
-}
 
-function updateCaHeaderInfo() {
-  const bank = getBank();
-  const pat = bank[getSelected()];
-  const infoEl = document.getElementById("ca-seq-info");
-  if (!infoEl || !pat) return;
-  const activeNotes = pat.steps.reduce((acc, st) => acc + (st.notes?.length || 0), 0);
-  const scaleName = state.caScale || "pentMinor";
-  const rootName = midiName(state.caRoot || 48);
-  infoEl.innerHTML = `Slot <b>${getSelected() + 1}</b> · Rule <b>${state.caRule ?? 30}</b> · ${state.length} steps · ${activeNotes} notes · ${rootName} ${scaleName}`;
-}
+  canvas.addEventListener("mousemove", (e) => {
+    handlePointerMove(e.clientX, e.clientY);
+  });
 
-export function updateCaSlotsDisplay() {
-  const container = document.getElementById("ca-bank-slots");
-  if (!container) return;
-  const bank = getBank();
-  const currentSlot = getSelected();
-  container.querySelectorAll(".ca-slot-btn").forEach((btn, idx) => {
-    const isSel = idx === currentSlot;
-    btn.classList.toggle("selected", isSel);
-    btn.setAttribute("aria-selected", String(isSel));
-    const pat = bank[idx];
-    const notesCount = pat ? pat.steps.reduce((acc, st) => acc + (st.notes?.length || 0), 0) : 0;
-    btn.querySelector(".ca-slot-notes").textContent = `${notesCount}n`;
+  window.addEventListener("mouseup", () => {
+    handlePointerUp();
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    hoverCell = null;
+    if (isPointerDown) {
+      isPointerDown = false;
+      seedGrid.set(currentGrid);
+    }
+    redrawCaCanvas();
+  });
+
+  canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault(); // Prevent right-click context menu when drawing
+  });
+
+  // Touch Listeners
+  canvas.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 0) {
+      e.preventDefault();
+      handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (e.touches.length > 0) {
+      e.preventDefault();
+      handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", () => {
+    handlePointerUp();
+  });
+
+  // Resize listener
+  window.addEventListener("resize", () => {
+    redrawCaCanvas();
   });
 }
 
-// Build the complete Cellular Automata UI Panel
+// BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
-  if (!container) return;
   container.innerHTML = "";
 
   const layout = document.createElement("div");
   layout.className = "ca-layout";
 
-  // LEFT MODULE: Controls
+  // LEFT COLUMN: Controls & Presets
   const module = document.createElement("div");
   module.className = "ca-module";
 
-  // SECTION 1: RULE
-  const ruleSect = document.createElement("section");
-  ruleSect.className = "sect ca-sect";
-  ruleSect.innerHTML = `
+  // 1. GRID DIMENSIONS & BOUNDARY
+  const gridSect = document.createElement("section");
+  gridSect.className = "sect ca-sect";
+  gridSect.innerHTML = `
     <div class="ca-sect-head">
-      <h3>Wolfram 1D Rule</h3>
-      <span class="ca-rule-badge" id="ca-rule-num-display">Rule ${state.caRule ?? 30}</span>
+      <h3>Grid Dimensions</h3>
+      <span class="ca-rule-badge" id="ca-badge-dim">${gridSize}×${gridSize}</span>
     </div>
   `;
 
-  // Rule Number Slider + Stepper
-  const ruleSliderWrap = document.createElement("div");
-  ruleSliderWrap.className = "ca-rule-slider-wrap";
-  ruleSliderWrap.append(
-    R("caRule", fader({
-      label: "Rule Number", min: 0, max: 255, step: 1, value: state.caRule ?? 30, def: 30,
-      format: (v) => `${Math.round(v)}`,
+  const gridForm = document.createElement("div");
+  gridForm.className = "ca-grid-2col";
+  gridForm.append(
+    R("caGridSize", dropdown({
+      label: "Grid Size",
+      options: GRID_SIZES.map((sz) => ({
+        v: String(sz),
+        t: sz === 64 ? `${sz} × ${sz} (Default)` : `${sz} × ${sz}`
+      })),
+      value: String(gridSize),
       onInput: (v) => {
-        state.caRule = Math.round(v);
-        updateRuleBitsDisplay(state.caRule);
-        scheduleRegen();
+        const sz = Number(v) || 64;
+        setGridSize(sz);
+        const badge = document.getElementById("ca-badge-dim");
+        if (badge) badge.textContent = `${sz}×${sz}`;
+        status(`Grid resized to ${sz}×${sz}`);
       },
-      tip: "Wolfram elementary cellular automata rule number (0–255)."
-    }))
-  );
-
-  // Quick Preset Rule Buttons
-  const presetRulesWrap = document.createElement("div");
-  presetRulesWrap.className = "ca-preset-rules";
-  for (const pr of WOLFRAM_PRESETS) {
-    const b = document.createElement("button");
-    b.className = "ca-preset-btn";
-    b.textContent = `${pr.rule}`;
-    b.title = `${pr.name}: ${pr.desc}`;
-    b.addEventListener("click", () => {
-      state.caRule = pr.rule;
-      if (refs.caRule) refs.caRule.setValue(pr.rule);
-      updateRuleBitsDisplay(pr.rule);
-      scheduleRegen();
-      status(`${pr.name} (${pr.desc}) selected`, "ok");
-    });
-    presetRulesWrap.appendChild(b);
-  }
-
-  // 8-Bit Wolfram Switchboard
-  const bitsContainer = document.createElement("div");
-  bitsContainer.className = "ca-rule-bits";
-  bitsContainer.id = "ca-rule-bits";
-  const patterns = ["111", "110", "101", "100", "011", "010", "001", "000"];
-  const currentBits = ruleToBits(state.caRule ?? 30);
-
-  patterns.forEach((pat, idx) => {
-    const bitBtn = document.createElement("button");
-    bitBtn.className = `ca-bit-btn ${currentBits[idx] ? "active" : ""}`;
-    bitBtn.dataset.pattern = pat;
-    bitBtn.dataset.bitIndex = String(idx);
-    bitBtn.dataset.bitVal = String(currentBits[idx]);
-    bitBtn.textContent = `${pat}: ${currentBits[idx]}`;
-    bitBtn.title = `Neighborhood ${pat} → click to toggle bit ${7 - idx}`;
-    bitBtn.addEventListener("click", () => {
-      const bits = ruleToBits(state.caRule ?? 30);
-      bits[idx] = bits[idx] ? 0 : 1;
-      const newRule = bitsToRule(bits);
-      state.caRule = newRule;
-      if (refs.caRule) refs.caRule.setValue(newRule);
-      updateRuleBitsDisplay(newRule);
-      scheduleRegen();
-      status(`Rule ${newRule} (bit ${7 - idx} toggled)`, "ok");
-    });
-    bitsContainer.appendChild(bitBtn);
-  });
-
-  ruleSect.append(ruleSliderWrap, presetRulesWrap, bitsContainer);
-
-  // SECTION 2: GENESIS (Initial Row)
-  const genesisSect = document.createElement("section");
-  genesisSect.className = "sect ca-sect";
-  genesisSect.innerHTML = `<h3>Genesis · Initial State</h3>`;
-
-  const genesisGrid = document.createElement("div");
-  genesisGrid.className = "ca-grid-2col";
-  genesisGrid.append(
-    R("caGenesis", dropdown({
-      label: "Genesis",
-      options: [
-        { v: "center", t: "Center 1" },
-        { v: "random", t: "Random Seed" },
-        { v: "sparse", t: "Sparse 2-Point" },
-        { v: "edges", t: "Dual Edges" },
-        { v: "custom", t: "Custom (Click Grid)" }
-      ],
-      value: state.caGenesis || "center",
-      onInput: (v) => { state.caGenesis = v; scheduleRegen(); },
-      tip: "Initial cell configuration for generation 1."
+      tip: "Grid resolution. Defaults to 64x64."
     })),
-    R("caBoundary", dropdown({
+    R("caBoundaryMode", dropdown({
       label: "Boundary",
       options: [
-        { v: "wrap", t: "Wrap (Torus)" },
-        { v: "zero", t: "Zero (Wall)" },
-        { v: "mirror", t: "Mirror (Reflect)" }
+        { v: "wrap", t: "Torus (Wrap)" },
+        { v: "wall", t: "Wall (Zero Border)" }
       ],
-      value: state.caBoundary || "wrap",
-      onInput: (v) => { state.caBoundary = v; scheduleRegen(); },
-      tip: "Edge conditions when calculating left/right neighbor."
-    })),
-    R("caInitDensity", fader({
-      label: "Density", min: 10, max: 90, value: state.caInitDensity ?? 35, def: 35,
-      format: (v) => `${Math.round(v)}%`,
-      onInput: setState("caInitDensity"),
-      tip: "Initial live cell density for Random genesis."
-    })),
-    actionBtn("Mutate 1-Bit", () => {
-      // Invert a bit in custom genesis
-      const idx = (Math.random() * CA_WIDTH) | 0;
-      caCustomRow[idx] = caCustomRow[idx] ? 0 : 1;
-      state.caGenesis = "custom";
-      if (refs.caGenesis) refs.caGenesis.setValue("custom");
-      scheduleRegen();
-      status(`Mutated cell ${idx + 1} in Genesis row`);
-    }, "Randomly flip a bit in initial row")
+      value: boundaryMode,
+      onInput: (v) => {
+        boundaryMode = v;
+        status(`Boundary: ${v === "wrap" ? "Torus Wrap" : "Wall"}`);
+      },
+      tip: "Edge behavior when cells travel beyond grid boundaries."
+    }))
   );
+  gridSect.appendChild(gridForm);
 
-  genesisSect.appendChild(genesisGrid);
+  // 2. DRAW & EDIT TOOLS
+  const drawSect = document.createElement("section");
+  drawSect.className = "sect ca-sect";
+  drawSect.innerHTML = `
+    <div class="ca-sect-head">
+      <h3>Draw & Edit Tools</h3>
+      <span class="ca-hint-inline">Click & drag to paint</span>
+    </div>
+  `;
 
-  // SECTION 3: MUSICAL MAPPING
-  const mappingSect = document.createElement("section");
-  mappingSect.className = "sect ca-sect";
-  mappingSect.innerHTML = `<h3>Musical Mapping</h3>`;
+  const toolsWrap = document.createElement("div");
+  toolsWrap.className = "ca-tools-bar";
 
-  const mappingGrid = document.createElement("div");
-  mappingGrid.className = "ca-grid-2col";
-  mappingGrid.append(
-    R("caMapping", dropdown({
-      label: "Mapping",
-      options: [
-        { v: "matrix", t: "Scale Matrix (Poly)" },
-        { v: "contour", t: "Melodic Contour (Lead)" },
-        { v: "bassMelody", t: "Bass + Lead (Split)" }
-      ],
-      value: state.caMapping || "matrix",
-      onInput: (v) => { state.caMapping = v; scheduleRegen(); },
-      tip: "How alive cells map into notes: polyphonic scale matrix, melodic contour line, or dual split."
-    })),
-    R("caScale", dropdown({
-      label: "Scale",
-      options: Object.keys(SCALES).map((s) => ({ v: s, t: s })),
-      value: state.caScale || "pentMinor",
-      onInput: (v) => { state.caScale = v; scheduleRegen(); },
-      tip: "Musical scale constraining cell pitches."
-    })),
-    R("caRoot", fader({
-      label: "Root", min: 36, max: 72, step: 1, value: state.caRoot ?? 48, def: 48,
-      format: (v) => midiName(v),
-      onInput: setState("caRoot"),
-      tip: "Base root pitch for column 1."
-    })),
-    R("caDensity", fader({
-      label: "Gate %", min: 10, max: 100, value: state.caDensity ?? 85, def: 85,
+  const penBtn = document.createElement("button");
+  penBtn.className = `ca-tool-btn ${activeTool === "pen" ? "active" : ""}`;
+  penBtn.innerHTML = `✏️ Pen`;
+  penBtn.title = "Pen: Draw live cells (drag to paint, click alive to erase)";
+  penBtn.addEventListener("click", () => {
+    activeTool = "pen";
+    penBtn.classList.add("active");
+    eraserBtn.classList.remove("active");
+  });
+
+  const eraserBtn = document.createElement("button");
+  eraserBtn.className = `ca-tool-btn ${activeTool === "eraser" ? "active" : ""}`;
+  eraserBtn.innerHTML = `🧹 Eraser`;
+  eraserBtn.title = "Eraser: Drag to clear cells";
+  eraserBtn.addEventListener("click", () => {
+    activeTool = "eraser";
+    eraserBtn.classList.add("active");
+    penBtn.classList.remove("active");
+  });
+
+  const brushWrap = document.createElement("div");
+  brushWrap.className = "ca-brush-sizes";
+  [1, 2, 3].forEach((b) => {
+    const bBtn = document.createElement("button");
+    bBtn.className = `ca-brush-btn ${brushSize === b ? "active" : ""}`;
+    bBtn.textContent = `${b}px`;
+    bBtn.title = `Brush width: ${b} cell${b > 1 ? "s" : ""}`;
+    bBtn.addEventListener("click", () => {
+      brushSize = b;
+      brushWrap.querySelectorAll(".ca-brush-btn").forEach((el) => el.classList.remove("active"));
+      bBtn.classList.add("active");
+    });
+    brushWrap.appendChild(bBtn);
+  });
+
+  toolsWrap.append(penBtn, eraserBtn, brushWrap);
+
+  const editActions = document.createElement("div");
+  editActions.className = "ca-edit-actions";
+  editActions.append(
+    actionBtn("Clear", () => clearGrid(), "Clear all cells"),
+    actionBtn("Invert", () => invertGrid(), "Invert all cells"),
+    actionBtn("Randomize", () => randomizeGrid(state.caDensity ?? 25), "Spawn random soup"),
+    R("caSoupDensity", fader({
+      label: "Soup %", min: 10, max: 60, value: state.caDensity ?? 25, def: 25,
       format: (v) => `${Math.round(v)}%`,
       onInput: setState("caDensity"),
-      tip: "Probability threshold that active cells produce notes (controls overall sequence density)."
+      tip: "Live cell probability density when randomizing."
     }))
   );
 
-  mappingSect.appendChild(mappingGrid);
+  drawSect.append(toolsWrap, editActions);
 
-  // SECTION 4: BANK SLOTS (1 to 16)
-  const slotsSect = document.createElement("section");
-  slotsSect.className = "sect ca-sect ca-slots-sect";
-  slotsSect.innerHTML = `<h3>Bank Slots (1–16)</h3>`;
+  // 3. EVOLUTION & TRANSPORT CONTROLS
+  const evoSect = document.createElement("section");
+  evoSect.className = "sect ca-sect";
+  evoSect.innerHTML = `
+    <div class="ca-sect-head">
+      <h3>Evolution & Transport</h3>
+      <span class="ca-rule-badge">Conway B3/S23</span>
+    </div>
+  `;
 
-  const slotsGrid = document.createElement("div");
-  slotsGrid.className = "ca-bank-slots";
-  slotsGrid.id = "ca-bank-slots";
+  const transportRow = document.createElement("div");
+  transportRow.className = "ca-transport-row";
 
-  for (let i = 0; i < 16; i++) {
-    const b = document.createElement("button");
-    b.className = `ca-slot-btn ${i === getSelected() ? "selected" : ""}`;
-    b.dataset.slot = String(i);
-    b.innerHTML = `<span class="ca-slot-num">${i + 1}</span><span class="ca-slot-notes">—</span>`;
-    b.title = `Switch to slot ${i + 1}`;
-    b.addEventListener("click", () => {
-      setSelected(i);
-      updateCaSlotsDisplay();
-      updateCaHeaderInfo();
-      redrawCurrentCaCanvas();
-      status(`Selected slot ${i + 1}`);
+  const runBtn = document.createElement("button");
+  runBtn.id = "ca-run-btn";
+  runBtn.className = "ca-transport-btn ca-run-btn";
+  runBtn.textContent = isLive() ? "■ Pause" : "▶ Run";
+  runBtn.title = "Start/Stop Conway evolution (synchronized with Global Transport)";
+  runBtn.addEventListener("click", () => {
+    toggleLive();
+    updateHud();
+  });
+
+  const stepBtn = document.createElement("button");
+  stepBtn.className = "ca-transport-btn";
+  stepBtn.textContent = "▶| Step";
+  stepBtn.title = "Advance by 1 generation manually";
+  stepBtn.addEventListener("click", () => {
+    stepConway();
+    redrawCaCanvas();
+    updateHud();
+    status(`Advanced to Generation ${generation}`);
+  });
+
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "ca-transport-btn";
+  resetBtn.textContent = "↺ Reset Seed";
+  resetBtn.title = "Revert to initial user-drawn pattern";
+  resetBtn.addEventListener("click", () => {
+    resetToSeed();
+    status("Reverted to initial seed pattern");
+  });
+
+  const storeBtn = document.createElement("button");
+  storeBtn.className = "ca-transport-btn";
+  storeBtn.textContent = "📌 Store Seed";
+  storeBtn.title = "Snapshot current generation as loop seed";
+  storeBtn.addEventListener("click", () => {
+    storeAsSeed();
+  });
+
+  transportRow.append(runBtn, stepBtn, resetBtn, storeBtn);
+
+  const loopModeWrap = document.createElement("div");
+  loopModeWrap.className = "ca-loop-mode-wrap";
+  loopModeWrap.append(
+    R("caLoopMode", dropdown({
+      label: "Cycle Mode",
+      options: [
+        { v: "loop", t: "Loop (Reset at Length)" },
+        { v: "free", t: "Free Run (Continuous)" }
+      ],
+      value: loopMode,
+      onInput: (v) => {
+        loopMode = v;
+        updateHud();
+        status(`Cycle mode: ${v === "loop" ? "Loop cycle" : "Free run"}`);
+      },
+      tip: "Loop mode resets to initial pattern every sequence length (set by global LENGTH knob). Free run evolves forever."
+    }))
+  );
+
+  evoSect.append(transportRow, loopModeWrap);
+
+  // 4. PRESET PATTERNS LIBRARY
+  const presetSect = document.createElement("section");
+  presetSect.className = "sect ca-sect";
+  presetSect.innerHTML = `
+    <div class="ca-sect-head">
+      <h3>Classic Life Presets</h3>
+      <span class="ca-hint-inline">1-Click Stamp</span>
+    </div>
+  `;
+
+  const presetList = document.createElement("div");
+  presetList.className = "ca-preset-grid";
+
+  LIFE_PRESETS.forEach((p) => {
+    const btn = document.createElement("button");
+    btn.className = "ca-preset-btn";
+    btn.textContent = p.name;
+    btn.title = `${p.name}: ${p.desc}`;
+    btn.addEventListener("click", () => {
+      loadPreset(p);
     });
-    slotsGrid.appendChild(b);
-  }
+    presetList.appendChild(btn);
+  });
 
-  slotsSect.appendChild(slotsGrid);
+  presetSect.appendChild(presetList);
 
-  module.append(ruleSect, genesisSect, mappingSect, slotsSect);
+  module.append(gridSect, drawSect, evoSect, presetSect);
 
-  // RIGHT DISPLAY: Cellular Automata State Display
+  // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
   display.className = "display ca-display";
 
   display.innerHTML = `
     <div class="ca-display-header">
-      <h2>Cellular Automata Sequence</h2>
-      <div class="ca-seq-info" id="ca-seq-info">Loading...</div>
+      <div class="ca-hud-bar">
+        <div class="ca-hud-item"><span class="ca-hud-lbl">GEN</span><b id="ca-hud-gen" class="ca-hud-val">0</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">POPULATION</span><b id="ca-hud-pop" class="ca-hud-val">0 cells</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">GRID</span><b id="ca-hud-size" class="ca-hud-val">${gridSize} × ${gridSize}</b></div>
+        <div class="ca-hud-item"><span class="ca-hud-lbl">MODE</span><b id="ca-hud-mode" class="ca-hud-val">Loop (64 steps)</b></div>
+      </div>
     </div>
-    <div class="ca-canvas-container">
+    <div class="ca-canvas-wrap">
       <canvas id="ca-canvas" class="ca-canvas"></canvas>
     </div>
     <div class="ca-display-footer">
-      <span class="ca-hint">💡 Click or drag on top row to edit Genesis · Click steps to toggle notes · Space to Play</span>
+      <span class="ca-hint">💡 Click & drag to draw cells · Right-click or Eraser to erase · Spacebar to Run/Pause</span>
       <span id="ca-step-hover" class="ca-step-hover">—</span>
     </div>
   `;
@@ -679,145 +881,110 @@ export function buildCellularPanel(container) {
   layout.append(module, display);
   container.appendChild(layout);
 
-  wireCanvasInteractions();
-  redrawCurrentCaCanvas();
-  updateCaSlotsDisplay();
-}
-
-function redrawCurrentCaCanvas() {
+  // Initialize Canvas
   const canvas = document.getElementById("ca-canvas");
-  if (!canvas) return;
-  const bank = getBank();
-  const pat = bank[getSelected()];
-  renderCaCanvas(canvas, pat, activeCanvasPlayhead, activeHoverCell);
-  updateCaHeaderInfo();
+  if (canvas) {
+    wireCanvasEvents(canvas);
+    setupDefaultPattern();
+    redrawCaCanvas();
+    updateHud();
+  }
 }
 
-function wireCanvasInteractions() {
-  const canvas = document.getElementById("ca-canvas");
-  if (!canvas) return;
+// Generate Bank of 16 Patterns for SysEx / Player compatibility
+export function generateCaBank() {
+  const bank = [];
+  const seqLen = Math.max(1, Math.min(64, state.length || 64));
+  const rate = state.rate || "1/16";
+  const tempo = state.tempo || 120;
 
-  const getCellFromEvent = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const w = rect.width;
-    const h = rect.height;
-
-    const padLeft = 24;
-    const padTop = 22;
-    const padRight = 6;
-    const padBottom = 8;
-    const gridW = w - padLeft - padRight;
-    const gridH = h - padTop - padBottom;
-    const stepsCount = Math.max(1, Math.min(64, state.length || 64));
-
-    if (x < padLeft || x > w - padRight || y < padTop || y > h - padBottom) return null;
-
-    const col = Math.floor(((x - padLeft) / gridW) * CA_WIDTH);
-    const row = Math.floor(((y - padTop) / gridH) * stepsCount);
-    if (col >= 0 && col < CA_WIDTH && row >= 0 && row < stepsCount) {
-      return { col, row };
+  for (let s = 0; s < 16; s++) {
+    const steps = [];
+    for (let i = 0; i < seqLen; i++) {
+      steps.push({
+        notes: [], // Visual sequence focus first; note rules will be added in follow-up step
+        rate: rate,
+        gate: state.gate ?? 50
+      });
     }
-    return null;
-  };
-
-  canvas.addEventListener("mousemove", (e) => {
-    const cell = getCellFromEvent(e);
-    activeHoverCell = cell;
-    const hoverEl = document.getElementById("ca-step-hover");
-    if (cell) {
-      const bank = getBank();
-      const pat = bank[getSelected()];
-      const noteName = pat?.pitches?.[cell.col] ? midiName(pat.pitches[cell.col]) : `Col ${cell.col + 1}`;
-      const isAlive = pat?.caGrid?.[cell.row]?.[cell.col] === 1;
-      if (hoverEl) {
-        hoverEl.textContent = `Step ${cell.row + 1} · ${noteName} · ${isAlive ? "Active (1)" : "Rest (0)"}`;
-      }
-    } else {
-      if (hoverEl) hoverEl.textContent = "—";
-    }
-    redrawCurrentCaCanvas();
-  });
-
-  canvas.addEventListener("mouseleave", () => {
-    activeHoverCell = null;
-    const hoverEl = document.getElementById("ca-step-hover");
-    if (hoverEl) hoverEl.textContent = "—";
-    redrawCurrentCaCanvas();
-  });
-
-  canvas.addEventListener("click", (e) => {
-    const cell = getCellFromEvent(e);
-    if (!cell) return;
-    const bank = getBank();
-    const pat = bank[getSelected()];
-    if (!pat || !pat.caGrid) return;
-
-    if (cell.row === 0) {
-      // Toggle custom Genesis cell
-      caCustomRow[cell.col] = caCustomRow[cell.col] ? 0 : 1;
-      state.caGenesis = "custom";
-      if (refs.caGenesis) refs.caGenesis.setValue("custom");
-      scheduleRegen();
-      status(`Genesis cell ${cell.col + 1} toggled`);
-    } else {
-      // Toggle cell in this slot
-      const curr = pat.caGrid[cell.row][cell.col];
-      pat.caGrid[cell.row][cell.col] = curr ? 0 : 1;
-      const pitches = pat.pitches || buildScalePitches(state.caRoot ?? 48, state.caScale || "pentMinor", CA_WIDTH);
-      const updated = caGridToPattern(pat.caGrid, pitches, state, state.seed);
-      bank[getSelected()] = updated;
-      redrawCurrentCaCanvas();
-      updateCaSlotsDisplay();
-      status(`Step ${cell.row + 1}, cell ${cell.col + 1} toggled`);
-    }
-  });
-
-  // Window resize re-renders canvas
-  window.addEventListener("resize", () => {
-    redrawCurrentCaCanvas();
-  });
+    bank.push({
+      length: seqLen,
+      rate: rate,
+      tempo: tempo,
+      gate: state.gate ?? 50,
+      swing: state.swing ?? 50,
+      steps: steps,
+      gridSize: gridSize
+    });
+  }
+  setBank(bank);
+  return bank;
 }
 
-// Initialize the Cellular Automata Model
+// Randomize active CA configuration
+export function randomizeCa() {
+  randomizeGrid(state.caDensity ?? 25);
+  status("Randomized Cellular Automata pattern", "ok");
+}
+
+// INITIALIZATION
 export function initCellular() {
   const container = document.getElementById("model-cellular");
   if (!container) return;
   buildCellularPanel(container);
 
-  // Hook playhead step updates
+  // Hook step clock advancement from live transport loop
   onStep((stepIndex) => {
-    activeCanvasPlayhead = stepIndex;
-    const canvas = document.getElementById("ca-canvas");
-    if (canvas && container.style.display !== "none") {
-      redrawCurrentCaCanvas();
+    if (stepIndex === null) {
+      updateHud();
+      return;
     }
+    if (container.style.display === "none") return;
+
+    // Check loop mode
+    if (loopMode === "loop") {
+      const loopLen = Math.max(1, Math.min(64, state.length || 64));
+      if (stepIndex === 0 && generation > 0) {
+        // Reset to initial seed pattern at loop boundary
+        resetToSeed();
+        return;
+      }
+    }
+
+    // Step 1 generation of Conway's Game of Life
+    stepConway();
+    redrawCaCanvas();
+    updateHud();
   });
 
-  // Hook regeneration updates
+  // Hook bank regenerations
   onRegen(() => {
     if (container.style.display !== "none") {
-      redrawCurrentCaCanvas();
-      updateCaSlotsDisplay();
-      updateCaHeaderInfo();
+      updateHud();
+      redrawCaCanvas();
     }
   });
+
+  // Watch for theme changes (Dark / Light) to instantly update canvas colors
+  const themeObserver = new MutationObserver(() => {
+    if (container.style.display !== "none") {
+      redrawCaCanvas();
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }
 
-// When activating the Cellular Automata Model
+// When activating Cellular Automata Model
 export function activateCellularModel() {
   setModelGenerator(generateCaBank);
   setModelRandomizer(randomizeCa);
   doGenerate(false);
-  redrawCurrentCaCanvas();
-  updateCaSlotsDisplay();
-  updateCaHeaderInfo();
+  redrawCaCanvas();
+  updateHud();
 }
 
 // When deactivating Cellular Automata Model
 export function deactivateCellularModel() {
-  activeCanvasPlayhead = null;
   setModelGenerator(null);
   setModelRandomizer(null);
 }

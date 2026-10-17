@@ -4,17 +4,17 @@ import {
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
   getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
   getCurrentModelRandomizer
-} from "./state.js?v=103";
-import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=103";
+} from "./state.js?v=104";
+import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=104";
 import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=100";
-import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=103";
+import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=104";
 import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js?v=100";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js?v=100";
 import { buildTheme } from "./themes.js?v=100";
 import { initScope, renderScope } from "./scope.js?v=100";
-import { initModes, getActiveModel } from "./modes.js?v=103";
+import { initModes, getActiveModel } from "./modes.js?v=104";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=100";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=103";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=104";
 import * as midi from "./midi.js?v=100";
 import * as audio from "./audio.js?v=100";
 
