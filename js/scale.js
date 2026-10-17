@@ -1,7 +1,7 @@
 // scale.js — Unified Musical Scale & Root Note/Octave management for FM-1 Pulses.
 import { SCALES, NOTE_NAMES, midiName } from "./generator.js";
 import { state, refs, R, status } from "./state.js";
-import { dropdown } from "./controls.js";
+import { dropdown, fader } from "./controls.js";
 
 export const SCALE_LABELS = {
   pentMinor: "Pentatonic Minor",
@@ -236,6 +236,150 @@ export function createScalePicker({
     scaleCtrl,
     scaleBox,
     scaleDiv,
+    sync
+  };
+}
+
+/**
+ * Creates the complete, unified 'Notes' div component for any sequencer model.
+ * Contains:
+ * + Root Note
+ * + Root Octave
+ * + Scale DropDown
+ * + Note Selection
+ * + Quantize
+ * + Octave spread (Fader + Mode Dropdown)
+ */
+export function createNotesSection({
+  title = "Notes",
+  scaleKey = "scale",
+  customScaleKey = "customScale",
+  rootKey = "root",
+  rootNoteKey = "rootNote",
+  rootOctaveKey = "rootOctave",
+  quantKey = "quantSteps",
+  octaveKey = "octave",
+  octaveModeKey = "octaveMode",
+  defaultOctave = 4,
+  scaleLabel = "Scale",
+  onChange = () => {}
+} = {}) {
+  const picker = createScalePicker({
+    scaleKey,
+    customScaleKey,
+    rootKey,
+    rootNoteKey,
+    rootOctaveKey,
+    defaultOctave,
+    scaleLabel,
+    onChange
+  });
+
+  // Quantize Fader
+  const quantCtrl = R(quantKey, fader({
+    label: "Quantize",
+    min: 0,
+    max: 100,
+    value: state[quantKey] ?? 100,
+    def: 100,
+    format: (v) => `${Math.round(v)}%`,
+    onInput: (v) => {
+      state[quantKey] = v;
+      onChange();
+      status(`Quantize: ${Math.round(v)}%`);
+    },
+    tip: "Scale snap strength: probability notes lock to the chosen scale. 100% = strictly in-key; lower allows raw, out-of-scale chromatic pitches."
+  }));
+
+  // Octave Spread Fader
+  const octaveCtrl = R(octaveKey, fader({
+    label: "Octave Spread",
+    min: 0,
+    max: 100,
+    value: state[octaveKey] ?? 0,
+    def: 0,
+    format: (v) => `${Math.round(v)}%`,
+    onInput: (v) => {
+      state[octaveKey] = v;
+      onChange();
+      status(`Octave Spread: ${Math.round(v)}%`);
+    },
+    tip: "Chance of shifting a note by one octave (Up, Down, or Both)."
+  }));
+
+  // Octave Spread Direction Dropdown
+  const octaveModeCtrl = R(octaveModeKey, dropdown({
+    label: "Oct Spread",
+    options: [
+      { v: "up", t: "Up" },
+      { v: "down", t: "Down" },
+      { v: "both", t: "Both" }
+    ],
+    value: state[octaveModeKey] || "up",
+    onInput: (v) => {
+      state[octaveModeKey] = v;
+      onChange();
+      status(`Oct Spread: ${v.toUpperCase()}`);
+    },
+    tip: "Octave spread direction: Up (+12 st), Down (-12 st), or Both (±12 st).",
+    labelPos: "right"
+  }));
+
+  // Container Div titled 'Notes'
+  const sectEl = document.createElement("div");
+  sectEl.className = "sect notes-sect";
+  sectEl.style.gridColumn = "span 6";
+
+  const h = document.createElement("h3");
+  h.textContent = title;
+
+  const grid = document.createElement("div");
+  grid.className = "sgrid notes-grid";
+  grid.style.gridTemplateColumns = "repeat(6, minmax(0, 1fr))";
+
+  // Row 1: Root Note (2), Root Octave (2), Scale Dropdown (2)
+  picker.rootNoteCtrl.style.gridColumn = "span 2";
+  picker.rootOctCtrl.style.gridColumn = "span 2";
+  picker.scaleCtrl.style.gridColumn = "span 2";
+
+  // Row 2: Note Selection (12 buttons) (6)
+  picker.scaleBox.style.gridColumn = "span 6";
+
+  // Row 3: Quantize (6)
+  quantCtrl.style.gridColumn = "span 6";
+
+  // Row 4: Octave Spread (4), Direction Mode (2)
+  octaveCtrl.style.gridColumn = "span 4";
+  octaveModeCtrl.style.gridColumn = "span 2";
+
+  grid.append(
+    picker.rootNoteCtrl,
+    picker.rootOctCtrl,
+    picker.scaleCtrl,
+    picker.scaleBox,
+    quantCtrl,
+    octaveCtrl,
+    octaveModeCtrl
+  );
+
+  sectEl.append(h, grid);
+
+  function sync() {
+    picker.sync();
+    if (refs[quantKey]?.setValue) refs[quantKey].setValue(state[quantKey] ?? 100, false);
+    if (refs[octaveKey]?.setValue) refs[octaveKey].setValue(state[octaveKey] ?? 0, false);
+    if (refs[octaveModeKey]?.setValue) refs[octaveModeKey].setValue(state[octaveModeKey] || "up", false);
+  }
+
+  return {
+    sectEl,
+    rootNoteCtrl: picker.rootNoteCtrl,
+    rootOctCtrl: picker.rootOctCtrl,
+    scaleCtrl: picker.scaleCtrl,
+    scaleBox: picker.scaleBox,
+    quantCtrl,
+    octaveCtrl,
+    octaveModeCtrl,
     sync
   };
 }

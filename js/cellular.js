@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createScalePicker, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=208";
+import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js?v=209";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -288,7 +288,22 @@ export function mapCellToNote(cell, N) {
   // X Axis -> Pitch: quantize along scale degrees
   const normX = Math.max(0, Math.min(1, cell.x / Math.max(1, N - 1)));
   const rawPitch = root + normX * (octaves * 12);
-  const note = Math.max(0, Math.min(127, quantize(rawPitch, scale, root, 1)));
+  const quantStrength = (state.caQuantSteps ?? 100) / 100;
+  const quantRng = mulberry32((cell.x * 2654435761 + cell.y * 2246822519) >>> 0);
+  let note = Math.max(0, Math.min(127, quantize(rawPitch, scale, root, quantStrength, quantRng)));
+
+  // Octave spread: Up (+12), Down (-12), or Both (±12)
+  const octChance = (state.caOctave ?? 0) / 100;
+  if (octChance > 0) {
+    const octRng = mulberry32((cell.x * 1597334677 + cell.y * 381204887 + generation * 65537) >>> 0);
+    if (octRng() < octChance) {
+      const mode = (state.caOctaveMode || "up").toLowerCase();
+      let shift = 12;
+      if (mode === "down") shift = -12;
+      else if (mode === "both") shift = octRng() < 0.5 ? 12 : -12;
+      if (note + shift >= 0 && note + shift <= 127) note += shift;
+    }
+  }
 
   // Y Axis -> Velocity: top (y = 0) is loud (maxVel), bottom (y = N-1) is soft (minVel)
   const normY = 1 - Math.max(0, Math.min(1, cell.y / Math.max(1, N - 1)));
@@ -982,7 +997,7 @@ function wireCanvasEvents(canvas) {
   });
 }
 
-let caScalePicker = null;
+let caNotesSection = null;
 
 // BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
@@ -1101,18 +1116,18 @@ export function buildCellularPanel(container) {
 
   evoSect.append(transportRow, loopWrap);
 
-  // 3. NOTE TRIGGERING & SCALE RULES
-  const noteSect = document.createElement("section");
-  noteSect.className = "sect ca-sect";
-  noteSect.innerHTML = `
+  // 3. CELL TRIGGERING & PITCH SPAN
+  const triggerSect = document.createElement("section");
+  triggerSect.className = "sect ca-sect";
+  triggerSect.innerHTML = `
     <div class="ca-sect-head">
-      <h3>Note & Pitch Rules</h3>
+      <h3>Cell Triggering</h3>
       <span class="ca-rule-badge">X: Pitch · Y: Vel</span>
     </div>
   `;
 
-  const noteControls = document.createElement("div");
-  noteControls.className = "ca-grid-2col";
+  const triggerControls = document.createElement("div");
+  triggerControls.className = "ca-grid-2col";
 
   const ruleCtrl = R("caNoteRule", dropdown({
     label: "Cell Picker Rule",
@@ -1128,12 +1143,33 @@ export function buildCellularPanel(container) {
   }));
   ruleCtrl.classList.add("ca-span-full");
 
-  caScalePicker = createScalePicker({
+  const spanCtrl = R("caOctaves", dropdown({
+    label: "Pitch Span",
+    options: OCTAVE_OPTIONS,
+    value: String(state.caOctaves ?? 3),
+    onInput: (v) => {
+      state.caOctaves = Number(v);
+      generateCaBank();
+      status(`Pitch Span: ${v} octaves`);
+    },
+    tip: "Horizontal keyboard span across the X axis."
+  }));
+  spanCtrl.classList.add("ca-span-full");
+
+  triggerControls.append(ruleCtrl, spanCtrl);
+  triggerSect.append(triggerControls);
+
+  // 4. UNIFIED NOTES SECTION (Root Note, Root Octave, Scale Dropdown, Note Selection, Quantize, Octave Spread)
+  caNotesSection = createNotesSection({
+    title: "Notes",
     scaleKey: "caScale",
     customScaleKey: "caCustomScale",
     rootKey: "caRoot",
     rootNoteKey: "caRootNote",
     rootOctaveKey: "caRootOctave",
+    quantKey: "caQuantSteps",
+    octaveKey: "caOctave",
+    octaveModeKey: "caOctaveMode",
     defaultOctave: 3,
     scaleLabel: "Scale Quantize",
     onChange: () => {
@@ -1141,27 +1177,7 @@ export function buildCellularPanel(container) {
     }
   });
 
-  noteControls.append(
-    ruleCtrl,
-    caScalePicker.scaleCtrl,
-    R("caOctaves", dropdown({
-      label: "Pitch Span",
-      options: OCTAVE_OPTIONS,
-      value: String(state.caOctaves ?? 3),
-      onInput: (v) => {
-        state.caOctaves = Number(v);
-        generateCaBank();
-        status(`Pitch Span: ${v} octaves`);
-      },
-      tip: "Horizontal keyboard span across the X axis."
-    })),
-    caScalePicker.rootNoteCtrl,
-    caScalePicker.rootOctCtrl
-  );
-
-  noteSect.append(noteControls, caScalePicker.scaleBox);
-
-  // 4. PRESET PATTERNS LIBRARY
+  // 5. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
   presetSect.className = "sect ca-sect";
   presetSect.innerHTML = `
@@ -1187,7 +1203,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(gridSect, evoSect, noteSect, presetSect);
+  module.append(gridSect, evoSect, triggerSect, caNotesSection.sectEl, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -1389,7 +1405,7 @@ export function activateCellularModel() {
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
-  if (caScalePicker) caScalePicker.sync();
+  if (caNotesSection) caNotesSection.sync();
   doGenerate(false);
   redrawCaCanvas();
   updateHud();

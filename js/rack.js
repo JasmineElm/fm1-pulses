@@ -14,12 +14,12 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createScalePicker } from "./scale.js?v=208";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=208";
+import { createNotesSection } from "./scale.js?v=209";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=209";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
-let traditionalScalePicker = null;
+let traditionalNotesSection = null;
 
 // Register hooks
 onRegen(() => {
@@ -87,7 +87,7 @@ export function refreshLoopInfo() {
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
-  if (traditionalScalePicker) traditionalScalePicker.sync();
+  if (traditionalNotesSection) traditionalNotesSection.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -267,38 +267,31 @@ export function buildRack() {
     })(),
 
     (() => {
-      const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
-      const blank = () => span(document.createElement("div"), 2);
-      const hr = () => span(document.createElement("hr"), 6);
-
-      traditionalScalePicker = createScalePicker({
+      traditionalNotesSection = createNotesSection({
+        title: "Notes",
         scaleKey: "scale",
         customScaleKey: "customScale",
         rootKey: "root",
         rootNoteKey: "rootNote",
         rootOctaveKey: "rootOctave",
+        quantKey: "quantSteps",
+        octaveKey: "octave",
+        octaveModeKey: "octaveMode",
         defaultOctave: 4,
         scaleLabel: "Scale",
         onChange: () => {
           scheduleRegen();
         }
       });
+      return traditionalNotesSection.sectEl;
+    })(),
+
+    (() => {
+      const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
+      const blank = () => span(document.createElement("div"), 2);
+      const hr = () => span(document.createElement("hr"), 6);
 
       return sect("Shape", 6, [
-        span(traditionalScalePicker.rootNoteCtrl, 2),
-        span(traditionalScalePicker.rootOctCtrl, 2),
-        span(traditionalScalePicker.scaleCtrl, 2),
-        span(traditionalScalePicker.scaleBox, 6),
-
-        span(R("quantSteps", fader({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps"),
-          tip: "Scale snap strength: probability notes lock to the chosen scale. 100% = strictly in-key; lower allows raw, out-of-scale chromatic pitches." })), 4),
-        blank(),
-
-        span(R("octave", fader({ label: "Octave Spread", min: 0, max: 100, value: state.octave, def: DEFAULT.octave,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("octave"), tip: "Chance of shifting a note by one octave (Up, Down, or Both)." })), 4),
-        span(R("octaveMode", dropdown({ label: "Oct Spread", options: [{ v: "up", t: "Up" }, { v: "down", t: "Down" }, { v: "both", t: "Both" }], value: state.octaveMode, onInput: (v) => { state.octaveMode = v; scheduleRegen(); }, tip: "Octave spread direction: Up (+12 st), Down (-12 st), or Both (±12 st).", labelPos: "right" })), 2),
-
         span(R("gravity", fader({ label: "Root grav", min: 0, max: 100, value: state.gravity, def: DEFAULT.gravity,
           format: (v) => `${Math.round(v)}%`, onInput: setState("gravity"), tip: "Pulls pitches towards the root note." })), 4),
         blank(),
