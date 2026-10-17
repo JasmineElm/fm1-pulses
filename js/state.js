@@ -28,6 +28,8 @@ export const DEFAULT = {
   caScale: "pentMinor",
   caCustomScale: [0, 3, 5, 7, 10],
   caRoot: 48,
+  caRootNote: 0,
+  caRootOctave: 3,
   caOctaves: 3,
   caMinVel: 30,
   caMaxVel: 120,

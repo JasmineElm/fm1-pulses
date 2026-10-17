@@ -62,6 +62,19 @@ export const SCALE_LABELS = {
   custom: "Custom (User Defined)"
 };
 
+export const ROOT_NOTE_OPTIONS = NOTE_NAMES.map((name, idx) => ({
+  v: String(idx),
+  t: name
+}));
+
+export const ROOT_OCTAVE_OPTIONS = [
+  { v: "1", t: "Octave 1" },
+  { v: "2", t: "Octave 2" },
+  { v: "3", t: "Octave 3" },
+  { v: "4", t: "Octave 4" },
+  { v: "5", t: "Octave 5" }
+];
+
 export const ROOT_OPTIONS = [];
 for (let n = 24; n <= 72; n++) {
   ROOT_OPTIONS.push({ v: String(n), t: `${midiName(n)} (${n})` });
@@ -1224,19 +1237,56 @@ export function buildCellularPanel(container) {
 
   const noteControls = document.createElement("div");
   noteControls.className = "ca-grid-2col";
+
+  const ruleCtrl = R("caNoteRule", dropdown({
+    label: "Cell Picker Rule",
+    options: NOTE_RULES.map((r) => ({ v: r.v, t: r.t })),
+    value: state.caNoteRule || "closest",
+    onInput: (v) => {
+      state.caNoteRule = v;
+      const sel = NOTE_RULES.find((r) => r.v === v);
+      generateCaBank();
+      status(`Note Rule: ${sel ? sel.t : v}`);
+    },
+    tip: "Rule governing which live cell triggers a note at each step. Choose Pitch (X), Velocity (Y), or 2D Spatial/Morphological rules."
+  }));
+  ruleCtrl.classList.add("ca-span-full");
+
+  const currentRoot = typeof state.caRoot === "number" ? state.caRoot : 48;
+  if (state.caRootNote === undefined) state.caRootNote = ((currentRoot % 12) + 12) % 12;
+  if (state.caRootOctave === undefined) state.caRootOctave = Math.floor(currentRoot / 12) - 1;
+
+  const rootNoteCtrl = R("caRootNote", dropdown({
+    label: "Root Note",
+    options: ROOT_NOTE_OPTIONS,
+    value: String(state.caRootNote),
+    onInput: (v) => {
+      state.caRootNote = Number(v);
+      const oct = typeof state.caRootOctave === "number" ? state.caRootOctave : 3;
+      state.caRoot = (oct + 1) * 12 + state.caRootNote;
+      syncScaleButtons();
+      generateCaBank();
+      status(`Root Note: ${midiName(state.caRoot)} (${state.caRoot})`);
+    },
+    tip: "Pitch class of the root note (C through B)."
+  }));
+
+  const rootOctCtrl = R("caRootOctave", dropdown({
+    label: "Root Octave",
+    options: ROOT_OCTAVE_OPTIONS,
+    value: String(state.caRootOctave),
+    onInput: (v) => {
+      state.caRootOctave = Number(v);
+      const noteIdx = typeof state.caRootNote === "number" ? state.caRootNote : 0;
+      state.caRoot = (state.caRootOctave + 1) * 12 + noteIdx;
+      generateCaBank();
+      status(`Root Octave: Octave ${state.caRootOctave} (${midiName(state.caRoot)})`);
+    },
+    tip: "Base octave for the root note."
+  }));
+
   noteControls.append(
-    R("caNoteRule", dropdown({
-      label: "Cell Picker Rule",
-      options: NOTE_RULES.map((r) => ({ v: r.v, t: r.t })),
-      value: state.caNoteRule || "closest",
-      onInput: (v) => {
-        state.caNoteRule = v;
-        const sel = NOTE_RULES.find((r) => r.v === v);
-        generateCaBank();
-        status(`Note Rule: ${sel ? sel.t : v}`);
-      },
-      tip: "Rule governing which live cell triggers a note at each step. Choose Pitch (X), Velocity (Y), or 2D Spatial/Morphological rules."
-    })),
+    ruleCtrl,
     R("caScale", dropdown({
       label: "Scale Quantize",
       options: Object.keys(SCALES).map((s) => ({
@@ -1252,18 +1302,6 @@ export function buildCellularPanel(container) {
       },
       tip: "Scale for quantizing X-axis pitch (reused from Traditional sequencer)."
     })),
-    R("caRoot", dropdown({
-      label: "Root Note",
-      options: ROOT_OPTIONS,
-      value: String(state.caRoot ?? 48),
-      onInput: (v) => {
-        state.caRoot = Number(v);
-        syncScaleButtons();
-        generateCaBank();
-        status(`Root Note: ${midiName(Number(v))}`);
-      },
-      tip: "Base root note (lowest pitch at X=0)."
-    })),
     R("caOctaves", dropdown({
       label: "Pitch Span",
       options: OCTAVE_OPTIONS,
@@ -1274,7 +1312,9 @@ export function buildCellularPanel(container) {
         status(`Pitch Span: ${v} octaves`);
       },
       tip: "Horizontal keyboard span across the X axis."
-    }))
+    })),
+    rootNoteCtrl,
+    rootOctCtrl
   );
 
   // Scale Notes 12-Button Selector ("scale" div)
@@ -1543,6 +1583,11 @@ export function activateCellularModel() {
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
+  const cur = typeof state.caRoot === "number" ? state.caRoot : 48;
+  if (state.caRootNote === undefined) state.caRootNote = ((cur % 12) + 12) % 12;
+  if (state.caRootOctave === undefined) state.caRootOctave = Math.floor(cur / 12) - 1;
+  if (refs.caRootNote) refs.caRootNote.setValue(String(state.caRootNote));
+  if (refs.caRootOctave) refs.caRootOctave.setValue(String(state.caRootOctave));
   syncScaleButtons();
   doGenerate(false);
   redrawCaCanvas();

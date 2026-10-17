@@ -886,6 +886,9 @@ body { padding: 12px; font-family: "Panel", ui-sans-serif, system-ui, sans-serif
   gap: 8px;
   align-items: center;
 }
+.ca-span-full {
+  grid-column: 1 / -1;
+}
 
 /* Tools bar (Pen / Eraser / Brush sizes) */
 .ca-tools-bar {
