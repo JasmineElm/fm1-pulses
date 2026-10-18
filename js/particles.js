@@ -6,15 +6,14 @@
 // Cell collisions trigger harmonic note events and either deflect at 90°, annihilate, or spawn child particles.
 // Includes predictive trajectory rays and predicted collision target crosshairs to visualize physics.
 
-import { SCALES, quantize, NOTE_NAMES, midiName } from "./generator.js";
+import { SCALES, quantize, midiName } from "./generator.js";
 import {
-  state, refs, R, setState, scheduleRegen, doGenerate,
-  getBank, setBank, getSelected, setSelected, status, onRegen,
+  state, refs, R, doGenerate,
+  getBank, setBank, getSelected, setSelected, status,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
 } from "./state.js";
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js?v=260";
 
@@ -89,8 +88,6 @@ export const TOOL_TO_OBS = {
   bouncer: OBS_BOUNCER
 };
 
-export const OBS_TO_TOOL = ["none", "slash", "backslash", "bouncer"];
-
 // Particle Simulator State
 let gridW = 16;
 let gridH = 16;
@@ -116,7 +113,6 @@ let precomputedStepStates = [];
 let precomputedInitialState = null;
 
 // Timing & State tracking
-let currentTick = 0;
 let lastLiveStep = -1;
 let nextParticleId = 1;
 
@@ -267,11 +263,6 @@ export function setObstacle(x, y, type, obsGrid = obstacles, W = gridW, H = grid
   obsGrid[y * W + x] = numType;
 }
 
-export function getObstacle(x, y, obsGrid = obstacles, W = gridW, H = gridH) {
-  if (x < 0 || x >= W || y < 0 || y >= H) return OBS_NONE;
-  return obsGrid[y * W + x];
-}
-
 export function removeObstacle(x, y, obsGrid = obstacles, W = gridW, H = gridH) {
   if (x < 0 || x >= W || y < 0 || y >= H) return;
   obsGrid[y * W + x] = OBS_NONE;
@@ -282,18 +273,8 @@ export function clearObstacles(obsGrid = obstacles) {
 }
 
 function cloneObstacles(obsGrid, W = gridW, H = gridH) {
-  if (!obsGrid) return new Uint8Array(W * H);
   if (obsGrid instanceof Uint8Array) return obsGrid.slice();
-  const arr = new Uint8Array(W * H);
-  if (typeof obsGrid.entries === "function") {
-    for (const [key, type] of obsGrid.entries()) {
-      const [ox, oy] = key.split(",").map(Number);
-      if (ox >= 0 && ox < W && oy >= 0 && oy < H) {
-        arr[oy * W + ox] = TOOL_TO_OBS[type] ?? OBS_NONE;
-      }
-    }
-  }
-  return arr;
+  return new Uint8Array(W * H);
 }
 
 function saveToSeed() {
@@ -427,9 +408,7 @@ export function rebuildNoteLUT(W = gridW, H = gridH, sig = null) {
     ? state.customScale
     : (SCALES[scaleName] || SCALES.pentMinor);
 
-  const rootNoteStr = String(state.rootNote ?? 0);
-  const rootNoteVal = ROOT_NOTE_OPTIONS.find((r) => r.v === rootNoteStr)?.v ?? 0;
-  const rootMidiBase = Number(rootNoteVal);
+  const rootMidiBase = Number(state.rootNote ?? 0) || 0;
 
   const rootOct = state.rootOctave !== undefined ? Number(state.rootOctave) : 3;
   const baseMidi = rootMidiBase + (rootOct + 1) * 12;
@@ -566,7 +545,7 @@ const reusableCellGroup = new Array(MAX_SIM_PARTICLES);
  * Step the particle physics engine forward by 1 tick.
  * Zero-allocation inner loop utilizing flat typed arrays for spatial collision hashing.
  */
-export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = false) {
+export function stepPhysics(pList, obsMap, W = gridW, H = gridH) {
   const boundary = state.particleBoundary || "reflect";
   const wallNotes = Boolean(state.particleWallNotes);
   const mode = state.particleCollisionMode || "deflect";
@@ -798,7 +777,7 @@ export function stepPhysicsTick(triggerSound = true) {
   if (loopMode === "free") {
     totalFreeSteps++;
     lastLiveStep = lastLiveStep < 0 ? 0 : lastLiveStep + 1;
-    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
     particles = updated;
     updateCachedTrajectories();
     updateHud(lastLiveStep, collisions.length, collisions[0]?.note || null);
@@ -817,7 +796,7 @@ export function stepPhysicsTick(triggerSound = true) {
     cachedCollisionTargets = stepState.targets;
     updateHud(nextStep, stepState.collisionsCount, stepState.primaryNote);
   } else {
-    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
     particles = updated;
     updateCachedTrajectories();
     updateHud(nextStep, collisions.length, collisions[0]?.note || null);
@@ -856,7 +835,7 @@ export function generateParticleBank() {
   // 2. Precompute all sequence steps
   precomputedStepStates = [];
   for (let step = 0; step < seqLen; step++) {
-    const { particles: updated, notes, collisions } = stepPhysics(simParticles, simObstacles, gridW, gridH, true);
+    const { particles: updated, notes, collisions } = stepPhysics(simParticles, simObstacles, gridW, gridH);
     simParticles = updated;
 
     const stepNotes = notes.slice(0, polyLimit);
@@ -1772,7 +1751,7 @@ export function initParticles() {
       lastLiveStep = stepIndex;
 
       // 1. Advance particle physics forward 1 continuous tick
-      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
       particles = updated;
 
       updateCachedTrajectories();
@@ -1809,7 +1788,7 @@ export function initParticles() {
       if (stepIndex === 0) {
         restoreFromSeed();
       }
-      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
       particles = updated;
       updateCachedTrajectories();
       updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
