@@ -101,7 +101,8 @@ let seedObstacles = new Uint8Array(gridW * gridH);
 
 let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer" | "eraser"
 let selectedDirectionIdx = 2; // East (1, 0)
-let loopMode = "loop"; // "loop" (resets to seed every 64 steps) | "free"
+let loopMode = state.particleLoopMode || "loop"; // "loop" (resets to seed every sequence length) | "free" (carries on indefinitely)
+let totalFreeSteps = 0;
 
 // Visual representation toggles
 let showTrajectories = true; // Trajectory path prediction lines
@@ -794,6 +795,17 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
  * Executes a single physics step (used during manual step button).
  */
 export function stepPhysicsTick(triggerSound = true) {
+  if (loopMode === "free") {
+    totalFreeSteps++;
+    lastLiveStep = lastLiveStep < 0 ? 0 : lastLiveStep + 1;
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+    particles = updated;
+    updateCachedTrajectories();
+    updateHud(lastLiveStep, collisions.length, collisions[0]?.note || null);
+    renderCanvas();
+    return;
+  }
+
   const seqLen = precomputedStepStates.length || 64;
   const nextStep = lastLiveStep < 0 ? 0 : (lastLiveStep + 1) % seqLen;
   lastLiveStep = nextStep;
@@ -1171,8 +1183,17 @@ export function renderCanvas() {
  */
 function updateHud(stepIndex = 0, collisionCount = 0, lastNoteName = null) {
   if (hudStep) {
-    const s = typeof stepIndex === "number" && stepIndex >= 0 ? stepIndex + 1 : 1;
-    hudStep.textContent = `${s} / ${state.length || 64}`;
+    if (loopMode === "free") {
+      const live = isLive();
+      if (live && totalFreeSteps > 0) {
+        hudStep.textContent = `${totalFreeSteps} (Free)`;
+      } else {
+        hudStep.textContent = "Free Run (∞)";
+      }
+    } else {
+      const s = typeof stepIndex === "number" && stepIndex >= 0 ? stepIndex + 1 : 1;
+      hudStep.textContent = `${s} / ${state.length || 64}`;
+    }
   }
   if (hudParticles) {
     const parents = particles.filter((p) => !p.isChild).length;
@@ -1193,12 +1214,18 @@ function updateHud(stepIndex = 0, collisionCount = 0, lastNoteName = null) {
   }
   if (hudMode) {
     const sel = COLLISION_MODES.find((m) => m.v === state.particleCollisionMode);
-    hudMode.textContent = sel ? sel.t : "Deflect (90°)";
+    const modeName = sel ? sel.t : "Deflect (90°)";
+    hudMode.textContent = loopMode === "free" ? `${modeName} · Free` : modeName;
   }
   if (hudStatus) {
     const live = isLive();
-    hudStatus.textContent = live ? "▶ PLAYING" : "■ STOPPED";
-    hudStatus.style.color = live ? "var(--accent)" : "var(--dim)";
+    if (live) {
+      hudStatus.textContent = loopMode === "free" ? "▶ FREE RUN" : "▶ PLAYING";
+      hudStatus.style.color = "var(--accent)";
+    } else {
+      hudStatus.textContent = "■ STOPPED";
+      hudStatus.style.color = "var(--dim)";
+    }
   }
 }
 
@@ -1359,6 +1386,28 @@ export function initParticles() {
   }));
   modeCtrl.classList.add("particle-span-full");
 
+  const cycleCtrl = R("particleLoopMode", dropdown({
+    label: "Cycle Mode",
+    options: [
+      { v: "loop", t: "Loop (Reset at Length)" },
+      { v: "free", t: "Free Run (Indefinite)" }
+    ],
+    value: loopMode,
+    onInput: (v) => {
+      loopMode = v;
+      state.particleLoopMode = v;
+      if (v === "loop") {
+        totalFreeSteps = 0;
+        restoreFromSeed();
+        generateParticleBank();
+      }
+      updateHud();
+      renderCanvas();
+      status(`Cycle Mode: ${v === "loop" ? "Loop cycle (resets at length)" : "Free run (carries on indefinitely)"}`);
+    },
+    tip: "Loop mode repeats a frozen sequence cycle. Free run carries on moving and colliding indefinitely without resetting."
+  }));
+
   const boundCtrl = R("particleBoundary", dropdown({
     label: "Wall Boundary",
     options: [
@@ -1433,7 +1482,7 @@ export function initParticles() {
     "top"
   );
 
-  physGrid.append(modeCtrl, boundCtrl, wallNoteCtrl, lifeKnob, maxCountKnob, trajToggle);
+  physGrid.append(modeCtrl, cycleCtrl, boundCtrl, lifeKnob, maxCountKnob, wallNoteCtrl, trajToggle);
   physSect.append(physGrid);
 
   // 2. Grid & Editing Tools Section
@@ -1542,10 +1591,11 @@ export function initParticles() {
   }, "Advance particle physics forward by 1 step tick");
 
   const resetBtn = actionBtn("Reset Seed", () => {
+    totalFreeSteps = 0;
     restoreFromSeed();
     generateParticleBank();
     renderCanvas();
-    updateHud();
+    updateHud(0, 0, null);
     status("Reset particles to seed layout", "ok");
   }, "Restore particles to original seed positions");
 
@@ -1700,11 +1750,11 @@ export function initParticles() {
   saveToSeed();
   updateCachedTrajectories();
 
-  // Step Hook for Live Transport Playback (Zero-computation O(1) buffer lookup)
+  // Step Hook for Live Transport Playback
   onStep((stepIndex) => {
     if (stepIndex === null) {
       lastLiveStep = -1;
-      if (precomputedInitialState) {
+      if (loopMode === "loop" && precomputedInitialState) {
         particles = precomputedInitialState.particles;
         cachedParticlePaths = precomputedInitialState.paths;
         cachedCollisionTargets = precomputedInitialState.targets;
@@ -1717,6 +1767,33 @@ export function initParticles() {
     if (getActiveModel && getActiveModel() !== "particles") return;
     if (!containerEl || containerEl.style.display === "none") return;
 
+    if (loopMode === "free") {
+      totalFreeSteps++;
+      lastLiveStep = stepIndex;
+
+      // 1. Advance particle physics forward 1 continuous tick
+      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+      particles = updated;
+
+      updateCachedTrajectories();
+
+      // 2. Route notes directly to the current bank step so player.js plays them
+      const polyLimit = Math.max(1, Math.min(4, Number(state.particlePolyphony || 2)));
+      const stepNotes = notes.slice(0, polyLimit);
+
+      const bank = getBank();
+      const curP = bank?.[getSelected()];
+      const st = curP?.steps?.[stepIndex];
+      if (st) {
+        st.notes = stepNotes.map((n) => ({ ...n }));
+      }
+
+      updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
+      renderCanvas();
+      return;
+    }
+
+    // Loop Mode: O(1) Ring Buffer Lookup
     lastLiveStep = stepIndex;
 
     const stepState = (stepIndex >= 0 && stepIndex < precomputedStepStates.length)
@@ -1729,8 +1806,7 @@ export function initParticles() {
       cachedCollisionTargets = stepState.targets;
       updateHud(stepIndex, stepState.collisionsCount, stepState.primaryNote);
     } else {
-      // Dynamic fallback for non-loop or overflow steps
-      if (stepIndex === 0 && loopMode === "loop") {
+      if (stepIndex === 0) {
         restoreFromSeed();
       }
       const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);

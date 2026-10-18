@@ -73,6 +73,7 @@ export const DEFAULT = {
   particleRoot: 48,
   particleRootNote: 0,
   particleRootOctave: 3,
+  particleLoopMode: "loop",
 };
 
 export const state = { ...DEFAULT };
