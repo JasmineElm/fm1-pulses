@@ -1726,11 +1726,6 @@ body {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.rhythm-step-btn.is-active .r-step-led {
-  background: #ffffff;
-  box-shadow: 0 0 3px rgba(255, 255, 255, 0.75);
-}
-
 .rhythm-step-btn.is-active .r-step-note {
   color: #ffffff;
   font-weight: 700;
@@ -1759,7 +1754,7 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0 1px;
   pointer-events: none;
 }
@@ -1770,14 +1765,6 @@ body {
   line-height: 1;
   color: var(--dim);
   font-variant-numeric: tabular-nums;
-}
-
-.r-step-led {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--line);
-  transition: background-color 0.1s, box-shadow 0.1s;
 }
 
 .r-step-note {

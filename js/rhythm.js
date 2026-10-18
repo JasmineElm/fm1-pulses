@@ -859,10 +859,7 @@ export function initRhythm(containerEl) {
       numSpan.className = "r-step-num";
       numSpan.textContent = String(stepIdx + 1);
 
-      const ledSpan = document.createElement("span");
-      ledSpan.className = "r-step-led";
-
-      btnHeader.append(numSpan, ledSpan);
+      btnHeader.appendChild(numSpan);
 
       const noteSpan = document.createElement("span");
       noteSpan.className = "r-step-note";
