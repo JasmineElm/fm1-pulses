@@ -89,6 +89,7 @@ let seedParticles = [];
 let obstacles = new Uint8Array(gridW * gridH);
 let seedObstacles = new Uint8Array(gridW * gridH);
 const flippedDeflectors = new Set();
+const playheadClickCounts = new Map();
 
 let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer"
 let selectedDirectionIdx = 2; // East (1, 0)
@@ -269,7 +270,8 @@ function cloneParticles(list) {
     isChild: Boolean(p.isChild),
     life: p.life,
     maxLife: p.maxLife,
-    color: p.color
+    color: p.color,
+    _clickCount: p._clickCount ?? playheadClickCounts.get(p.id) ?? 0
   }));
 }
 
@@ -303,7 +305,9 @@ function cloneObstacles(obsGrid, W = gridW, H = gridH) {
 }
 
 function saveToSeed() {
-  seedParticles = cloneParticles(particles.filter((p) => !p.isChild));
+  if (lastLiveStep < 0) {
+    seedParticles = cloneParticles(particles.filter((p) => !p.isChild));
+  }
   seedObstacles = cloneObstacles(obstacles);
 }
 
@@ -1002,6 +1006,7 @@ export function randomizeParticles() {
 
   const numParticles = 4 + Math.floor(Math.random() * 4);
   particles = [];
+  playheadClickCounts.clear();
   clearObstacles(obstacles);
 
   for (let i = 0; i < numParticles; i++) {
@@ -1333,20 +1338,33 @@ function wireCanvasEvents(canvas) {
       const existingIdx = particles.findIndex((p) => p.x === cell.x && p.y === cell.y);
       if (existingIdx >= 0) {
         const cur = particles[existingIdx];
-        cur._clickCount = (cur._clickCount || 0) + 1;
-        if (cur._clickCount >= 8) {
+        const prevCount = cur._clickCount ?? playheadClickCounts.get(cur.id) ?? 0;
+        const newCount = prevCount + 1;
+        cur._clickCount = newCount;
+        playheadClickCounts.set(cur.id, newCount);
+
+        if (newCount >= 8) {
           particles.splice(existingIdx, 1);
+          seedParticles = seedParticles.filter((p) => p.id !== cur.id);
+          playheadClickCounts.delete(cur.id);
           status(`Removed playhead at (${cell.x}, ${cell.y})`);
         } else {
           const curIdx = DIRECTIONS.findIndex((d) => d.dx === cur.dx && d.dy === cur.dy);
           const nextIdx = ((curIdx >= 0 ? curIdx : 0) + 1) % 8;
           cur.dx = DIRECTIONS[nextIdx].dx;
           cur.dy = DIRECTIONS[nextIdx].dy;
-          status(`Playhead (${cell.x}, ${cell.y}) → ${DIRECTIONS[nextIdx].label} (${cur._clickCount}/8 clicks)`);
+          const seedP = seedParticles.find((p) => p.id === cur.id);
+          if (seedP) {
+            seedP.dx = cur.dx;
+            seedP.dy = cur.dy;
+            seedP._clickCount = newCount;
+          }
+          status(`Playhead (${cell.x}, ${cell.y}) → ${DIRECTIONS[nextIdx].label} (${newCount}/8 clicks)`);
         }
       } else {
+        const newId = nextParticleId++;
         particles.push({
-          id: nextParticleId++,
+          id: newId,
           x: cell.x,
           y: cell.y,
           dx,
@@ -1357,6 +1375,7 @@ function wireCanvasEvents(canvas) {
           _clickCount: 0,
           color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length]
         });
+        playheadClickCounts.set(newId, 0);
         status(`Placed playhead at (${cell.x}, ${cell.y}) → ${DIRECTIONS[selectedDirectionIdx].label}`);
       }
       saveToSeed();
@@ -1425,6 +1444,13 @@ function wireCanvasEvents(canvas) {
           targetParticle.dx = ndx;
           targetParticle.dy = ndy;
           targetParticle._clickCount = 0;
+          playheadClickCounts.delete(targetParticle.id);
+          const seedP = seedParticles.find((p) => p.id === targetParticle.id);
+          if (seedP) {
+            seedP.dx = ndx;
+            seedP.dy = ndy;
+            seedP._clickCount = 0;
+          }
           saveToSeed();
           generateParticleBank();
           renderCanvas();
@@ -1713,6 +1739,7 @@ export function initParticles() {
     particleRhythmOverridden = false;
     totalFreeSteps = 0;
     flippedDeflectors.clear();
+    playheadClickCounts.clear();
     restoreFromSeed();
     generateParticleBank();
     renderCanvas();
@@ -1722,6 +1749,7 @@ export function initParticles() {
 
   const clearBtn = actionBtn("Clear All", () => {
     particles = [];
+    playheadClickCounts.clear();
     clearObstacles(obstacles);
     saveToSeed();
     generateParticleBank();
@@ -1808,6 +1836,7 @@ export function initParticles() {
     btn.title = `${p.name}: ${p.desc}`;
     btn.addEventListener("click", () => {
       particleRhythmOverridden = false;
+      playheadClickCounts.clear();
       p.setup();
       saveToSeed();
       generateParticleBank();
