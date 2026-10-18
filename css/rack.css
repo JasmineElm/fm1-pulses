@@ -1553,11 +1553,49 @@ body {
   margin-right: 2px;
 }
 
-.rhythm-checkbox {
-  accent-color: var(--accent);
+.rhythm-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  height: 22px;
+}
+
+.rhythm-toggle-btn {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  height: 100%;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
   cursor: pointer;
-  margin: 0 2px 0 3px;
-  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  outline: none;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.rhythm-toggle-btn:hover {
+  color: var(--fg);
+}
+
+.rhythm-toggle-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel2));
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.rhythm-mode-input-wrap {
+  display: inline-flex;
+  align-items: center;
 }
 
 .rhythm-btn {
