@@ -14,7 +14,7 @@ import {
 } from "./state.js";
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
+import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=275";
 import { getActiveModel } from "./modes.js?v=260";
 
 export const GRID_SIZES = [
@@ -93,6 +93,28 @@ let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer" |
 let selectedDirectionIdx = 2; // East (1, 0)
 let loopMode = state.particleLoopMode || "loop"; // "loop" (resets to seed every sequence length) | "free" (carries on indefinitely)
 let totalFreeSteps = 0;
+let particleRhythmOverridden = false; // When false, note triggering is strictly determined by particle collisions
+
+export function isParticleRhythmOverridden() {
+  return particleRhythmOverridden;
+}
+
+export function setParticleRhythmOverridden(val) {
+  particleRhythmOverridden = Boolean(val);
+}
+
+export function resetRhythmToCollisions() {
+  particleRhythmOverridden = false;
+  const bank = getBank();
+  if (bank?.[0]?.steps) {
+    for (const st of bank[0].steps) {
+      delete st._userRhythmActive;
+    }
+  }
+  generateParticleBank();
+  syncRhythmGrid();
+  status("Reset rhythm to particle collisions", "ok");
+}
 
 // Visual representation toggles
 let showTrajectories = true; // Trajectory path prediction lines
@@ -131,7 +153,7 @@ export const PARTICLE_PRESETS = [
       state.particleCollisionMode = "deflect";
       particles = [
         { id: 1, x: 2, y: 8, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
-        { id: 2, x: 13, y: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] }
+        { id: 2, x: 12, y: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] }
       ];
       clearObstacles(obstacles);
     }
@@ -159,9 +181,9 @@ export const PARTICLE_PRESETS = [
       state.particleCollisionMode = "deflect";
       particles = [
         { id: 1, x: 4, y: 4, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
-        { id: 2, x: 11, y: 4, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
-        { id: 3, x: 11, y: 11, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
-        { id: 4, x: 4, y: 11, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
+        { id: 2, x: 12, y: 4, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 12, y: 12, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 4, y: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
       ];
       clearObstacles(obstacles);
     }
@@ -175,7 +197,7 @@ export const PARTICLE_PRESETS = [
       state.particleChildLife = 16;
       particles = [
         { id: 1, x: 3, y: 6, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
-        { id: 2, x: 12, y: 6, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 2, x: 11, y: 6, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
         { id: 3, x: 7, y: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] }
       ];
       clearObstacles(obstacles);
@@ -189,9 +211,9 @@ export const PARTICLE_PRESETS = [
       state.particleCollisionMode = "deflect";
       particles = [
         { id: 1, x: 2, y: 3, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
-        { id: 2, x: 10, y: 5, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 2, x: 10, y: 3, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
         { id: 3, x: 6, y: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
-        { id: 4, x: 13, y: 9, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
+        { id: 4, x: 14, y: 10, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
       ];
       clearObstacles(obstacles);
     }
@@ -552,6 +574,8 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH) {
   // 1. Advance positions along velocity vectors and handle boundaries
   for (let i = 0; i < numParticles; i++) {
     const p = pList[i];
+    p._prevX = p.x;
+    p._prevY = p.y;
 
     let tx = p.x + p.dx;
     let ty = p.y + p.dy;
@@ -719,6 +743,35 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH) {
     }
   }
 
+  // Check for head-on passing collisions (particles swapping cells on same axis)
+  for (let i = 0; i < numParticles; i++) {
+    const pA = pList[i];
+    if (pA._dead) continue;
+    for (let j = i + 1; j < numParticles; j++) {
+      const pB = pList[j];
+      if (pB._dead) continue;
+      if (pA.x === pB._prevX && pA.y === pB._prevY && pB.x === pA._prevX && pB.y === pA._prevY) {
+        const cx = pA.x;
+        const cy = pA.y;
+        const mapped = mapCoordinateToNote(cx, cy, W, H);
+        notesTriggered.push({ note: mapped.note, vel: mapped.vel });
+        collisionLocs.push({ x: cx, y: cy, note: mapped.name, count: 2 });
+
+        if (mode === "annihilate") {
+          pA._dead = true;
+          pB._dead = true;
+        } else if (mode === "deflect" || mode === "spawn" || mode === "hybrid") {
+          const odxA = pA.dx;
+          pA.dx = -pA.dy;
+          pA.dy = odxA;
+          const odxB = pB.dx;
+          pB.dx = pB.dy;
+          pB.dy = -odxB;
+        }
+      }
+    }
+  }
+
   // 4. Cleanup spatial hash cells for next tick
   for (let i = 0; i < numParticles; i++) {
     const c = pList[i].y * W + pList[i].x;
@@ -853,20 +906,49 @@ export function generateParticleBank() {
 
   const curBank = getBank();
   const existingSteps = curBank?.[0]?.steps;
-  const hasExistingRhythm = existingSteps && existingSteps.length > 0;
 
   const steps = precomputedSteps.map((st, i) => {
-    const simNote = st.notes.length > 0 ? st.notes : null;
-    const isStepActive = hasExistingRhythm
-      ? (existingSteps[i]?.notes && existingSteps[i].notes.length > 0)
-      : (simNote !== null && simNote.length > 0);
+    const hasCollision = st.notes.length > 0;
+    const isStepActive = particleRhythmOverridden
+      ? Boolean(existingSteps?.[i]?.notes && existingSteps[i].notes.length > 0)
+      : hasCollision;
 
-    const savedNotes = simNote || existingSteps?.[i]?._savedNotes || (existingSteps?.[i]?._savedNote ? [existingSteps[i]._savedNote] : null);
+    // Determine fallback note for this step in case user turns it on manually
+    let fallbackNotes = null;
+    if (existingSteps?.[i]?.notes && existingSteps[i].notes.length > 0) {
+      fallbackNotes = existingSteps[i].notes.map((n) => ({ ...n }));
+    } else if (existingSteps?.[i]?._savedNotes && existingSteps[i]._savedNotes.length > 0) {
+      fallbackNotes = existingSteps[i]._savedNotes.map((n) => ({ ...n }));
+    } else if (existingSteps?.[i]?._savedNote) {
+      fallbackNotes = [{ ...existingSteps[i]._savedNote }];
+    } else if (precomputedStepStates[i]?.particles?.[0]) {
+      const p0 = precomputedStepStates[i].particles[0];
+      const defM = mapCoordinateToNote(p0.x, p0.y, gridW, gridH);
+      fallbackNotes = [{ note: defM.note, vel: defM.vel }];
+    } else {
+      const root = state.root ?? 48;
+      const vel = state.velocity ?? 100;
+      fallbackNotes = [{ note: root, vel }];
+    }
+
+    const collisionNotes = hasCollision ? st.notes.map((n) => ({ ...n })) : null;
+
+    let finalNotes;
+    if (isStepActive) {
+      finalNotes = (collisionNotes && collisionNotes.length > 0)
+        ? collisionNotes
+        : (fallbackNotes || []);
+    } else {
+      finalNotes = [];
+    }
+
+    const savedNotes = collisionNotes || fallbackNotes;
 
     return {
-      notes: (isStepActive && savedNotes) ? savedNotes.map((n) => ({ ...n })) : [],
+      notes: finalNotes,
       _savedNotes: savedNotes ? savedNotes.map((n) => ({ ...n })) : null,
       _savedNote: savedNotes?.[0] ? { ...savedNotes[0] } : null,
+      _userRhythmActive: particleRhythmOverridden ? isStepActive : undefined,
       rate: st.rate,
       gate: st.gate
     };
@@ -904,6 +986,7 @@ export function generateParticleBank() {
  * Randomize particles configuration and generate new sequence.
  */
 export function randomizeParticles() {
+  particleRhythmOverridden = false;
   state.seed = (Math.random() * 1e9) | 0;
   if (refs.seed?.setValue) refs.seed.setValue(state.seed, false);
 
@@ -1563,6 +1646,7 @@ export function initParticles() {
   }, "Advance particle physics forward by 1 step tick");
 
   const resetBtn = actionBtn("Reset Seed", () => {
+    particleRhythmOverridden = false;
     totalFreeSteps = 0;
     restoreFromSeed();
     generateParticleBank();
@@ -1629,6 +1713,16 @@ export function initParticles() {
   harmGrid.append(mapCtrl, polyCtrl);
   harmSect.append(harmGrid);
 
+  const harmBtnRow = document.createElement("div");
+  harmBtnRow.className = "particle-btn-row";
+  harmBtnRow.style.marginTop = "8px";
+  const resetRhythmBtn = actionBtn("Reset Rhythm to Collisions", () => {
+    resetRhythmToCollisions();
+  }, "Restore note triggers to exact particle collisions, clearing Euclidean or manual rhythm overrides");
+  resetRhythmBtn.id = "btn-particle-reset-rhythm";
+  harmBtnRow.appendChild(resetRhythmBtn);
+  harmSect.appendChild(harmBtnRow);
+
   // 4. Presets Library Section
   const presetSect = document.createElement("section");
   presetSect.className = "sect particle-sect";
@@ -1648,6 +1742,7 @@ export function initParticles() {
     btn.textContent = p.name;
     btn.title = `${p.name}: ${p.desc}`;
     btn.addEventListener("click", () => {
+      particleRhythmOverridden = false;
       p.setup();
       saveToSeed();
       generateParticleBank();
@@ -1744,7 +1839,27 @@ export function initParticles() {
       const curP = bank?.[getSelected()];
       const st = curP?.steps?.[stepIndex];
       if (st) {
-        st.notes = stepNotes.map((n) => ({ ...n }));
+        if (!particleRhythmOverridden) {
+          // Default: note triggering determined strictly by particle collisions
+          st.notes = stepNotes.map((n) => ({ ...n }));
+        } else {
+          // Override: respect user Euclidean or manual rhythm gate
+          const isGateOn = st._userRhythmActive ?? (st.notes && st.notes.length > 0);
+          if (isGateOn) {
+            if (stepNotes.length > 0) {
+              st.notes = stepNotes.map((n) => ({ ...n }));
+            } else if (!st.notes || st.notes.length === 0) {
+              const defNote = st._savedNote || { note: state.root ?? 48, vel: state.velocity ?? 100 };
+              st.notes = [{ ...defNote }];
+            }
+          } else {
+            if (st.notes && st.notes.length > 0) {
+              st._savedNotes = st.notes.map((n) => ({ ...n }));
+              st._savedNote = { ...st.notes[0] };
+            }
+            st.notes = [];
+          }
+        }
       }
 
       updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
@@ -1790,12 +1905,26 @@ export function initParticles() {
       renderCanvas();
     }
   });
+
+  // Listen for user edits from Euclidean controls or manual rhythm step toggling
+  onRhythmUserEdit(() => {
+    if (getActiveModel && getActiveModel() !== "particles") return;
+    particleRhythmOverridden = true;
+    const curBank = getBank();
+    const curP = curBank?.[0];
+    if (curP?.steps) {
+      for (const s of curP.steps) {
+        s._userRhythmActive = Boolean(s.notes && s.notes.length > 0);
+      }
+    }
+  });
 }
 
 /**
  * When activating the Particle Collision Simulator model.
  */
 export function activateParticlesModel() {
+  particleRhythmOverridden = false;
   setSelected(0);
   setModelGenerator(generateParticleBank);
   setModelRandomizer(randomizeParticles);

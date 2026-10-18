@@ -19,10 +19,10 @@ import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js?v=274";
 import { createHumaniseSection } from "./humanise.js?v=269";
 import { createVelocitySection } from "./velocity.js?v=269";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=274";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=274";
-import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=274";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=258";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=275";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=275";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=275";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=275";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 

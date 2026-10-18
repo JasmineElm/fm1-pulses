@@ -44,6 +44,18 @@ let rotDisplayEl = null;
 let euclidHitsInput = null;
 let euclidDivSelect = null;
 
+const rhythmUserEditListeners = new Set();
+export function onRhythmUserEdit(fn) {
+  rhythmUserEditListeners.add(fn);
+  return () => rhythmUserEditListeners.delete(fn);
+}
+
+export function notifyRhythmUserEdit() {
+  for (const fn of rhythmUserEditListeners) {
+    try { fn(); } catch (_) {}
+  }
+}
+
 /**
  * Creates a default note for an activated step if none exists.
  */
@@ -146,6 +158,7 @@ export function toggleStepGate(stepIndex) {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
 }
 
 /**
@@ -186,6 +199,7 @@ export function applyEuclidPattern(hits, div, rot = 0) {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   const classic = classicName(N, M);
   status(`Applied Euclid E(${N},${M})${classic ? ` [${classic}]` : ""}${effRot ? ` rot ${effRot}` : ""}`, "ok");
 }
@@ -249,6 +263,7 @@ export function applyActiveEuclidRhythm() {
   syncRhythmGrid();
   renderBuffer();
   refreshLoopInfo();
+  notifyRhythmUserEdit();
 }
 
 /**
@@ -283,6 +298,7 @@ export function applyGenrePreset(presetId) {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   status(`Applied rhythm preset: ${preset.name}`, "ok");
 }
 
@@ -323,6 +339,7 @@ export function rotatePattern(direction) {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   state.euclidRot = ((rotOffset % 16) + 16) % 16;
   if (rotDisplayEl) {
     rotDisplayEl.textContent = rotOffset > 0 ? `+${rotOffset}` : `${rotOffset}`;
@@ -351,6 +368,7 @@ export function setAllGatesOn() {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   status(`All ${L} steps set to ON`);
 }
 
@@ -373,6 +391,7 @@ export function setAllGatesOff() {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   status("All step gates turned OFF");
 }
 
@@ -399,6 +418,7 @@ export function invertGates() {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   status("Inverted all step gates");
 }
 
@@ -433,6 +453,7 @@ export function randomizeGates() {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
   status(`Randomized gates (density ${Math.round(prob * 100)}%)`);
 }
 
@@ -479,6 +500,7 @@ export function randomizeRhythm() {
 
   syncRhythmGrid();
   renderBuffer();
+  notifyRhythmUserEdit();
 }
 
 /**
@@ -694,7 +716,10 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   blendInput.addEventListener("input", (e) => {
     const v = Number(e.target.value);
     state.gateBlend = v;
-    if (v > 0) setPrevGateBlend(v);
+    if (v > 0) {
+      setPrevGateBlend(v);
+      notifyRhythmUserEdit();
+    }
     blendVal.textContent = `${Math.round(v)}%`;
     refreshLoopInfo();
     scheduleRegen();
