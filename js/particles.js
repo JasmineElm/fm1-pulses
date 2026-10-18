@@ -89,7 +89,7 @@ let seedParticles = [];
 let obstacles = new Uint8Array(gridW * gridH);
 let seedObstacles = new Uint8Array(gridW * gridH);
 
-let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer" | "eraser"
+let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer"
 let selectedDirectionIdx = 2; // East (1, 0)
 let loopMode = state.particleLoopMode || "loop"; // "loop" (resets to seed every sequence length) | "free" (carries on indefinitely)
 let totalFreeSteps = 0;
@@ -1323,10 +1323,17 @@ function wireCanvasEvents(canvas) {
       const existingIdx = particles.findIndex((p) => p.x === cell.x && p.y === cell.y);
       if (existingIdx >= 0) {
         const cur = particles[existingIdx];
-        const curIdx = DIRECTIONS.findIndex((d) => d.dx === cur.dx && d.dy === cur.dy);
-        const nextIdx = ((curIdx >= 0 ? curIdx : 0) + 1) % 8;
-        cur.dx = DIRECTIONS[nextIdx].dx;
-        cur.dy = DIRECTIONS[nextIdx].dy;
+        cur._clickCount = (cur._clickCount || 0) + 1;
+        if (cur._clickCount >= 8) {
+          particles.splice(existingIdx, 1);
+          status(`Removed playhead at (${cell.x}, ${cell.y})`);
+        } else {
+          const curIdx = DIRECTIONS.findIndex((d) => d.dx === cur.dx && d.dy === cur.dy);
+          const nextIdx = ((curIdx >= 0 ? curIdx : 0) + 1) % 8;
+          cur.dx = DIRECTIONS[nextIdx].dx;
+          cur.dy = DIRECTIONS[nextIdx].dy;
+          status(`Playhead (${cell.x}, ${cell.y}) → ${DIRECTIONS[nextIdx].label} (${cur._clickCount}/8 clicks)`);
+        }
       } else {
         particles.push({
           id: nextParticleId++,
@@ -1337,25 +1344,29 @@ function wireCanvasEvents(canvas) {
           isChild: false,
           life: 0,
           maxLife: 0,
+          _clickCount: 0,
           color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length]
         });
+        status(`Placed playhead at (${cell.x}, ${cell.y}) → ${DIRECTIONS[selectedDirectionIdx].label}`);
       }
       saveToSeed();
       generateParticleBank();
       renderCanvas();
       updateHud();
     } else if (activeTool === "slash" || activeTool === "backslash" || activeTool === "bouncer") {
-      setObstacle(cell.x, cell.y, activeTool);
+      const obsIdx = cell.y * gridW + cell.x;
+      const currentObs = obstacles[obsIdx];
+      const targetObs = TOOL_TO_OBS[activeTool];
+      if (currentObs === targetObs) {
+        removeObstacle(cell.x, cell.y);
+        status(`Removed ${activeTool} at (${cell.x}, ${cell.y})`);
+      } else {
+        setObstacle(cell.x, cell.y, activeTool);
+        status(`Placed ${activeTool} at (${cell.x}, ${cell.y})`);
+      }
       saveToSeed();
       generateParticleBank();
       renderCanvas();
-    } else if (activeTool === "eraser") {
-      particles = particles.filter((p) => p.x !== cell.x || p.y !== cell.y);
-      removeObstacle(cell.x, cell.y);
-      saveToSeed();
-      generateParticleBank();
-      renderCanvas();
-      updateHud();
     }
   });
 
@@ -1381,6 +1392,7 @@ function wireCanvasEvents(canvas) {
         if (targetParticle) {
           targetParticle.dx = ndx;
           targetParticle.dy = ndy;
+          targetParticle._clickCount = 0;
           saveToSeed();
           generateParticleBank();
           renderCanvas();
@@ -1552,23 +1564,42 @@ export function initParticles() {
   const toolGrid = document.createElement("div");
   toolGrid.className = "particle-grid-2col";
 
-  const toolModeCtrl = dropdown({
-    label: "Active Stamp Tool",
-    options: [
-      { v: "particle", t: "Playhead Particle (•)" },
-      { v: "slash", t: "Deflector / (45° Up)" },
-      { v: "backslash", t: "Deflector \\ (45° Down)" },
-      { v: "bouncer", t: "Omni Bouncer * (180°)" },
-      { v: "eraser", t: "Eraser (Clear Cell)" }
-    ],
-    value: activeTool,
-    onInput: (v) => {
-      activeTool = v;
-      status(`Tool: ${v}`);
-    },
-    tip: "Tool stamped when clicking or dragging on the 2D grid."
+  const stampToolWrap = document.createElement("div");
+  stampToolWrap.className = "particle-tool-wrap particle-span-full";
+
+  const stampLabel = document.createElement("div");
+  stampLabel.className = "k-lab";
+  stampLabel.textContent = "Active Stamp Tool";
+
+  const stampBtnGroup = document.createElement("div");
+  stampBtnGroup.className = "particle-tool-group";
+
+  const STAMP_TOOLS = [
+    { v: "particle", label: "Playhead •", title: "Playhead Particle (•) — Click grid to place playhead, drag to aim direction, click 8 times to cycle compass and remove." },
+    { v: "slash", label: "Deflector /", title: "Deflector / (45° Up) — Reflects particles at 45°. Click placed deflector to erase." },
+    { v: "backslash", label: "Deflector \\", title: "Deflector \\ (45° Down) — Reflects particles at 45°. Click placed deflector to erase." },
+    { v: "bouncer", label: "Omni Bounce *", title: "Omni Bouncer * (180°) — Bounces particles straight back. Click placed bouncer to erase." }
+  ];
+
+  const stampButtons = [];
+
+  STAMP_TOOLS.forEach((t) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `particle-tool-btn${activeTool === t.v ? " is-active" : ""}`;
+    btn.textContent = t.label;
+    btn.title = t.title;
+    btn.id = `btn-stamp-${t.v}`;
+    btn.addEventListener("click", () => {
+      activeTool = t.v;
+      stampButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
+      status(`Tool: ${t.label}`);
+    });
+    stampBtnGroup.appendChild(btn);
+    stampButtons.push(btn);
   });
-  toolModeCtrl.classList.add("particle-span-full");
+
+  stampToolWrap.append(stampLabel, stampBtnGroup);
 
   const dirCtrl = dropdown({
     label: "Vector Direction",
@@ -1613,7 +1644,7 @@ export function initParticles() {
     tip: "2D surface grid dimensions."
   });
 
-  toolGrid.append(toolModeCtrl, dirCtrl, sizeCtrl);
+  toolGrid.append(stampToolWrap, dirCtrl, sizeCtrl);
 
   // Quick Action Buttons
   const btnRow = document.createElement("div");

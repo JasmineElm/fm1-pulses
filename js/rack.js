@@ -21,7 +21,7 @@ import { createHumaniseSection } from "./humanise.js?v=269";
 import { createVelocitySection } from "./velocity.js?v=269";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=275";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=275";
-import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=275";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=277";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=275";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
