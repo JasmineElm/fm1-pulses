@@ -462,14 +462,35 @@ export function initRhythm(containerEl) {
   euclidLabel.textContent = "Euclid";
 
   const euclidSelect = document.createElement("select");
-  euclidSelect.className = "rhythm-select";
-  euclidSelect.title = "Select classic Euclidean rhythm preset";
+  euclidSelect.className = "rhythm-select rhythm-preset-select";
+  euclidSelect.title = "Select rhythm preset (Euclidean rhythm or Groove pattern)";
+
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "custom";
+  defaultOpt.textContent = "Euclid Presets…";
+  euclidSelect.appendChild(defaultOpt);
+
+  const eucOptGroup = document.createElement("optgroup");
+  eucOptGroup.label = "Euclidean";
   for (const ep of EUCLID_PRESETS) {
+    if (ep.id === "custom") continue;
     const opt = document.createElement("option");
     opt.value = ep.id;
     opt.textContent = ep.name;
-    euclidSelect.appendChild(opt);
+    eucOptGroup.appendChild(opt);
   }
+  euclidSelect.appendChild(eucOptGroup);
+
+  const patternOptGroup = document.createElement("optgroup");
+  patternOptGroup.label = "Patterns";
+  for (const gp of GENRE_PRESETS) {
+    if (!gp.id) continue;
+    const opt = document.createElement("option");
+    opt.value = gp.id;
+    opt.textContent = gp.name;
+    patternOptGroup.appendChild(opt);
+  }
+  euclidSelect.appendChild(patternOptGroup);
 
   const euclidInputsWrap = document.createElement("div");
   euclidInputsWrap.className = "rhythm-euclid-inputs";
@@ -600,7 +621,8 @@ export function initRhythm(containerEl) {
 
   euclidSelect.addEventListener("change", () => {
     const val = euclidSelect.value;
-    if (val === "custom") return;
+    if (val === "custom" || !val) return;
+
     const preset = EUCLID_PRESETS.find((p) => p.id === val);
     if (preset && preset.n !== undefined) {
       euclidHitsInput.value = String(preset.n);
@@ -615,6 +637,19 @@ export function initRhythm(containerEl) {
       state.euclidRot = rotOffset;
       if (rotDisplayEl) rotDisplayEl.textContent = rotOffset > 0 ? `+${rotOffset}` : `${rotOffset}`;
       applyEuclidPattern(preset.n, preset.m, preset.rot || 0);
+      refreshLoopInfo();
+      return;
+    }
+
+    const genre = GENRE_PRESETS.find((p) => p.id === val);
+    if (genre && genre.fn) {
+      applyGenrePreset(genre.id);
+      const bank = getBank();
+      const p = bank[0];
+      const seqLen = Math.max(1, Math.min(64, state.length || 64));
+      const activeHits = p?.steps ? p.steps.filter((st, i) => i < seqLen && st.notes?.length > 0).length : 0;
+      euclidHitsInput.value = String(activeHits);
+      state.gateProb = Math.min(100, Math.max(0, Math.round((activeHits / seqLen) * 100)));
       refreshLoopInfo();
     }
   });
@@ -677,28 +712,6 @@ export function initRhythm(containerEl) {
     get value() { return state.snapGrid; }
   });
 
-  // --- Genre Presets ---
-  const genreGroup = document.createElement("div");
-  genreGroup.className = "rhythm-tool-group";
-  const genreLabel = document.createElement("span");
-  genreLabel.className = "rhythm-tool-label";
-  genreLabel.textContent = "Pattern";
-
-  const genreSelect = document.createElement("select");
-  genreSelect.className = "rhythm-select";
-  genreSelect.title = "Standard metric and groove patterns";
-  for (const gp of GENRE_PRESETS) {
-    const opt = document.createElement("option");
-    opt.value = gp.id;
-    opt.textContent = gp.name;
-    genreSelect.appendChild(opt);
-  }
-  genreSelect.addEventListener("change", () => {
-    if (genreSelect.value) {
-      applyGenrePreset(genreSelect.value);
-    }
-  });
-  genreGroup.append(genreLabel, genreSelect);
 
   // --- Rotate Controls ---
   const rotGroup = document.createElement("div");
@@ -772,7 +785,7 @@ export function initRhythm(containerEl) {
   batchBtnGroup.append(allOnBtn, allOffBtn, invertBtn, copyBar1Btn, randomBtn);
   batchGroup.append(batchLabel, batchBtnGroup);
 
-  toolbar.append(euclidGroup, rotGroup, genreGroup, batchGroup);
+  toolbar.append(euclidGroup, rotGroup, batchGroup);
   header.append(titleWrap, toolbar);
 
   // 2. 16x4 Step Buttons Grid

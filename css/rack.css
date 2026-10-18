@@ -1435,6 +1435,23 @@ body {
   outline: none;
   cursor: pointer;
   height: 22px;
+  width: auto;
+}
+
+.rhythm-select-sm {
+  min-width: 46px;
+  width: auto;
+  text-align: center;
+}
+
+.rhythm-preset-select {
+  width: 125px;
+  max-width: 125px;
+  min-width: 0;
+  flex: 0 0 125px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .rhythm-select:hover,
@@ -1452,7 +1469,7 @@ body {
 .rhythm-euclid-inputs {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   font-size: 9px;
   color: var(--dim);
 }
@@ -1460,14 +1477,14 @@ body {
 .rhythm-euclid-inputs label {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .rhythm-num-input {
-  width: 32px;
+  width: 38px;
   height: 22px;
   font-family: inherit;
   font-size: 9.5px;
@@ -1477,7 +1494,7 @@ body {
   background: var(--panel2);
   border: 1px solid var(--line);
   color: var(--fg);
-  padding: 0 2px;
+  padding: 0 3px;
   outline: none;
 }
 
@@ -1490,13 +1507,13 @@ body {
 .rhythm-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 44px;
+  width: 72px;
   height: 4px;
   border-radius: 2px;
   background: var(--line);
   outline: none;
   cursor: pointer;
-  margin: 0 3px;
+  margin: 0 4px;
   vertical-align: middle;
 }
 
@@ -1529,7 +1546,7 @@ body {
   font-size: 9.5px;
   font-weight: 700;
   color: var(--fg);
-  min-width: 24px;
+  min-width: 28px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   margin-right: 2px;
