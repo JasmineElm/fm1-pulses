@@ -14,7 +14,7 @@ import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, in
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
-import { initModes, getActiveModel } from "./modes.js?v=260";
+import { initModes, getActiveModel } from "./modes.js?v=267";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js?v=258";
 import { createHumaniseSection } from "./humanise.js?v=258";

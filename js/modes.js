@@ -3,10 +3,10 @@
 export const MODELS = [
   {
     id: "traditional",
-    name: "Traditional",
+    name: "Mene311",
     kicker: "Stochastic S&H · Quantizer · Echo Loop",
     available: true,
-    desc: "Classical generative signal chain. Gate probability triggers Sample & Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across 18 scales, with micro-timing humanize and 16-slot bank synthesis for FM-1 SysEx freeze.",
+    desc: "Classical generative signal chain created by Mene311. Gate probability triggers Sample & Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across 18 scales, with micro-timing humanize and 16-slot bank synthesis for FM-1 SysEx freeze.",
     tags: ["64 Steps", "16-Slot Bank", "18 Scales", "Echo / Deja-Vu", "SysEx Freeze", "Audio Audition"],
     icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2 12h3l2-6 4 12 3-8 2 4 2-2h4" />
@@ -163,7 +163,7 @@ export function showModel(id, updateHash = true) {
   if (modelParticles) modelParticles.style.display = id === "particles" ? "block" : "none";
   if (btnBack) btnBack.style.display = "inline-flex";
   if (modeTag) {
-    if (id === "traditional") modeTag.textContent = "Traditional";
+    if (id === "traditional") modeTag.textContent = "Mene311";
     else if (id === "cellular") modeTag.textContent = "Cellular Automata";
     else if (id === "turing") modeTag.textContent = "Turing Machine";
     else if (id === "particles") modeTag.textContent = "Particles";
@@ -199,7 +199,7 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   // Handle URL hash changes
   window.addEventListener("hashchange", () => {
     const h = window.location.hash.toLowerCase();
-    if (h === "#traditional") {
+    if (h === "#traditional" || h === "#mene311") {
       if (activeModelId !== "traditional") showModel("traditional", false);
     } else if (h === "#cellular") {
       if (activeModelId !== "cellular") showModel("cellular", false);
@@ -214,7 +214,7 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
 
   // Initial view selection
   const initialHash = window.location.hash.toLowerCase();
-  if (initialHash === "#traditional") {
+  if (initialHash === "#traditional" || initialHash === "#mene311") {
     showModel("traditional", false);
   } else if (initialHash === "#cellular") {
     showModel("cellular", false);
