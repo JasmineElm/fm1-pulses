@@ -105,7 +105,6 @@ let loopMode = "loop"; // "loop" (resets to seed every 64 steps) | "free"
 
 // Visual representation toggles
 let showTrajectories = true; // Trajectory path prediction lines
-let continuousPreview = false; // Free-running motion preview when transport is stopped
 
 // Cached Trajectory path rays & predicted collision markers (computed on generation/step)
 let cachedParticlePaths = null;
@@ -115,7 +114,6 @@ let cachedCollisionTargets = [];
 let currentTick = 0;
 let lastLiveStep = -1;
 let nextParticleId = 1;
-let previewTimerId = null;
 
 // DOM References
 let containerEl = null;
@@ -720,7 +718,7 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
 }
 
 /**
- * Executes a single physics step (used during manual step or preview).
+ * Executes a single physics step (used during manual step button).
  */
 export function stepPhysicsTick(triggerSound = true) {
   const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
@@ -1078,48 +1076,8 @@ function updateHud(stepIndex = 0, collisionCount = 0, lastNoteName = null) {
   }
   if (hudStatus) {
     const live = isLive();
-    hudStatus.textContent = live ? "▶ PLAYING" : (continuousPreview ? "⚡ PREVIEW" : "■ STOPPED");
-    hudStatus.style.color = (live || continuousPreview) ? "var(--accent)" : "var(--dim)";
-  }
-}
-
-/**
- * Drives the continuous preview motion timer when transport is stopped.
- * Only triggers at step boundaries, with zero idle overhead when stopped.
- */
-function startPreviewTimer() {
-  stopPreviewTimer();
-  if (!continuousPreview || isLive()) return;
-
-  function tick() {
-    if (!continuousPreview || isLive()) {
-      stopPreviewTimer();
-      return;
-    }
-    const tempo = Math.max(20, Math.min(300, state.tempo || 120));
-    const qMs = 60000 / tempo;
-    let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
-    if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
-    const qMult = RATE_QUARTERS[rateIdx] ?? 0.25;
-    const delay = Math.max(20, qMs * qMult);
-
-    stepPhysicsTick(false);
-    previewTimerId = setTimeout(tick, delay);
-  }
-
-  const tempo = Math.max(20, Math.min(300, state.tempo || 120));
-  const qMs = 60000 / tempo;
-  let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
-  if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
-  const qMult = RATE_QUARTERS[rateIdx] ?? 0.25;
-  const delay = Math.max(20, qMs * qMult);
-  previewTimerId = setTimeout(tick, delay);
-}
-
-function stopPreviewTimer() {
-  if (previewTimerId) {
-    clearTimeout(previewTimerId);
-    previewTimerId = null;
+    hudStatus.textContent = live ? "▶ PLAYING" : "■ STOPPED";
+    hudStatus.style.color = live ? "var(--accent)" : "var(--dim)";
   }
 }
 
@@ -1355,25 +1313,7 @@ export function initParticles() {
     "top"
   );
 
-  const previewToggle = toggleBtn(
-    "Preview Motion",
-    continuousPreview,
-    (on) => {
-      continuousPreview = on;
-      if (on && !isLive()) {
-        startPreviewTimer();
-      } else {
-        stopPreviewTimer();
-      }
-      updateHud();
-      renderCanvas();
-      status(`Continuous Motion Preview: ${on ? "On" : "Off"}`);
-    },
-    "Run free physics motion continuously even when transport is stopped.",
-    "top"
-  );
-
-  physGrid.append(modeCtrl, boundCtrl, wallNoteCtrl, lifeKnob, maxCountKnob, trajToggle, previewToggle);
+  physGrid.append(modeCtrl, boundCtrl, wallNoteCtrl, lifeKnob, maxCountKnob, trajToggle);
   physSect.append(physGrid);
 
   // 2. Grid & Editing Tools Section
@@ -1650,18 +1590,11 @@ export function initParticles() {
       lastLiveStep = -1;
       updateHud(-1, 0, null);
       renderCanvas();
-      if (continuousPreview) {
-        startPreviewTimer();
-      }
       return;
     }
 
     if (getActiveModel && getActiveModel() !== "particles") return;
     if (containerEl.style.display === "none") return;
-
-    if (previewTimerId) {
-      stopPreviewTimer();
-    }
 
     lastLiveStep = stepIndex;
 
@@ -1710,19 +1643,12 @@ export function activateParticlesModel() {
   updateCachedTrajectories();
   renderCanvas();
   updateHud(0, 0, null);
-
-  stopPreviewTimer();
-  if (continuousPreview && !isLive()) {
-    startPreviewTimer();
-  }
 }
 
 /**
  * When deactivating the Particle Collision Simulator model.
  */
 export function deactivateParticlesModel() {
-  stopPreviewTimer();
-  continuousPreview = false;
   setModelGenerator(null);
   setModelRandomizer(null);
 }
