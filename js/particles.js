@@ -18,6 +18,7 @@ import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v
 import { getActiveModel } from "./modes.js";
 
 export const GRID_SIZES = [
+  { v: "8", t: "8 × 8" },
   { v: "16", t: "16 × 16 (Standard)" },
   { v: "20", t: "20 × 20" },
   { v: "24", t: "24 × 24" },
@@ -83,8 +84,8 @@ export const TOOL_TO_OBS = {
 };
 
 // Particle Simulator State
-let gridW = 16;
-let gridH = 16;
+let gridW = state.particleGridSize || 16;
+let gridH = state.particleGridSize || 16;
 let particles = [];
 let seedParticles = [];
 let obstacles = new Uint8Array(gridW * gridH);
@@ -1628,10 +1629,6 @@ export function initParticles() {
   const stampToolWrap = document.createElement("div");
   stampToolWrap.className = "particle-tool-wrap particle-span-full";
 
-  const stampLabel = document.createElement("div");
-  stampLabel.className = "k-lab";
-  stampLabel.textContent = "Active Stamp Tool";
-
   const stampBtnGroup = document.createElement("div");
   stampBtnGroup.className = "particle-tool-group";
 
@@ -1659,7 +1656,7 @@ export function initParticles() {
     stampButtons.push(btn);
   });
 
-  stampToolWrap.append(stampLabel, stampBtnGroup);
+  stampToolWrap.appendChild(stampBtnGroup);
 
   const dirCtrl = dropdown({
     label: "Vector Direction",
@@ -1711,44 +1708,6 @@ export function initParticles() {
   const btnRow = document.createElement("div");
   btnRow.className = "particle-btn-row particle-span-full";
 
-  const addRndBtn = actionBtn("+ Random Head", () => {
-    const rx = Math.floor(Math.random() * gridW);
-    const ry = Math.floor(Math.random() * gridH);
-    const d = DIRECTIONS[Math.floor(Math.random() * 8)];
-    particles.push({
-      id: nextParticleId++,
-      x: rx,
-      y: ry,
-      dx: d.dx,
-      dy: d.dy,
-      isChild: false,
-      life: 0,
-      maxLife: 0,
-      color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length]
-    });
-    saveToSeed();
-    generateParticleBank();
-    renderCanvas();
-    updateHud();
-    status("Added particle playhead", "ok");
-  }, "Add a new randomized particle playhead to the grid");
-
-  const stepBtn = actionBtn("Step ▶", () => {
-    stepPhysicsTick(false);
-  }, "Advance particle physics forward by 1 step tick");
-
-  const resetBtn = actionBtn("Reset Seed", () => {
-    particleRhythmOverridden = false;
-    totalFreeSteps = 0;
-    flippedDeflectors.clear();
-    playheadClickCounts.clear();
-    restoreFromSeed();
-    generateParticleBank();
-    renderCanvas();
-    updateHud(0, 0, null);
-    status("Reset particles to seed layout", "ok");
-  }, "Restore particles to original seed positions");
-
   const clearBtn = actionBtn("Clear All", () => {
     particles = [];
     playheadClickCounts.clear();
@@ -1760,12 +1719,9 @@ export function initParticles() {
     status("Cleared all particles and obstacles");
   }, "Remove all particles and obstacles from the grid");
 
-  addRndBtn.id = "btn-particle-random";
-  stepBtn.id = "btn-particle-step";
-  resetBtn.id = "btn-particle-reset";
   clearBtn.id = "btn-particle-clear";
 
-  btnRow.append(addRndBtn, stepBtn, resetBtn, clearBtn);
+  btnRow.appendChild(clearBtn);
   toolGrid.appendChild(btnRow);
   toolSect.append(toolGrid);
 
