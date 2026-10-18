@@ -622,59 +622,6 @@ export function initRhythm(containerEl) {
   euclidInputsWrap.append(hitsLabel, divLabel, blendLabel, applyEuclidBtn);
   euclidGroup.append(euclidLabel, euclidSelect, euclidInputsWrap);
 
-  // --- Snap Controls ---
-  const snapGroup = document.createElement("div");
-  snapGroup.className = "rhythm-tool-group";
-
-  const snapLabel = document.createElement("span");
-  snapLabel.className = "rhythm-tool-label";
-  snapLabel.textContent = "Snap";
-
-  const snapPctLabel = document.createElement("label");
-  snapPctLabel.title = "Grid snap: probability a note survives only if it lands on a grid line (0–100%)";
-  snapPctLabel.textContent = "Prob ";
-
-  const snapInput = document.createElement("input");
-  snapInput.type = "range";
-  snapInput.min = "0";
-  snapInput.max = "100";
-  snapInput.value = String(state.gateQuant ?? 0);
-  snapInput.className = "rhythm-slider";
-
-  const snapVal = document.createElement("span");
-  snapVal.className = "rhythm-val";
-  snapVal.textContent = `${Math.round(state.gateQuant ?? 0)}%`;
-
-  snapInput.addEventListener("input", (e) => {
-    const v = Number(e.target.value);
-    state.gateQuant = v;
-    snapVal.textContent = `${v}%`;
-    scheduleRegen();
-  });
-
-  const snapGridLabel = document.createElement("label");
-  snapGridLabel.title = "Grid spacing in steps (2–8)";
-  snapGridLabel.textContent = "Grid ";
-
-  const snapGridSelect = document.createElement("select");
-  snapGridSelect.className = "rhythm-select-sm";
-  for (const n of [2, 3, 4, 5, 6, 7, 8]) {
-    const opt = document.createElement("option");
-    opt.value = String(n);
-    opt.textContent = String(n);
-    if (n === (state.snapGrid ?? 4)) opt.selected = true;
-    snapGridSelect.appendChild(opt);
-  }
-
-  snapGridSelect.addEventListener("change", (e) => {
-    state.snapGrid = Number(e.target.value);
-    scheduleRegen();
-  });
-
-  snapPctLabel.append(snapInput, snapVal);
-  snapGridLabel.appendChild(snapGridSelect);
-  snapGroup.append(snapLabel, snapPctLabel, snapGridLabel);
-
   // Register refs for synchronization
   R("gateProb", {
     setValue: (v) => {
@@ -719,8 +666,6 @@ export function initRhythm(containerEl) {
   R("gateQuant", {
     setValue: (v) => {
       state.gateQuant = Number(v) || 0;
-      snapInput.value = String(state.gateQuant);
-      snapVal.textContent = `${Math.round(state.gateQuant)}%`;
     },
     get value() { return state.gateQuant; }
   });
@@ -728,7 +673,6 @@ export function initRhythm(containerEl) {
   R("snapGrid", {
     setValue: (v) => {
       state.snapGrid = Number(v) || 4;
-      snapGridSelect.value = String(state.snapGrid);
     },
     get value() { return state.snapGrid; }
   });
@@ -828,7 +772,7 @@ export function initRhythm(containerEl) {
   batchBtnGroup.append(allOnBtn, allOffBtn, invertBtn, copyBar1Btn, randomBtn);
   batchGroup.append(batchLabel, batchBtnGroup);
 
-  toolbar.append(euclidGroup, snapGroup, rotGroup, genreGroup, batchGroup);
+  toolbar.append(euclidGroup, rotGroup, genreGroup, batchGroup);
   header.append(titleWrap, toolbar);
 
   // 2. 16x4 Step Buttons Grid
