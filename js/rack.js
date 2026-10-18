@@ -8,7 +8,7 @@ import {
 
 export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=250";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
@@ -21,7 +21,7 @@ import { createHumaniseSection } from "./humanise.js";
 import { createVelocitySection } from "./velocity.js";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=250";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -399,7 +399,7 @@ refreshLoopRanges();
 buildTransport();
 buildEditor();
 initScope();
-initRhythm(document.getElementById("rhythm-bar"));
+initRhythm(document.getElementById("rhythm-bar"), document.getElementById("sequence"));
 initCellular();
 initTuring();
 doGenerate(true);

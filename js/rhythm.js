@@ -5,7 +5,7 @@ import {
 import {
   euclid, classicName, quantize, midiName
 } from "./generator.js";
-import { renderBuffer, onBufferRender } from "./grid.js";
+import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=250";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
@@ -77,6 +77,7 @@ export function syncRhythmGrid() {
 
     btn.classList.toggle("is-active", !!hasNotes);
     btn.classList.toggle("is-off-length", !isWithinLen);
+    btn.classList.toggle("is-edit", i === getEditStep());
 
     const noteEl = btn.querySelector(".r-step-note");
     const velBarEl = btn.querySelector(".r-step-vel-bar");
@@ -460,7 +461,7 @@ export function highlightPlayhead(stepIndex) {
 /**
  * Initializes and builds the full-width Rhythm section DOM.
  */
-export function initRhythm(containerEl) {
+export function initRhythm(containerEl, sequenceContainerEl) {
   if (!containerEl) return;
   containerEl.innerHTML = "";
   stepButtons = [];
@@ -862,6 +863,7 @@ export function initRhythm(containerEl) {
       btn.append(btnHeader, noteSpan, velWrap);
 
       btn.addEventListener("click", () => {
+        selectStep(stepIdx);
         toggleStepGate(stepIdx);
       });
 
@@ -873,7 +875,16 @@ export function initRhythm(containerEl) {
     gridContainer.appendChild(row);
   }
 
-  containerEl.append(header, gridContainer);
+  const seqContainer = sequenceContainerEl || document.getElementById("sequence");
+  if (seqContainer) {
+    seqContainer.innerHTML = "";
+    const seqHeader = document.createElement("h3");
+    seqHeader.textContent = "Sequence";
+    seqContainer.append(seqHeader, gridContainer);
+    containerEl.append(header);
+  } else {
+    containerEl.append(header, gridContainer);
+  }
 
   // Hook Step Clock for live playhead tracking
   onStep((stepIndex) => {

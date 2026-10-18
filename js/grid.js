@@ -82,45 +82,52 @@ export function clearLocks() {
   status("locks cleared");
 }
 
+export function getEditStep() {
+  return editStep;
+}
+
 export function renderBuffer() {
-  const el = document.getElementById("steps");
-  if (!el) return;
-  el.innerHTML = "";
   const bank = getBank();
   const selected = getSelected();
   const p = bank[selected];
   if (!p) return;
-  const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);   // loop region, 0-based
-  const ln = Math.round(state.loop ?? 0);
-  const loopOn = ln >= 2 && ls + ln <= p.length;
-  for (let i = 0; i < 64; i++) {
-    const st = p.steps[i];
-    const cell = document.createElement("div");
-    cell.className = "cell";
-    const dot = document.createElement("span");
-    dot.className = "dot";
-    cell.appendChild(dot);
-    const on = i < p.length && st && st.notes.length;
-    if (on) {
-      const n0 = st.notes[0];
-      dot.textContent = midiName(n0.note);
-      cell.classList.add("on");
-      const vel = Math.max(1, Math.min(127, n0.vel ?? 100));
-      // Opacity scales continuously from 0.25 (vel 1) to 1.0 (vel 127)
-      const alpha = 0.25 + 0.75 * (vel / 127);
-      dot.style.setProperty("--vel-alpha", alpha.toFixed(3));
-      cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
-    } else if (i >= p.length) cell.classList.add("off");
-    if (loopOn && i >= ls && i < ls + ln) {
-      cell.classList.add("loop");
-      if (i === ls) cell.classList.add("loopstart");
+
+  const el = document.getElementById("steps");
+  if (el) {
+    el.innerHTML = "";
+    const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);   // loop region, 0-based
+    const ln = Math.round(state.loop ?? 0);
+    const loopOn = ln >= 2 && ls + ln <= p.length;
+    for (let i = 0; i < 64; i++) {
+      const st = p.steps[i];
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      cell.appendChild(dot);
+      const on = i < p.length && st && st.notes.length;
+      if (on) {
+        const n0 = st.notes[0];
+        dot.textContent = midiName(n0.note);
+        cell.classList.add("on");
+        const vel = Math.max(1, Math.min(127, n0.vel ?? 100));
+        // Opacity scales continuously from 0.25 (vel 1) to 1.0 (vel 127)
+        const alpha = 0.25 + 0.75 * (vel / 127);
+        dot.style.setProperty("--vel-alpha", alpha.toFixed(3));
+        cell.title = st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ");
+      } else if (i >= p.length) cell.classList.add("off");
+      if (loopOn && i >= ls && i < ls + ln) {
+        cell.classList.add("loop");
+        if (i === ls) cell.classList.add("loopstart");
+      }
+      if (st && st.echo != null) cell.classList.add("echo");   // a step the loop copied from the motif
+      if (locks.has(`${selected}:${i}`)) cell.classList.add("locked");
+      if (i === editStep) cell.classList.add("edit");
+      cell.addEventListener("click", () => selectStep(i));
+      el.appendChild(cell);
     }
-    if (st && st.echo != null) cell.classList.add("echo");   // a step the loop copied from the motif
-    if (locks.has(`${selected}:${i}`)) cell.classList.add("locked");
-    if (i === editStep) cell.classList.add("edit");
-    cell.addEventListener("click", () => selectStep(i));
-    el.appendChild(cell);
   }
+
   const selnum = document.getElementById("selnum");
   if (selnum) selnum.textContent = String(selected + 1);
   const bufinfo = document.getElementById("bufinfo");

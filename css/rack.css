@@ -700,58 +700,7 @@ body {
 .display h2 { margin: 0 0 6px; font-size: 8px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--dim); font-weight: 700; }
 .display h2 small { color: var(--fg); letter-spacing: .4px; font-weight: 400; text-transform: none; }
 
-/* ---- pattern grid with row & column headers ---- */
-.grid-frame {
-  display: grid;
-  grid-template-columns: 14px 1fr;
-  grid-template-rows: 14px 1fr;
-  gap: 4px 6px;
-  width: 100%;
-  margin: 4px 0 6px;
-}
-.grid-corner {
-  grid-column: 1;
-  grid-row: 1;
-}
-.col-headers {
-  grid-column: 2;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
-  align-items: center;
-  justify-items: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--dim);
-  letter-spacing: .4px;
-  user-select: none;
-  line-height: 1;
-}
-.row-headers {
-  grid-column: 1;
-  grid-row: 2;
-  display: grid;
-  grid-template-rows: repeat(8, 1fr);
-  gap: 6px;
-  align-items: center;
-  justify-items: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--dim);
-  letter-spacing: .4px;
-  user-select: none;
-  line-height: 1;
-}
-.display .steps {
-  grid-column: 2;
-  grid-row: 2;
-  display: grid;
-  padding: 0;
-  border-radius: 3px;
-  gap: 6px;
-  grid-template-columns: repeat(8, 1fr);
-}
+/* ---- pattern grid: removed (superfluous, replaced by full-width sequence grid) ---- */
 /* min-width: 0 — a grid item's automatic minimum is its min-content size, and the dot's
    size is derived from the (height-driven) cell, so the 1fr tracks used to grow past the
    screen: the last column hung out of the TFT on the right. Pinning the tracks' minimum
@@ -825,13 +774,11 @@ body {
   /* the screen fills its column, so both panels end on the same line. The 8x8 grid
      stretches to any shape and every step stays round because the circle is
      inscribed in its cell rather than being the cell. */
-  .display { display: flex; flex-direction: column; margin-top: 0; }
-  .display .steps { flex: 1 1 auto; min-height: 0; grid-auto-rows: 1fr; }
+  .display { display: flex; flex-direction: column; margin-top: 0; gap: 8px; }
   .display .bank { grid-template-columns: repeat(16, 1fr); }
 }
 
 @media (max-width: 400px) {
-  .display .steps { gap: 5px; }
   .display .bank { grid-template-columns: repeat(8, 1fr); }
   .k-lab { max-width: 62px; }
 }
@@ -1354,11 +1301,11 @@ body {
 }
 
 /* ==========================================================================
-   RHYTHM CONTROLS (Full-Width 16x4 Step Grid & Euclid Controls)
+   RHYTHM CONTROLS (Full-Width Euclid & Pattern Tools)
    ========================================================================== */
 .rhythm-bar {
   width: 100%;
-  margin-bottom: 11px;
+  margin-bottom: 8px;
   box-sizing: border-box;
 }
 
@@ -1368,7 +1315,33 @@ body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 14px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+}
+
+/* ==========================================================================
+   SEQUENCE (Full-Width 16x4 Step Buttons Grid)
+   ========================================================================== */
+.sequence-bar {
+  width: 100%;
+  margin-bottom: 11px;
+  box-sizing: border-box;
+}
+
+.sequence-bar h3 {
+  margin: 0 0 6px 0;
+  padding: 0 0 4px 0;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.2;
+}
+
+.rhythm-step-btn.is-edit {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .rhythm-title-wrap {

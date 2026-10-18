@@ -94,9 +94,9 @@ export function markStep(i) {
     if (nowCell) nowCell.classList.remove("now");
     nowCell = el.children[i] || null;
     if (nowCell) nowCell.classList.add("now");
-    setScopeNow(i);
-    try { renderScope(); } catch (_) {}
   }
+  setScopeNow(i);
+  try { renderScope(); } catch (_) {}
 }
 
 export function stopLive() {
