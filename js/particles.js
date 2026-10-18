@@ -116,8 +116,6 @@ let hudNote = null;
 let hudMode = null;
 let hudStatus = null;
 let hoverCoordEl = null;
-let headsListEl = null;
-let headsCountBadge = null;
 
 // Built-in Classic Presets
 export const PARTICLE_PRESETS = [
@@ -265,7 +263,6 @@ function restoreFromSeed() {
   obstacles = cloneObstacles(seedObstacles);
   collisionEvents = [];
   wallSparks = [];
-  renderActiveHeadsList();
 }
 
 /**
@@ -612,7 +609,6 @@ export function stepPhysicsTick(triggerSound = true) {
     });
   }
 
-  renderActiveHeadsList();
   updateHud(lastLiveStep >= 0 ? lastLiveStep : 0, collisions.length, collisions[0]?.note || null);
 }
 
@@ -677,7 +673,6 @@ export function generateParticleBank() {
 
   setBank(bank);
   syncRhythmGrid();
-  renderActiveHeadsList();
   return bank;
 }
 
@@ -722,76 +717,8 @@ export function randomizeParticles() {
   saveToSeed();
   generateParticleBank();
   randomizeRhythm();
-  renderActiveHeadsList();
   updateHud(0, 0, null);
   status(`Randomized Particles physics & Rhythm · seed ${state.seed >>> 0}`, "ok");
-}
-
-/**
- * Renders the Active Particle Heads inspector list in the left control panel.
- */
-export function renderActiveHeadsList() {
-  if (!headsListEl) return;
-  headsListEl.innerHTML = "";
-
-  const parents = particles.filter((p) => !p.isChild).length;
-  const children = particles.filter((p) => p.isChild).length;
-  if (headsCountBadge) {
-    headsCountBadge.textContent = `${particles.length} Heads (${parents}P / ${children}C)`;
-  }
-
-  if (particles.length === 0) {
-    const emptyEl = document.createElement("div");
-    emptyEl.className = "particle-hint";
-    emptyEl.style.padding = "8px 4px";
-    emptyEl.textContent = "No active particles. Click the grid or '+ Random Head' to add playheads.";
-    headsListEl.appendChild(emptyEl);
-    return;
-  }
-
-  particles.forEach((p, idx) => {
-    const card = document.createElement("div");
-    card.className = "particle-head-card";
-
-    // Heading arrow icon
-    const dirObj = DIRECTIONS.find((d) => d.dx === p.dx && d.dy === p.dy) || DIRECTIONS[2];
-
-    card.innerHTML = `
-      <div class="particle-head-left">
-        <span class="particle-head-dot" style="background: ${p.isChild ? '#ffffff' : p.color}; color: ${p.isChild ? '#ffffff' : p.color};"></span>
-        <span class="particle-head-title">#${p.id} ${p.isChild ? '(Child)' : 'Head'}</span>
-        <span class="particle-head-coords">(${p.x}, ${p.y})</span>
-      </div>
-      <div class="particle-head-right">
-        <button class="particle-head-dir-btn" title="Click to rotate vector 45° (${dirObj.label})">${dirObj.label.split(" ")[1] || "→"}</button>
-        <button class="particle-head-del-btn" title="Remove particle head">✕</button>
-      </div>
-    `;
-
-    // Rotate heading on click
-    card.querySelector(".particle-head-dir-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const curIdx = DIRECTIONS.findIndex((d) => d.dx === p.dx && d.dy === p.dy);
-      const nextIdx = ((curIdx >= 0 ? curIdx : 0) + 1) % 8;
-      p.dx = DIRECTIONS[nextIdx].dx;
-      p.dy = DIRECTIONS[nextIdx].dy;
-      saveToSeed();
-      generateParticleBank();
-      renderActiveHeadsList();
-    });
-
-    // Delete particle on click
-    card.querySelector(".particle-head-del-btn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      particles = particles.filter((item) => item.id !== p.id);
-      saveToSeed();
-      generateParticleBank();
-      renderActiveHeadsList();
-      updateHud();
-    });
-
-    headsListEl.appendChild(card);
-  });
 }
 
 /**
@@ -1249,7 +1176,6 @@ function wireCanvasEvents(canvas) {
       }
       saveToSeed();
       generateParticleBank();
-      renderActiveHeadsList();
       renderCanvas();
       updateHud();
     } else if (activeTool === "slash" || activeTool === "backslash" || activeTool === "bouncer") {
@@ -1262,7 +1188,6 @@ function wireCanvasEvents(canvas) {
       obstacles.delete(`${cell.x},${cell.y}`);
       saveToSeed();
       generateParticleBank();
-      renderActiveHeadsList();
       renderCanvas();
       updateHud();
     }
@@ -1292,7 +1217,6 @@ function wireCanvasEvents(canvas) {
           targetParticle.dy = ndy;
           saveToSeed();
           generateParticleBank();
-          renderActiveHeadsList();
           renderCanvas();
         }
       }
@@ -1441,23 +1365,7 @@ export function initParticles() {
   physGrid.append(modeCtrl, boundCtrl, wallNoteCtrl, lifeKnob, maxCountKnob, trajToggle, previewToggle);
   physSect.append(physGrid);
 
-  // 2. Active Playhead Particles Inspector Section
-  const headsSect = document.createElement("section");
-  headsSect.className = "sect particle-sect";
-  headsSect.innerHTML = `
-    <div class="particle-sect-head">
-      <h3>Active Playhead Particles</h3>
-      <span class="particle-badge" id="particle-heads-count">0 Heads</span>
-    </div>
-  `;
-
-  headsListEl = document.createElement("div");
-  headsListEl.className = "particle-heads-list";
-  headsListEl.id = "particle-heads-list";
-
-  headsSect.appendChild(headsListEl);
-
-  // 3. Grid & Editing Tools Section
+  // 2. Grid & Editing Tools Section
   const toolSect = document.createElement("section");
   toolSect.className = "sect particle-sect";
   toolSect.innerHTML = `
@@ -1514,7 +1422,6 @@ export function initParticles() {
       });
       saveToSeed();
       generateParticleBank();
-      renderActiveHeadsList();
       renderCanvas();
       updateHud();
       status(`Grid: ${s} × ${s}`);
@@ -1548,7 +1455,6 @@ export function initParticles() {
     });
     saveToSeed();
     generateParticleBank();
-    renderActiveHeadsList();
     renderCanvas();
     updateHud();
     status("Added particle playhead", "ok");
@@ -1561,7 +1467,6 @@ export function initParticles() {
   const resetBtn = actionBtn("Reset Seed", () => {
     restoreFromSeed();
     generateParticleBank();
-    renderActiveHeadsList();
     renderCanvas();
     updateHud();
     status("Reset particles to seed layout", "ok");
@@ -1572,7 +1477,6 @@ export function initParticles() {
     obstacles.clear();
     saveToSeed();
     generateParticleBank();
-    renderActiveHeadsList();
     renderCanvas();
     updateHud();
     status("Cleared all particles and obstacles");
@@ -1587,7 +1491,7 @@ export function initParticles() {
   toolGrid.appendChild(btnRow);
   toolSect.append(toolGrid);
 
-  // 4. Harmonic Mapping Section
+  // 3. Harmonic Mapping Section
   const harmSect = document.createElement("section");
   harmSect.className = "sect particle-sect";
   harmSect.innerHTML = `
@@ -1640,7 +1544,7 @@ export function initParticles() {
   harmGrid.append(mapCtrl, octCtrl, polyCtrl);
   harmSect.append(harmGrid);
 
-  // 5. Presets Library Section
+  // 4. Presets Library Section
   const presetSect = document.createElement("section");
   presetSect.className = "sect particle-sect";
   presetSect.innerHTML = `
@@ -1663,7 +1567,6 @@ export function initParticles() {
       p.setup();
       saveToSeed();
       generateParticleBank();
-      renderActiveHeadsList();
       renderCanvas();
       updateHud();
       status(`Loaded Preset: ${p.name}`, "ok");
@@ -1673,7 +1576,7 @@ export function initParticles() {
 
   presetSect.appendChild(presetGrid);
 
-  module.append(physSect, headsSect, toolSect, harmSect, presetSect);
+  module.append(physSect, toolSect, harmSect, presetSect);
 
   // RIGHT COLUMN: 2D Interactive Canvas & HUD
   const display = document.createElement("div");
@@ -1710,7 +1613,6 @@ export function initParticles() {
   hudMode = document.getElementById("particle-hud-mode");
   hudStatus = document.getElementById("particle-hud-status");
   hoverCoordEl = document.getElementById("particle-step-hover");
-  headsCountBadge = document.getElementById("particle-heads-count");
 
   // Canvas setup
   canvasEl = document.getElementById("particle-canvas");
@@ -1722,7 +1624,6 @@ export function initParticles() {
   // Load default preset (Head-On Clave)
   PARTICLE_PRESETS[0].setup();
   saveToSeed();
-  renderActiveHeadsList();
 
   // Step Hook for Live Transport Playback
   onStep((stepIndex) => {
@@ -1766,7 +1667,6 @@ export function initParticles() {
       });
     }
 
-    renderActiveHeadsList();
     updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
   });
 
@@ -1798,7 +1698,6 @@ export function activateParticlesModel() {
 
   doGenerate(false);
   syncRhythmGrid();
-  renderActiveHeadsList();
   renderCanvas();
   updateHud(0, 0, null);
   startAnimLoop();
