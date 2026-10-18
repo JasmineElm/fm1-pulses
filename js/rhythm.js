@@ -826,14 +826,6 @@ export function initRhythm(containerEl) {
     const row = document.createElement("div");
     row.className = "rhythm-row";
 
-    // Row Label
-    const barLabel = document.createElement("div");
-    barLabel.className = "rhythm-bar-label";
-    const barRange = document.createElement("span");
-    barRange.className = "rhythm-bar-range";
-    barRange.textContent = `${bar * 16 + 1}–${(bar + 1) * 16}`;
-    barLabel.appendChild(barRange);
-
     // Row Steps (16 buttons)
     const stepsWrap = document.createElement("div");
     stepsWrap.className = "rhythm-row-steps";
@@ -877,7 +869,7 @@ export function initRhythm(containerEl) {
       stepsWrap.appendChild(btn);
     }
 
-    row.append(barLabel, stepsWrap);
+    row.appendChild(stepsWrap);
     gridContainer.appendChild(row);
   }
 
