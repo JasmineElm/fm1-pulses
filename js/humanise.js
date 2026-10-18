@@ -51,10 +51,7 @@ export function createHumaniseSection(options = {}) {
   headEl.className = "humanise-head";
   const h3 = document.createElement("h3");
   h3.textContent = title;
-  const badge = document.createElement("span");
-  badge.className = "humanise-badge";
-  badge.textContent = "Timing & Groove";
-  headEl.append(h3, badge);
+  headEl.append(h3);
   sectEl.appendChild(headEl);
 
   const bodyEl = document.createElement("div");

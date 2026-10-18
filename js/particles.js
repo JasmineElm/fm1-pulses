@@ -1217,7 +1217,6 @@ export function initParticles() {
   physSect.innerHTML = `
     <div class="particle-sect-head">
       <h3>Physics &amp; Collisions</h3>
-      <span class="particle-badge">Kinetic 2D Grid</span>
     </div>
   `;
 
@@ -1322,7 +1321,6 @@ export function initParticles() {
   toolSect.innerHTML = `
     <div class="particle-sect-head">
       <h3>Interactive Tools</h3>
-      <span class="particle-hint-inline">Click / Drag Grid</span>
     </div>
   `;
 
@@ -1455,7 +1453,6 @@ export function initParticles() {
   harmSect.innerHTML = `
     <div class="particle-sect-head">
       <h3>Harmonic Mapping</h3>
-      <span class="particle-badge">Notes Div Sync</span>
     </div>
   `;
 
@@ -1488,7 +1485,7 @@ export function initParticles() {
   }));
 
   const polyCtrl = R("particlePolyphony", dropdown({
-    label: "Polyphony Limit",
+    label: "Polyphony",
     options: POLYPHONY_OPTIONS,
     value: String(state.particlePolyphony || 2),
     onInput: (v) => {
@@ -1508,7 +1505,6 @@ export function initParticles() {
   presetSect.innerHTML = `
     <div class="particle-sect-head">
       <h3>Orca / Plinky Presets</h3>
-      <span class="particle-hint-inline">1-Click Load</span>
     </div>
   `;
 
@@ -1555,7 +1551,6 @@ export function initParticles() {
       <canvas id="particle-canvas" class="particle-canvas"></canvas>
     </div>
     <div class="particle-display-footer">
-      <span class="particle-hint">💡 Moving particles step discretely · Dashed lines project future paths · Rings show predicted collisions</span>
       <span id="particle-step-hover" class="particle-step-hover">—</span>
     </div>
   `;
