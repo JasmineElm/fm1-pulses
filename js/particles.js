@@ -330,9 +330,9 @@ export function predictTrajectory(p, steps = 10, W = gridW, H = gridH, obsGrid =
       ty = (ty % H + H) % H;
     }
 
-    const obs = obsGrid instanceof Uint8Array
+    const obs = (obsGrid instanceof Uint8Array && ty >= 0 && ty < H && tx >= 0 && tx < W)
       ? obsGrid[ty * W + tx]
-      : (typeof obsGrid?.get === "function" ? (TOOL_TO_OBS[obsGrid.get(`${tx},${ty}`)] ?? OBS_NONE) : OBS_NONE);
+      : OBS_NONE;
 
     if (obs !== OBS_NONE) {
       if (obs === OBS_SLASH) {
@@ -351,6 +351,9 @@ export function predictTrajectory(p, steps = 10, W = gridW, H = gridH, obsGrid =
   return pts;
 }
 
+// Reusable Map for future trajectory collision analysis (zero per-tick allocations)
+const trajectoryCollisionMap = new Map();
+
 /**
  * Computes future trajectory paths and predicted collision markers for an arbitrary particle list.
  */
@@ -359,24 +362,27 @@ export function computeTrajectoriesForParticles(pList, obsGrid = obstacles, W = 
     return { paths: [], targets: [] };
   }
 
-  // Collect potential collisions at the same coordinate and future step
-  const collisionMap = new Map();
+  trajectoryCollisionMap.clear();
   const paths = pList.map((p) => {
     const path = predictTrajectory(p, steps, W, H, obsGrid);
     for (let s = 1; s < path.length; s++) {
       const pt = path[s];
       // Numeric collision key: step (high 16 bits), y (mid 8 bits), x (low 8 bits)
       const k = (s << 16) | (pt.y << 8) | pt.x;
-      if (!collisionMap.has(k)) collisionMap.set(k, []);
-      collisionMap.get(k).push({ step: s, x: pt.x, y: pt.y });
+      const count = (trajectoryCollisionMap.get(k) || 0) + 1;
+      trajectoryCollisionMap.set(k, count);
     }
     return { p: { ...p }, path };
   });
 
   const targets = [];
-  for (const colls of collisionMap.values()) {
-    if (colls.length >= 2) {
-      targets.push({ x: colls[0].x, y: colls[0].y, step: colls[0].step });
+  for (const [k, count] of trajectoryCollisionMap.entries()) {
+    if (count >= 2) {
+      targets.push({
+        step: k >>> 16,
+        y: (k >>> 8) & 0xff,
+        x: k & 0xff
+      });
     }
   }
   return { paths, targets };
@@ -546,8 +552,18 @@ export function mapCoordinateToNote(x, y, W = gridW, H = gridH) {
   return { note: clampedNote, vel: finalVel, name };
 }
 
+// Zero-Allocation Spatial Hash Buffers for stepPhysics collision detection
+const MAX_GRID_CELLS = 32 * 32; // 1024 max cells
+const MAX_SIM_PARTICLES = 128;
+const spatialCellHead = new Int16Array(MAX_GRID_CELLS).fill(-1);
+const spatialCellTail = new Int16Array(MAX_GRID_CELLS).fill(-1);
+const spatialParticleNext = new Int16Array(MAX_SIM_PARTICLES).fill(-1);
+const spatialCellCount = new Uint8Array(MAX_GRID_CELLS);
+const reusableCellGroup = new Array(MAX_SIM_PARTICLES);
+
 /**
  * Step the particle physics engine forward by 1 tick.
+ * Zero-allocation inner loop utilizing flat typed arrays for spatial collision hashing.
  */
 export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = false) {
   const boundary = state.particleBoundary || "reflect";
@@ -558,9 +574,10 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
 
   const notesTriggered = [];
   const collisionLocs = [];
+  const numParticles = pList.length;
 
   // 1. Advance positions along velocity vectors and handle boundaries
-  for (let i = 0; i < pList.length; i++) {
+  for (let i = 0; i < numParticles; i++) {
     const p = pList[i];
 
     let tx = p.x + p.dx;
@@ -603,10 +620,10 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
       notesTriggered.push({ note: wallNote.note, vel: Math.max(1, Math.round(wallNote.vel * 0.7)) });
     }
 
-    // Handle fixed obstacles (deflectors & bouncers)
-    const obs = obsMap instanceof Uint8Array
+    // Handle fixed obstacles (deflectors & bouncers) via fast typed array read
+    const obs = (obsMap instanceof Uint8Array && p.y >= 0 && p.y < H && p.x >= 0 && p.x < W)
       ? obsMap[p.y * W + p.x]
-      : (typeof obsMap?.get === "function" ? (TOOL_TO_OBS[obsMap.get(`${p.x},${p.y}`)] ?? OBS_NONE) : OBS_NONE);
+      : OBS_NONE;
 
     if (obs !== OBS_NONE) {
       if (obs === OBS_SLASH) {
@@ -629,94 +646,141 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
     }
   }
 
-  // 2. Identify particle collisions: group by coordinate
-  const cellMap = new Map();
-  for (let i = 0; i < pList.length; i++) {
-    const p = pList[i];
-    const key = `${p.x},${p.y}`;
-    if (!cellMap.has(key)) cellMap.set(key, []);
-    cellMap.get(key).push(p);
+  // 2. Zero-Allocation Spatial Hash: Group particles by coordinate in flat typed arrays
+  // Fast clear of only cells occupied by current particles
+  for (let i = 0; i < numParticles; i++) {
+    const c = pList[i].y * W + pList[i].x;
+    spatialCellHead[c] = -1;
+    spatialCellTail[c] = -1;
+    spatialCellCount[c] = 0;
   }
 
-  const toAnnihilate = new Set();
-  const childrenToSpawn = [];
+  // Populate linked list chains
+  for (let i = 0; i < numParticles; i++) {
+    const c = pList[i].y * W + pList[i].x;
+    if (spatialCellHead[c] === -1) {
+      spatialCellHead[c] = i;
+    } else {
+      spatialParticleNext[spatialCellTail[c]] = i;
+    }
+    spatialCellTail[c] = i;
+    spatialParticleNext[i] = -1;
+    spatialCellCount[c]++;
+  }
 
-  for (const [key, cellParticles] of cellMap.entries()) {
-    if (cellParticles.length >= 2) {
-      const cx = cellParticles[0].x;
-      const cy = cellParticles[0].y;
-      const mapped = mapCoordinateToNote(cx, cy, W, H);
+  let spawnedChildrenCount = 0;
+  const spawnedChildren = [];
 
-      notesTriggered.push({ note: mapped.note, vel: mapped.vel });
-      collisionLocs.push({ x: cx, y: cy, note: mapped.name, count: cellParticles.length });
+  // 3. Resolve collisions
+  for (let i = 0; i < numParticles; i++) {
+    const c = pList[i].y * W + pList[i].x;
+    const count = spatialCellCount[c];
+    if (count < 2) continue;
 
-      // Collision Dynamics
-      if (mode === "annihilate") {
-        for (const p of cellParticles) {
-          toAnnihilate.add(p);
+    // Mark cell as processed so other particles sharing this cell don't duplicate work
+    spatialCellCount[c] = 0;
+
+    // Collect cell particles in original insertion order into reusable buffer
+    let groupLen = 0;
+    let curr = spatialCellHead[c];
+    while (curr !== -1 && groupLen < reusableCellGroup.length) {
+      reusableCellGroup[groupLen++] = pList[curr];
+      curr = spatialParticleNext[curr];
+    }
+
+    const cx = reusableCellGroup[0].x;
+    const cy = reusableCellGroup[0].y;
+    const mapped = mapCoordinateToNote(cx, cy, W, H);
+
+    notesTriggered.push({ note: mapped.note, vel: mapped.vel });
+    collisionLocs.push({ x: cx, y: cy, note: mapped.name, count: groupLen });
+
+    // Collision Dynamics
+    if (mode === "annihilate") {
+      for (let k = 0; k < groupLen; k++) {
+        reusableCellGroup[k]._dead = true;
+      }
+    } else if (mode === "deflect" || mode === "spawn" || mode === "hybrid") {
+      for (let k = 0; k < groupLen; k++) {
+        const p = reusableCellGroup[k];
+        if (p.dx === 0 && p.dy === 0) {
+          p.dx = k % 2 === 0 ? 1 : -1;
+          p.dy = k % 2 === 0 ? -1 : 1;
+        } else if (k % 2 === 0) {
+          const odx = p.dx;
+          p.dx = -p.dy;
+          p.dy = odx;
+        } else {
+          const odx = p.dx;
+          p.dx = p.dy;
+          p.dy = -odx;
         }
-      } else if (mode === "deflect" || mode === "spawn" || mode === "hybrid") {
-        for (let k = 0; k < cellParticles.length; k++) {
-          const p = cellParticles[k];
-          if (p.dx === 0 && p.dy === 0) {
-            p.dx = k % 2 === 0 ? 1 : -1;
-            p.dy = k % 2 === 0 ? -1 : 1;
-          } else if (k % 2 === 0) {
-            const odx = p.dx;
-            p.dx = -p.dy;
-            p.dy = odx;
-          } else {
-            const odx = p.dx;
-            p.dx = p.dy;
-            p.dy = -odx;
-          }
-        }
+      }
 
-        const shouldSpawn = mode === "spawn" || (mode === "hybrid" && Math.random() < 0.5);
-        if (shouldSpawn && (pList.length + childrenToSpawn.length) < maxCount) {
-          const pA = cellParticles[0];
-          const pB = cellParticles[1];
-          let cdx = pA.dx + pB.dx;
-          let cdy = pA.dy + pB.dy;
-          if (cdx === 0 && cdy === 0) {
-            cdx = (Math.random() < 0.5 ? 1 : -1);
-            cdy = (Math.random() < 0.5 ? 1 : -1);
-          }
-          cdx = Math.max(-1, Math.min(1, cdx));
-          cdy = Math.max(-1, Math.min(1, cdy));
-
-          childrenToSpawn.push({
-            id: nextParticleId++,
-            x: cx,
-            y: cy,
-            dx: cdx,
-            dy: cdy,
-            isChild: true,
-            life: childLife,
-            maxLife: childLife,
-            color: "#ffffff"
-          });
+      const shouldSpawn = mode === "spawn" || (mode === "hybrid" && Math.random() < 0.5);
+      if (shouldSpawn && (numParticles + spawnedChildrenCount) < maxCount) {
+        const pA = reusableCellGroup[0];
+        const pB = reusableCellGroup[1];
+        let cdx = pA.dx + pB.dx;
+        let cdy = pA.dy + pB.dy;
+        if (cdx === 0 && cdy === 0) {
+          cdx = (Math.random() < 0.5 ? 1 : -1);
+          cdy = (Math.random() < 0.5 ? 1 : -1);
         }
+        cdx = Math.max(-1, Math.min(1, cdx));
+        cdy = Math.max(-1, Math.min(1, cdy));
+
+        spawnedChildrenCount++;
+        spawnedChildren.push({
+          id: nextParticleId++,
+          x: cx,
+          y: cy,
+          dx: cdx,
+          dy: cdy,
+          isChild: true,
+          life: childLife,
+          maxLife: childLife,
+          color: "#ffffff"
+        });
       }
     }
   }
 
-  // 3. Remove annihilated or expired particles
-  let nextList = pList.filter((p) => {
-    if (toAnnihilate.has(p)) return false;
-    if (p.isChild && p.life <= 0) return false;
-    return true;
-  });
-
-  // 4. Add new spawned children
-  if (childrenToSpawn.length > 0) {
-    nextList.push(...childrenToSpawn);
+  // 4. Cleanup spatial hash cells for next tick
+  for (let i = 0; i < numParticles; i++) {
+    const c = pList[i].y * W + pList[i].x;
+    spatialCellHead[c] = -1;
+    spatialCellTail[c] = -1;
+    spatialCellCount[c] = 0;
   }
 
-  // 5. Auto-respawn safety if particles drop below 2 in Annihilate mode
+  // 5. Compact surviving particles (filter dead and expired)
+  const nextList = [];
+  for (let i = 0; i < numParticles; i++) {
+    const p = pList[i];
+    if (p._dead) {
+      delete p._dead;
+      continue;
+    }
+    if (p.isChild && p.life <= 0) {
+      continue;
+    }
+    nextList.push(p);
+  }
+
+  // 6. Add new spawned children
+  if (spawnedChildren.length > 0) {
+    nextList.push(...spawnedChildren);
+  }
+
+  // 7. Auto-respawn safety if particles drop below 2 in Annihilate mode
   if (mode === "annihilate" && nextList.length < 2) {
     const restored = cloneParticles(seedParticles);
-    nextList = restored;
+    return {
+      particles: restored,
+      notes: notesTriggered,
+      collisions: collisionLocs
+    };
   }
 
   return {
