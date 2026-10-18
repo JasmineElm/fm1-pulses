@@ -14,14 +14,15 @@ import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, in
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
-import { initModes, getActiveModel } from "./modes.js?v=236";
+import { initModes, getActiveModel } from "./modes.js?v=258";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=257";
-import { createHumaniseSection } from "./humanise.js?v=257";
-import { createVelocitySection } from "./velocity.js?v=257";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=257";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=257";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=257";
+import { createNotesSection } from "./scale.js?v=258";
+import { createHumaniseSection } from "./humanise.js?v=258";
+import { createVelocitySection } from "./velocity.js?v=258";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=258";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=258";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=259";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=258";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -213,20 +214,28 @@ export function buildNotesBar() {
       // Mirror to ca* and turing*
       state.caScale = state.scale;
       state.turingScale = state.scale;
+      state.particleScale = state.scale;
       state.caCustomScale = state.customScale;
       state.turingCustomScale = state.customScale;
+      state.particleCustomScale = state.customScale;
       state.caRoot = state.root;
       state.turingRoot = state.root;
+      state.particleRoot = state.root;
       state.caRootNote = state.rootNote;
       state.turingRootNote = state.rootNote;
+      state.particleRootNote = state.rootNote;
       state.caRootOctave = state.rootOctave;
       state.turingRootOctave = state.rootOctave;
+      state.particleRootOctave = state.rootOctave;
       state.caQuantSteps = state.quantSteps;
       state.turingQuantSteps = state.quantSteps;
+      state.particleQuantSteps = state.quantSteps;
       state.caOctave = state.octave;
       state.turingOctave = state.octave;
+      state.particleOctave = state.octave;
       state.caOctaveMode = state.octaveMode;
       state.turingOctaveMode = state.octaveMode;
+      state.particleOctaveMode = state.octaveMode;
 
       scheduleRegen();
     }
@@ -430,6 +439,7 @@ initScope();
 initRhythm(document.getElementById("rhythm-bar"), document.getElementById("sequence"));
 initCellular();
 initTuring();
+initParticles();
 doGenerate(true);
 initMidi();
 initModes({
@@ -440,16 +450,23 @@ initModes({
     if (modelId === "traditional") {
       deactivateCellularModel();
       deactivateTuringModel();
+      deactivateParticlesModel();
       fitSteps();
       renderScope();
       renderBuffer();
       syncRhythmGrid();
     } else if (modelId === "cellular") {
       deactivateTuringModel();
+      deactivateParticlesModel();
       activateCellularModel();
     } else if (modelId === "turing") {
       deactivateCellularModel();
+      deactivateParticlesModel();
       activateTuringModel();
+    } else if (modelId === "particles") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      activateParticlesModel();
     }
   },
   onLeaveModel: () => {
@@ -458,6 +475,7 @@ initModes({
     }
     deactivateCellularModel();
     deactivateTuringModel();
+    deactivateParticlesModel();
   }
 });
 setTimeout(applyTips, 0);

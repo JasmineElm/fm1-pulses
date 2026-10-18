@@ -12,7 +12,7 @@ import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
 import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
-import { getActiveModel } from "./modes.js?v=236";
+import { getActiveModel } from "./modes.js?v=258";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported

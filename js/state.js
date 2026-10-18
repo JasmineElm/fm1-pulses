@@ -57,6 +57,22 @@ export const DEFAULT = {
   turingOctave: 0,
   turingOctaveMode: "up",
   turingSlip: 0,
+
+  // Particle Simulator model parameters
+  particleGridSize: 16,
+  particleCollisionMode: "deflect",
+  particleChildLife: 16,
+  particleMaxCount: 20,
+  particleBoundary: "reflect",
+  particleWallNotes: false,
+  particleNoteRule: "x-pitch-y-oct",
+  particleOctaves: 3,
+  particlePolyphony: 2,
+  particleScale: "pentMinor",
+  particleCustomScale: [0, 3, 5, 7, 10],
+  particleRoot: 48,
+  particleRootNote: 0,
+  particleRootOctave: 3,
 };
 
 export const state = { ...DEFAULT };
