@@ -88,6 +88,7 @@ let particles = [];
 let seedParticles = [];
 let obstacles = new Uint8Array(gridW * gridH);
 let seedObstacles = new Uint8Array(gridW * gridH);
+const flippedDeflectors = new Set();
 
 let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer"
 let selectedDirectionIdx = 2; // East (1, 0)
@@ -276,15 +277,24 @@ export function setObstacle(x, y, type, obsGrid = obstacles, W = gridW, H = grid
   if (x < 0 || x >= W || y < 0 || y >= H) return;
   const numType = typeof type === "number" ? type : (TOOL_TO_OBS[type] ?? OBS_NONE);
   obsGrid[y * W + x] = numType;
+  if (obsGrid === obstacles) {
+    flippedDeflectors.delete(y * W + x);
+  }
 }
 
 export function removeObstacle(x, y, obsGrid = obstacles, W = gridW, H = gridH) {
   if (x < 0 || x >= W || y < 0 || y >= H) return;
   obsGrid[y * W + x] = OBS_NONE;
+  if (obsGrid === obstacles) {
+    flippedDeflectors.delete(y * W + x);
+  }
 }
 
 export function clearObstacles(obsGrid = obstacles) {
   if (obsGrid) obsGrid.fill(OBS_NONE);
+  if (obsGrid === obstacles) {
+    flippedDeflectors.clear();
+  }
 }
 
 function cloneObstacles(obsGrid, W = gridW, H = gridH) {
@@ -1353,16 +1363,38 @@ function wireCanvasEvents(canvas) {
       generateParticleBank();
       renderCanvas();
       updateHud();
-    } else if (activeTool === "slash" || activeTool === "backslash" || activeTool === "bouncer") {
+    } else if (activeTool === "slash" || activeTool === "backslash") {
       const obsIdx = cell.y * gridW + cell.x;
       const currentObs = obstacles[obsIdx];
-      const targetObs = TOOL_TO_OBS[activeTool];
-      if (currentObs === targetObs) {
-        removeObstacle(cell.x, cell.y);
-        status(`Removed ${activeTool} at (${cell.x}, ${cell.y})`);
+      if (currentObs === OBS_SLASH || currentObs === OBS_BACKSLASH) {
+        if (flippedDeflectors.has(obsIdx)) {
+          flippedDeflectors.delete(obsIdx);
+          removeObstacle(cell.x, cell.y);
+          status(`Removed deflector at (${cell.x}, ${cell.y})`);
+        } else {
+          const newObs = currentObs === OBS_SLASH ? OBS_BACKSLASH : OBS_SLASH;
+          obstacles[obsIdx] = newObs;
+          flippedDeflectors.add(obsIdx);
+          status(`Flipped deflector at (${cell.x}, ${cell.y}) to ${newObs === OBS_SLASH ? "/" : "\\"}`);
+        }
       } else {
         setObstacle(cell.x, cell.y, activeTool);
-        status(`Placed ${activeTool} at (${cell.x}, ${cell.y})`);
+        flippedDeflectors.delete(obsIdx);
+        status(`Placed ${activeTool === "slash" ? "Deflector /" : "Deflector \\"} at (${cell.x}, ${cell.y})`);
+      }
+      saveToSeed();
+      generateParticleBank();
+      renderCanvas();
+    } else if (activeTool === "bouncer") {
+      const obsIdx = cell.y * gridW + cell.x;
+      const currentObs = obstacles[obsIdx];
+      if (currentObs === OBS_BOUNCER) {
+        removeObstacle(cell.x, cell.y);
+        status(`Removed Omni Bounce at (${cell.x}, ${cell.y})`);
+      } else {
+        setObstacle(cell.x, cell.y, "bouncer");
+        flippedDeflectors.delete(obsIdx);
+        status(`Placed Omni Bounce at (${cell.x}, ${cell.y})`);
       }
       saveToSeed();
       generateParticleBank();
@@ -1576,8 +1608,8 @@ export function initParticles() {
 
   const STAMP_TOOLS = [
     { v: "particle", label: "Playhead •", title: "Playhead Particle (•) — Click grid to place playhead, drag to aim direction, click 8 times to cycle compass and remove." },
-    { v: "slash", label: "Deflector /", title: "Deflector / (45° Up) — Reflects particles at 45°. Click placed deflector to erase." },
-    { v: "backslash", label: "Deflector \\", title: "Deflector \\ (45° Down) — Reflects particles at 45°. Click placed deflector to erase." },
+    { v: "slash", label: "Deflector /", title: "Deflector / (45° Up) — Reflects particles at 45°. Click deflector to flip rotation; click again to remove." },
+    { v: "backslash", label: "Deflector \\", title: "Deflector \\ (45° Down) — Reflects particles at 45°. Click deflector to flip rotation; click again to remove." },
     { v: "bouncer", label: "Omni Bounce *", title: "Omni Bouncer * (180°) — Bounces particles straight back. Click placed bouncer to erase." }
   ];
 
@@ -1635,6 +1667,7 @@ export function initParticles() {
         }
       }
       obstacles = newObs;
+      flippedDeflectors.clear();
       saveToSeed();
       generateParticleBank();
       renderCanvas();
@@ -1679,6 +1712,7 @@ export function initParticles() {
   const resetBtn = actionBtn("Reset Seed", () => {
     particleRhythmOverridden = false;
     totalFreeSteps = 0;
+    flippedDeflectors.clear();
     restoreFromSeed();
     generateParticleBank();
     renderCanvas();
