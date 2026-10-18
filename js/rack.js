@@ -18,6 +18,7 @@ import { initModes, getActiveModel } from "./modes.js?v=236";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js";
 import { createHumaniseSection } from "./humanise.js";
+import { createVelocitySection } from "./velocity.js";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js";
@@ -26,6 +27,7 @@ import * as audio from "./audio.js";
 
 let traditionalNotesSection = null;
 let traditionalHumaniseSection = null;
+let traditionalVelocitySection = null;
 
 // Register hooks
 onRegen(() => {
@@ -76,6 +78,7 @@ export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
   if (traditionalNotesSection) traditionalNotesSection.sync();
   if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
+  if (traditionalVelocitySection) traditionalVelocitySection.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -202,6 +205,17 @@ export function buildRack() {
     })(),
 
     (() => {
+      traditionalVelocitySection = createVelocitySection({
+        title: "Velocity",
+        span: 6,
+        onChange: () => {
+          scheduleRegen();
+        }
+      });
+      return traditionalVelocitySection.sectEl;
+    })(),
+
+    (() => {
       const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
       const blank = () => span(document.createElement("div"), 2);
       const hr = () => span(document.createElement("hr"), 6);
@@ -232,45 +246,6 @@ export function buildRack() {
         span(R("bias", fader({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias,
           format: (v) => `${Math.round(v)}`, onInput: setState("bias"), tip: "Pitch distribution bias: negative favors lower notes, positive favors higher." })), 4),
         span(R("spread", dropdown({ label: "Spread", options: ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), value: state.spread, onInput: (v) => { state.spread = v; scheduleRegen(); }, tip: "Pitch distribution spread", labelPos: "right" })), 2),
-
-        span(R("velocity", fader({ label: "Velocity", min: 1, max: 127, value: state.velocity, def: DEFAULT.velocity,
-          format: (v) => `${Math.round(v)}`,
-          onInput: setState("velocity"),
-          tip: "Base note velocity (1-127)."
-        })), 4),
-        span(R("randVelAmt", fader({ label: "Rnd Amt", min: 0, max: 100, value: state.randVelAmt ?? 0, def: DEFAULT.randVelAmt ?? 0,
-          format: (v) => `${Math.round(v)}%`,
-          onInput: setState("randVelAmt"),
-          tip: "Intensity of velocity randomisation.",
-          checkbox: { label: "Rnd", value: state.randVel, tip: "Enable random velocity variation", onInput: (v) => { state.randVel = v; scheduleRegen(); } }
-        })), 4),
-        span((() => {
-          const wrap = document.createElement("div");
-          wrap.className = "vel-bounds-wrap";
-          wrap.append(
-            R("velMin", knob({
-              label: "Min",
-              min: 1,
-              max: 127,
-              value: state.velMin ?? 1,
-              def: DEFAULT.velMin ?? 1,
-              size: "sm",
-              onInput: (v) => { state.velMin = Number(v); scheduleRegen(); },
-              tip: "Lower bound for velocity randomisation (1–127)"
-            })),
-            R("velMax", knob({
-              label: "Max",
-              min: 1,
-              max: 127,
-              value: state.velMax ?? 127,
-              def: DEFAULT.velMax ?? 127,
-              size: "sm",
-              onInput: (v) => { state.velMax = Number(v); scheduleRegen(); },
-              tip: "Upper bound for velocity randomisation (1–127)"
-            }))
-          );
-          return wrap;
-        })(), 2),
       ]);
     })(),
 
