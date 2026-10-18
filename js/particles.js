@@ -110,6 +110,10 @@ let showTrajectories = true; // Trajectory path prediction lines
 let cachedParticlePaths = null;
 let cachedCollisionTargets = [];
 
+// 64-step Precomputed Simulation Ring Buffer (Zero-computation playback)
+let precomputedStepStates = [];
+let precomputedInitialState = null;
+
 // Timing & State tracking
 let currentTick = 0;
 let lastLiveStep = -1;
@@ -348,21 +352,17 @@ export function predictTrajectory(p, steps = 10, W = gridW, H = gridH, obsGrid =
 }
 
 /**
- * Computes and caches future trajectory paths and predicted collision markers.
- * Executed at the point of sequence generation (generateParticleBank) and on
- * each discrete physics step, rather than 60 times a second in the render loop.
+ * Computes future trajectory paths and predicted collision markers for an arbitrary particle list.
  */
-export function updateCachedTrajectories() {
-  if (!showTrajectories || particles.length === 0) {
-    cachedParticlePaths = [];
-    cachedCollisionTargets = [];
-    return;
+export function computeTrajectoriesForParticles(pList, obsGrid = obstacles, W = gridW, H = gridH, steps = 10) {
+  if (!showTrajectories || !pList || pList.length === 0) {
+    return { paths: [], targets: [] };
   }
 
   // Collect potential collisions at the same coordinate and future step
   const collisionMap = new Map();
-  cachedParticlePaths = particles.map((p) => {
-    const path = predictTrajectory(p, 10, gridW, gridH);
+  const paths = pList.map((p) => {
+    const path = predictTrajectory(p, steps, W, H, obsGrid);
     for (let s = 1; s < path.length; s++) {
       const pt = path[s];
       // Numeric collision key: step (high 16 bits), y (mid 8 bits), x (low 8 bits)
@@ -370,7 +370,7 @@ export function updateCachedTrajectories() {
       if (!collisionMap.has(k)) collisionMap.set(k, []);
       collisionMap.get(k).push({ step: s, x: pt.x, y: pt.y });
     }
-    return { p, path };
+    return { p: { ...p }, path };
   });
 
   const targets = [];
@@ -379,6 +379,15 @@ export function updateCachedTrajectories() {
       targets.push({ x: colls[0].x, y: colls[0].y, step: colls[0].step });
     }
   }
+  return { paths, targets };
+}
+
+/**
+ * Computes and caches future trajectory paths and predicted collision markers for current live particles.
+ */
+export function updateCachedTrajectories() {
+  const { paths, targets } = computeTrajectoriesForParticles(particles, obstacles, gridW, gridH);
+  cachedParticlePaths = paths;
   cachedCollisionTargets = targets;
 }
 
@@ -721,16 +730,29 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
  * Executes a single physics step (used during manual step button).
  */
 export function stepPhysicsTick(triggerSound = true) {
-  const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
-  particles = updated;
+  const seqLen = precomputedStepStates.length || 64;
+  const nextStep = lastLiveStep < 0 ? 0 : (lastLiveStep + 1) % seqLen;
+  lastLiveStep = nextStep;
 
-  updateCachedTrajectories();
-  updateHud(lastLiveStep >= 0 ? lastLiveStep : 0, collisions.length, collisions[0]?.note || null);
+  const stepState = precomputedStepStates[nextStep];
+  if (stepState) {
+    particles = stepState.particles;
+    cachedParticlePaths = stepState.paths;
+    cachedCollisionTargets = stepState.targets;
+    updateHud(nextStep, stepState.collisionsCount, stepState.primaryNote);
+  } else {
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+    particles = updated;
+    updateCachedTrajectories();
+    updateHud(nextStep, collisions.length, collisions[0]?.note || null);
+  }
+
   renderCanvas();
 }
 
 /**
  * Generates the full 64-step sequence bank from particle physics simulation.
+ * Precomputes and caches all discrete simulation states for zero-overhead playback.
  */
 export function generateParticleBank() {
   ensureNoteLUT(gridW, gridH);
@@ -744,11 +766,34 @@ export function generateParticleBank() {
   const simObstacles = cloneObstacles(seedObstacles.some((v) => v !== 0) ? seedObstacles : obstacles);
   const precomputedSteps = [];
 
+  // 1. Initial State (step -1 / stopped / preview state)
+  const initTrajectories = computeTrajectoriesForParticles(simParticles, simObstacles, gridW, gridH);
+  precomputedInitialState = {
+    particles: cloneParticles(simParticles),
+    collisions: [],
+    collisionsCount: 0,
+    primaryNote: null,
+    paths: initTrajectories.paths,
+    targets: initTrajectories.targets
+  };
+
+  // 2. Precompute all sequence steps
+  precomputedStepStates = [];
   for (let step = 0; step < seqLen; step++) {
     const { particles: updated, notes, collisions } = stepPhysics(simParticles, simObstacles, gridW, gridH, true);
     simParticles = updated;
 
     const stepNotes = notes.slice(0, polyLimit);
+    const stepTrajectories = computeTrajectoriesForParticles(simParticles, simObstacles, gridW, gridH);
+
+    precomputedStepStates.push({
+      particles: cloneParticles(simParticles),
+      collisions,
+      collisionsCount: collisions.length,
+      primaryNote: collisions[0]?.note || null,
+      paths: stepTrajectories.paths,
+      targets: stepTrajectories.targets
+    });
 
     precomputedSteps.push({
       notes: stepNotes,
@@ -791,7 +836,19 @@ export function generateParticleBank() {
 
   setBank(bank);
   syncRhythmGrid();
-  updateCachedTrajectories();
+
+  // Sync active visual display to current step or initial state
+  if (lastLiveStep >= 0 && lastLiveStep < precomputedStepStates.length) {
+    const activeState = precomputedStepStates[lastLiveStep];
+    particles = activeState.particles;
+    cachedParticlePaths = activeState.paths;
+    cachedCollisionTargets = activeState.targets;
+  } else if (precomputedInitialState) {
+    particles = precomputedInitialState.particles;
+    cachedParticlePaths = precomputedInitialState.paths;
+    cachedCollisionTargets = precomputedInitialState.targets;
+  }
+
   return bank;
 }
 
@@ -1579,31 +1636,45 @@ export function initParticles() {
   saveToSeed();
   updateCachedTrajectories();
 
-  // Step Hook for Live Transport Playback
+  // Step Hook for Live Transport Playback (Zero-computation O(1) buffer lookup)
   onStep((stepIndex) => {
     if (stepIndex === null) {
       lastLiveStep = -1;
+      if (precomputedInitialState) {
+        particles = precomputedInitialState.particles;
+        cachedParticlePaths = precomputedInitialState.paths;
+        cachedCollisionTargets = precomputedInitialState.targets;
+      }
       updateHud(-1, 0, null);
       renderCanvas();
       return;
     }
 
     if (getActiveModel && getActiveModel() !== "particles") return;
-    if (containerEl.style.display === "none") return;
+    if (!containerEl || containerEl.style.display === "none") return;
 
     lastLiveStep = stepIndex;
 
-    // Reset to seed on loop boundary (step 0)
-    if (stepIndex === 0 && loopMode === "loop") {
-      restoreFromSeed();
+    const stepState = (stepIndex >= 0 && stepIndex < precomputedStepStates.length)
+      ? precomputedStepStates[stepIndex]
+      : null;
+
+    if (stepState) {
+      particles = stepState.particles;
+      cachedParticlePaths = stepState.paths;
+      cachedCollisionTargets = stepState.targets;
+      updateHud(stepIndex, stepState.collisionsCount, stepState.primaryNote);
+    } else {
+      // Dynamic fallback for non-loop or overflow steps
+      if (stepIndex === 0 && loopMode === "loop") {
+        restoreFromSeed();
+      }
+      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
+      particles = updated;
+      updateCachedTrajectories();
+      updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
     }
 
-    // Advance particle physics forward 1 live tick
-    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
-    particles = updated;
-
-    updateCachedTrajectories();
-    updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
     renderCanvas();
   });
 
@@ -1635,7 +1706,6 @@ export function activateParticlesModel() {
 
   doGenerate(false);
   syncRhythmGrid();
-  updateCachedTrajectories();
   renderCanvas();
   updateHud(0, 0, null);
 }
