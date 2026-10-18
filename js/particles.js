@@ -1501,7 +1501,7 @@ export function initParticles() {
   physGrid.className = "particle-grid-2col";
 
   const modeCtrl = R("particleCollisionMode", dropdown({
-    label: "Collision Rule",
+    label: "Rule",
     options: COLLISION_MODES.map((m) => ({ v: m.v, t: m.t })),
     value: state.particleCollisionMode || "deflect",
     onInput: (v) => {
