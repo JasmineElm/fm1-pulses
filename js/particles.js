@@ -94,6 +94,10 @@ let showTrajectories = true; // Trajectory path prediction lines
 let smoothMotion = true;      // 60 FPS smooth interpolation between clock ticks
 let continuousPreview = false; // Free-running motion preview when transport is stopped
 
+// Cached Trajectory path rays & predicted collision markers (computed on generation/step, NOT in 60 FPS loop)
+let cachedParticlePaths = null;
+let cachedCollisionTargets = [];
+
 // Timing & Animation tracking
 let currentTick = 0;
 let lastLiveStep = -1;
@@ -263,6 +267,7 @@ function restoreFromSeed() {
   obstacles = cloneObstacles(seedObstacles);
   collisionEvents = [];
   wallSparks = [];
+  updateCachedTrajectories();
 }
 
 /**
@@ -303,6 +308,41 @@ export function predictTrajectory(p, steps = 10, W = gridW, H = gridH) {
     pts.push({ x: cx, y: cy, step: s });
   }
   return pts;
+}
+
+/**
+ * Computes and caches future trajectory paths and predicted collision markers.
+ * Executed at the point of sequence generation (generateParticleBank) and on
+ * each discrete physics step, rather than 60 times a second in the render loop.
+ */
+export function updateCachedTrajectories() {
+  if (!showTrajectories || particles.length === 0) {
+    cachedParticlePaths = [];
+    cachedCollisionTargets = [];
+    return;
+  }
+
+  // Collect potential collisions at the same coordinate and future step
+  const collisionMap = new Map();
+  cachedParticlePaths = particles.map((p) => {
+    const path = predictTrajectory(p, 10, gridW, gridH);
+    for (let s = 1; s < path.length; s++) {
+      const pt = path[s];
+      // Numeric collision key: step (high 16 bits), y (mid 8 bits), x (low 8 bits)
+      const k = (s << 16) | (pt.y << 8) | pt.x;
+      if (!collisionMap.has(k)) collisionMap.set(k, []);
+      collisionMap.get(k).push({ step: s, x: pt.x, y: pt.y });
+    }
+    return { p, path };
+  });
+
+  const targets = [];
+  for (const colls of collisionMap.values()) {
+    if (colls.length >= 2) {
+      targets.push({ x: colls[0].x, y: colls[0].y, step: colls[0].step });
+    }
+  }
+  cachedCollisionTargets = targets;
 }
 
 /**
@@ -609,6 +649,7 @@ export function stepPhysicsTick(triggerSound = true) {
     });
   }
 
+  updateCachedTrajectories();
   updateHud(lastLiveStep >= 0 ? lastLiveStep : 0, collisions.length, collisions[0]?.note || null);
 }
 
@@ -673,6 +714,7 @@ export function generateParticleBank() {
 
   setBank(bank);
   syncRhythmGrid();
+  updateCachedTrajectories();
   return bank;
 }
 
@@ -814,52 +856,42 @@ export function renderCanvas() {
     ctx.restore();
   }
 
-  // 3. Predictive Trajectory Rays & Target Crosshairs
-  if (showTrajectories && particles.length > 0) {
-    const collisionPredictions = new Map();
-    const particlePaths = particles.map((p) => {
-      const path = predictTrajectory(p, 10, gridW, gridH);
-      for (let s = 1; s < path.length; s++) {
-        const pt = path[s];
-        const k = `${pt.x},${pt.y},${s}`;
-        if (!collisionPredictions.has(k)) collisionPredictions.set(k, []);
-        collisionPredictions.get(k).push({ p, step: s, x: pt.x, y: pt.y });
-      }
-      return { p, path };
-    });
-
-    // Draw dashed path rays
-    for (const { p, path } of particlePaths) {
-      if (path.length < 2) continue;
-      ctx.save();
-      ctx.strokeStyle = p.isChild ? "rgba(255, 255, 255, 0.4)" : p.color;
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([4, 4]);
-      ctx.globalAlpha = 0.38;
-      ctx.beginPath();
-
-      // Current smooth position as path start
-      let curX = p.x;
-      let curY = p.y;
-      if (smoothMotion && typeof p.prevX === "number") {
-        curX = p.prevX + (p.x - p.prevX) * interpT;
-        curY = p.prevY + (p.y - p.prevY) * interpT;
-      }
-      ctx.moveTo(curX * cellW + cellW / 2, curY * cellH + cellH / 2);
-
-      for (let s = 1; s < path.length; s++) {
-        ctx.lineTo(path[s].x * cellW + cellW / 2, path[s].y * cellH + cellH / 2);
-      }
-      ctx.stroke();
-      ctx.restore();
+  // 3. Predictive Trajectory Rays & Target Crosshairs (Rendered from cached data)
+  if (showTrajectories) {
+    if (!cachedParticlePaths) {
+      updateCachedTrajectories();
     }
 
-    // Draw predicted collision target markers
-    for (const [k, colls] of collisionPredictions.entries()) {
-      if (colls.length >= 2) {
-        const { x, y, step } = colls[0];
-        const tcx = x * cellW + cellW / 2;
-        const tcy = y * cellH + cellH / 2;
+    if (cachedParticlePaths.length > 0) {
+      // Draw dashed path rays
+      for (let i = 0; i < cachedParticlePaths.length; i++) {
+        const { p, path } = cachedParticlePaths[i];
+        if (!path || path.length < 2) continue;
+        ctx.save();
+        ctx.strokeStyle = p.isChild ? "rgba(255, 255, 255, 0.4)" : p.color;
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        ctx.globalAlpha = 0.38;
+        ctx.beginPath();
+
+        // Current smooth position as path start
+        let curX = p.x;
+        let curY = p.y;
+        if (smoothMotion && typeof p.prevX === "number") {
+          curX = p.prevX + (p.x - p.prevX) * interpT;
+          curY = p.prevY + (p.y - p.prevY) * interpT;
+        }
+        ctx.moveTo(curX * cellW + cellW / 2, curY * cellH + cellH / 2);
+
+        for (let s = 1; s < path.length; s++) {
+          ctx.lineTo(path[s].x * cellW + cellW / 2, path[s].y * cellH + cellH / 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw predicted collision target markers
+      if (cachedCollisionTargets.length > 0) {
         const pulse = Math.sin(now * 0.008) * 2;
         const targetRad = Math.min(cellW, cellH) * 0.38 + pulse;
 
@@ -868,16 +900,23 @@ export function renderCanvas() {
         ctx.fillStyle = "rgba(255, 0, 127, 0.18)";
         ctx.lineWidth = 1.8;
         ctx.setLineDash([2, 2]);
-        ctx.beginPath();
-        ctx.arc(tcx, tcy, targetRad, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#ff007f";
         ctx.font = `bold 8.5px -apple-system, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`+${step}t`, tcx, tcy);
+
+        for (let i = 0; i < cachedCollisionTargets.length; i++) {
+          const { x, y, step } = cachedCollisionTargets[i];
+          const tcx = x * cellW + cellW / 2;
+          const tcy = y * cellH + cellH / 2;
+
+          ctx.beginPath();
+          ctx.arc(tcx, tcy, targetRad, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#ff007f";
+          ctx.fillText(`+${step}t`, tcx, tcy);
+        }
         ctx.restore();
       }
     }
@@ -1342,6 +1381,7 @@ export function initParticles() {
     showTrajectories,
     (on) => {
       showTrajectories = on;
+      if (on) updateCachedTrajectories();
       renderCanvas();
       status(`Trajectory Rays: ${on ? "On" : "Off"}`);
     },
@@ -1624,6 +1664,7 @@ export function initParticles() {
   // Load default preset (Head-On Clave)
   PARTICLE_PRESETS[0].setup();
   saveToSeed();
+  updateCachedTrajectories();
 
   // Step Hook for Live Transport Playback
   onStep((stepIndex) => {
@@ -1667,6 +1708,7 @@ export function initParticles() {
       });
     }
 
+    updateCachedTrajectories();
     updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
   });
 
@@ -1698,6 +1740,7 @@ export function activateParticlesModel() {
 
   doGenerate(false);
   syncRhythmGrid();
+  updateCachedTrajectories();
   renderCanvas();
   updateHud(0, 0, null);
   startAnimLoop();
