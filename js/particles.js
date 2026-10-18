@@ -9,7 +9,7 @@
 import { SCALES, quantize, midiName } from "./generator.js";
 import {
   state, refs, R, doGenerate,
-  getBank, setBank, getSelected, setSelected, status,
+  getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
 } from "./state.js";
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
@@ -1038,6 +1038,7 @@ export function randomizeParticles() {
   saveToSeed();
   generateParticleBank();
   randomizeRhythm();
+  renderCanvas();
   updateHud(0, 0, null);
   status(`Randomized Particles physics & Rhythm · seed ${state.seed >>> 0}`, "ok");
 }
@@ -1998,6 +1999,14 @@ export function initParticles() {
   window.addEventListener("resize", () => {
     if (containerEl && containerEl.style.display !== "none") {
       renderCanvas();
+    }
+  });
+
+  // Hook bank regenerations
+  onRegen(() => {
+    if (containerEl && containerEl.style.display !== "none") {
+      renderCanvas();
+      updateHud();
     }
   });
 
