@@ -100,6 +100,16 @@ export function createScalePicker({
       btn.title = `${noteName}${isRoot ? " (Root)" : ""}: ${isActive ? "Active in scale (click to exclude)" : "Excluded (click to include)"}`;
     });
 
+    if (refs[rootNoteKey]?.setValue && state[rootNoteKey] !== undefined) {
+      refs[rootNoteKey].setValue(String(state[rootNoteKey]), false);
+    }
+    if (refs[rootOctaveKey]?.setValue && state[rootOctaveKey] !== undefined) {
+      refs[rootOctaveKey].setValue(String(state[rootOctaveKey]), false);
+    }
+    if (refs[scaleKey]?.setValue && state[scaleKey] !== undefined) {
+      refs[scaleKey].setValue(state[scaleKey], false);
+    }
+
     if (scaleInfoEl) {
       const activeSorted = Array.from(activeNotePcs).sort((a, b) => a - b);
       scaleInfoEl.textContent = `${activeNotePcs.size} active: ${activeSorted.map((pc) => NOTE_NAMES[pc]).join(" ")}`;
@@ -251,6 +261,7 @@ export function createScalePicker({
  * + Octave spread (Fader + Mode Dropdown)
  */
 export function createNotesSection({
+  container = null,
   title = "Notes",
   scaleKey = "scale",
   customScaleKey = "customScale",
@@ -262,6 +273,8 @@ export function createNotesSection({
   octaveModeKey = "octaveMode",
   defaultOctave = 4,
   scaleLabel = "Scale",
+  isFullWidth = false,
+  badgeText = "Key & Scale",
   onChange = () => {}
 } = {}) {
   const picker = createScalePicker({
@@ -293,7 +306,7 @@ export function createNotesSection({
 
   // Octave Spread Fader
   const octaveCtrl = R(octaveKey, fader({
-    label: "Octave Spread",
+    label: isFullWidth ? "Octave" : "Octave Spread",
     min: 0,
     max: 100,
     value: state[octaveKey] ?? 0,
@@ -309,7 +322,7 @@ export function createNotesSection({
 
   // Octave Spread Direction Dropdown
   const octaveModeCtrl = R(octaveModeKey, dropdown({
-    label: "Oct Spread",
+    label: isFullWidth ? "Direction" : "Oct Spread",
     options: [
       { v: "up", t: "Up" },
       { v: "down", t: "Down" },
@@ -326,43 +339,72 @@ export function createNotesSection({
   }));
 
   // Container Div titled 'Notes'
-  const sectEl = document.createElement("div");
-  sectEl.className = "sect notes-sect";
-  sectEl.style.gridColumn = "span 6";
+  const sectEl = container || document.createElement("div");
+  if (!container) sectEl.className = "sect notes-sect";
+  sectEl.innerHTML = "";
 
+  const headEl = document.createElement("div");
+  headEl.className = "humanise-head notes-head";
   const h = document.createElement("h3");
   h.textContent = title;
+  const badge = document.createElement("span");
+  badge.className = "humanise-badge";
+  badge.textContent = badgeText;
+  headEl.append(h, badge);
 
   const grid = document.createElement("div");
-  grid.className = "sgrid notes-grid";
-  grid.style.gridTemplateColumns = "repeat(6, minmax(0, 1fr))";
+  grid.className = isFullWidth ? "sgrid notes-grid notes-grid-fullwidth" : "sgrid notes-grid";
+  if (!isFullWidth) {
+    grid.style.gridTemplateColumns = "repeat(6, minmax(0, 1fr))";
+    sectEl.style.gridColumn = "span 6";
+  }
 
-  // Row 1: Root Note (2), Root Octave (2), Scale Dropdown (2)
-  picker.rootNoteCtrl.style.gridColumn = "span 2";
-  picker.rootOctCtrl.style.gridColumn = "span 2";
-  picker.scaleCtrl.style.gridColumn = "span 2";
+  picker.rootNoteCtrl.classList.add("ctrl-root-note");
+  picker.rootOctCtrl.classList.add("ctrl-root-oct");
+  picker.scaleCtrl.classList.add("ctrl-scale");
+  picker.scaleBox.classList.add("ctrl-scale-box");
+  quantCtrl.classList.add("ctrl-quant");
+  octaveCtrl.classList.add("ctrl-oct-spread");
+  octaveModeCtrl.classList.add("ctrl-oct-mode");
 
-  // Row 2: Note Selection (12 buttons) (6)
-  picker.scaleBox.style.gridColumn = "span 6";
+  if (!isFullWidth) {
+    // Row 1: Root Note (2), Root Octave (2), Scale Dropdown (2)
+    picker.rootNoteCtrl.style.gridColumn = "span 2";
+    picker.rootOctCtrl.style.gridColumn = "span 2";
+    picker.scaleCtrl.style.gridColumn = "span 2";
 
-  // Row 3: Quantize (6)
-  quantCtrl.style.gridColumn = "span 6";
+    // Row 2: Note Selection (12 buttons) (6)
+    picker.scaleBox.style.gridColumn = "span 6";
 
-  // Row 4: Octave Spread (4), Direction Mode (2)
-  octaveCtrl.style.gridColumn = "span 4";
-  octaveModeCtrl.style.gridColumn = "span 2";
+    // Row 3: Quantize (6)
+    quantCtrl.style.gridColumn = "span 6";
 
-  grid.append(
-    picker.rootNoteCtrl,
-    picker.rootOctCtrl,
-    picker.scaleCtrl,
-    picker.scaleBox,
-    quantCtrl,
-    octaveCtrl,
-    octaveModeCtrl
-  );
+    // Row 4: Octave Spread (4), Direction Mode (2)
+    octaveCtrl.style.gridColumn = "span 4";
+    octaveModeCtrl.style.gridColumn = "span 2";
 
-  sectEl.append(h, grid);
+    grid.append(
+      picker.rootNoteCtrl,
+      picker.rootOctCtrl,
+      picker.scaleCtrl,
+      picker.scaleBox,
+      quantCtrl,
+      octaveCtrl,
+      octaveModeCtrl
+    );
+  } else {
+    grid.append(
+      picker.rootNoteCtrl,
+      picker.rootOctCtrl,
+      picker.scaleCtrl,
+      quantCtrl,
+      octaveCtrl,
+      octaveModeCtrl,
+      picker.scaleBox
+    );
+  }
+
+  sectEl.append(headEl, grid);
 
   function sync() {
     picker.sync();

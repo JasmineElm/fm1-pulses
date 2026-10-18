@@ -10,7 +10,7 @@ import {
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
+import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js?v=236";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
@@ -279,10 +279,10 @@ export function stepConway() {
 // Y Axis: Velocity (Top = Loud 120, Bottom = Soft 30)
 export function mapCellToNote(cell, N) {
   if (!cell) return null;
-  const scaleName = state.caScale || "pentMinor";
-  let scale = (scaleName === "custom" && state.caCustomScale) ? state.caCustomScale : (SCALES[scaleName] || SCALES.pentMinor);
+  const scaleName = state.scale || state.caScale || "pentMinor";
+  let scale = (scaleName === "custom" && (state.customScale || state.caCustomScale)) ? (state.customScale || state.caCustomScale) : (SCALES[scaleName] || SCALES.pentMinor);
   if (!scale || scale.length === 0) scale = [0];
-  const root = typeof state.caRoot === "number" ? state.caRoot : 48;
+  const root = typeof state.root === "number" ? state.root : (typeof state.caRoot === "number" ? state.caRoot : 48);
   const octaves = typeof state.caOctaves === "number" ? state.caOctaves : 3;
   const minVel = typeof state.caMinVel === "number" ? state.caMinVel : 30;
   const maxVel = typeof state.caMaxVel === "number" ? state.caMaxVel : 120;
@@ -290,16 +290,16 @@ export function mapCellToNote(cell, N) {
   // X Axis -> Pitch: quantize along scale degrees
   const normX = Math.max(0, Math.min(1, cell.x / Math.max(1, N - 1)));
   const rawPitch = root + normX * (octaves * 12);
-  const quantStrength = (state.caQuantSteps ?? 100) / 100;
+  const quantStrength = ((state.quantSteps ?? state.caQuantSteps) ?? 100) / 100;
   const quantRng = mulberry32((cell.x * 2654435761 + cell.y * 2246822519) >>> 0);
   let note = Math.max(0, Math.min(127, quantize(rawPitch, scale, root, quantStrength, quantRng)));
 
   // Octave spread: Up (+12), Down (-12), or Both (±12)
-  const octChance = (state.caOctave ?? 0) / 100;
+  const octChance = ((state.octave ?? state.caOctave) ?? 0) / 100;
   if (octChance > 0) {
     const octRng = mulberry32((cell.x * 1597334677 + cell.y * 381204887 + generation * 65537) >>> 0);
     if (octRng() < octChance) {
-      const mode = (state.caOctaveMode || "up").toLowerCase();
+      const mode = (state.octaveMode || state.caOctaveMode || "up").toLowerCase();
       let shift = 12;
       if (mode === "down") shift = -12;
       else if (mode === "both") shift = octRng() < 0.5 ? 12 : -12;
@@ -1216,7 +1216,6 @@ function wireCanvasEvents(canvas) {
   });
 }
 
-let caNotesSection = null;
 
 // BUILD CELLULAR AUTOMATA UI
 export function buildCellularPanel(container) {
@@ -1378,25 +1377,7 @@ export function buildCellularPanel(container) {
   triggerControls.append(ruleCtrl, spanCtrl);
   triggerSect.append(triggerControls);
 
-  // 4. UNIFIED NOTES SECTION (Root Note, Root Octave, Scale Dropdown, Note Selection, Quantize, Octave Spread)
-  caNotesSection = createNotesSection({
-    title: "Notes",
-    scaleKey: "caScale",
-    customScaleKey: "caCustomScale",
-    rootKey: "caRoot",
-    rootNoteKey: "caRootNote",
-    rootOctaveKey: "caRootOctave",
-    quantKey: "caQuantSteps",
-    octaveKey: "caOctave",
-    octaveModeKey: "caOctaveMode",
-    defaultOctave: 3,
-    scaleLabel: "Scale Quantize",
-    onChange: () => {
-      generateCaBank();
-    }
-  });
-
-  // 5. PRESET PATTERNS LIBRARY
+  // 4. PRESET PATTERNS LIBRARY
   const presetSect = document.createElement("section");
   presetSect.className = "sect ca-sect";
   presetSect.innerHTML = `
@@ -1422,7 +1403,7 @@ export function buildCellularPanel(container) {
 
   presetSect.appendChild(presetList);
 
-  module.append(caNotesSection.sectEl, gridSect, evoSect, triggerSect, presetSect);
+  module.append(gridSect, evoSect, triggerSect, presetSect);
 
   // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
   const display = document.createElement("div");
@@ -1649,7 +1630,6 @@ export function activateCellularModel() {
   setModelRandomizer(randomizeCa);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
-  if (caNotesSection) caNotesSection.sync();
   doGenerate(false);
   syncRhythmGrid();
   redrawCaCanvas();

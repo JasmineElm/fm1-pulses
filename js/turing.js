@@ -9,7 +9,7 @@ import {
 } from "./state.js";
 import { knob, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
+import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js?v=236";
 import { quantize, midiName, SCALES } from "./generator.js";
@@ -51,7 +51,6 @@ initDefaultBits();
 // Track previous step for live playhead and mutation
 let lastLiveStep = -1;
 let turingContainer = null;
-let turingNotesSection = null;
 
 // UI element references
 let bitButtons = [];
@@ -100,25 +99,28 @@ function getNoteAtStep(step) {
 
   // Octave spread offset if configured
   let octShift = 0;
-  if (state.turingOctave && state.turingOctave > 0) {
-    const octProb = state.turingOctave / 100;
+  const octVal = state.octave ?? state.turingOctave ?? 0;
+  if (octVal > 0) {
+    const octProb = octVal / 100;
     // Derive deterministic octave shift for step
     const octRnd = (((step * 9301 + 49297) % 233280) / 233280);
     if (octRnd < octProb) {
-      if (state.turingOctaveMode === "up") octShift = 12;
-      else if (state.turingOctaveMode === "down") octShift = -12;
-      else if (state.turingOctaveMode === "up2") octShift = 24;
-      else if (state.turingOctaveMode === "down2") octShift = -24;
+      const mode = state.octaveMode || state.turingOctaveMode || "up";
+      if (mode === "up") octShift = 12;
+      else if (mode === "down") octShift = -12;
+      else if (mode === "up2") octShift = 24;
+      else if (mode === "down2") octShift = -24;
       else octShift = octRnd < octProb / 2 ? 12 : -12;
     }
   }
 
-  const rawNote = (state.turingRoot || 48) + semitones + octShift;
+  const root = typeof state.root === "number" ? state.root : (typeof state.turingRoot === "number" ? state.turingRoot : 48);
+  const rawNote = root + semitones + octShift;
   const quantNote = quantize(
     rawNote,
-    state.turingScale || "pentMinor",
-    state.turingQuantSteps ?? 100,
-    state.turingCustomScale
+    state.scale || state.turingScale || "pentMinor",
+    (state.quantSteps ?? state.turingQuantSteps) ?? 100,
+    state.customScale || state.turingCustomScale
   );
 
   return { note: Math.max(0, Math.min(127, quantNote)), val, norm };
@@ -200,8 +202,6 @@ export function randomizeTuring() {
   // 6. Randomize the shared Rhythm controls
   randomizeRhythm();
 
-  // 7. Sync sections
-  if (turingNotesSection) turingNotesSection.sync();
 
   doGenerate(true);
   syncRhythmGrid();
@@ -577,25 +577,7 @@ export function initTuring() {
 
   engineSect.append(engineControls, probRow, bitActionsRow);
 
-  // 2. REUSED NOTES SECTION (Root Note, Root Octave, Scale Quantizer, Note Selector, Octave Spread)
-  turingNotesSection = createNotesSection({
-    title: "Notes",
-    scaleKey: "turingScale",
-    customScaleKey: "turingCustomScale",
-    rootKey: "turingRoot",
-    rootNoteKey: "turingRootNote",
-    rootOctaveKey: "turingRootOctave",
-    quantKey: "turingQuantSteps",
-    octaveKey: "turingOctave",
-    octaveModeKey: "turingOctaveMode",
-    defaultOctave: 3,
-    scaleLabel: "Scale Quantize",
-    onChange: () => {
-      generateTuringBank();
-    }
-  });
-
-  moduleCol.append(engineSect, turingNotesSection.sectEl);
+  moduleCol.append(engineSect);
 
   // ==========================================
   // RIGHT COLUMN: Shift Register Display & Contour
@@ -764,8 +746,6 @@ export function activateTuringModel() {
 
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
-
-  if (turingNotesSection) turingNotesSection.sync();
 
   doGenerate(false);
   syncRhythmGrid();

@@ -16,12 +16,12 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js?v=236";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js";
-import { createHumaniseSection } from "./humanise.js?v=255";
-import { createVelocitySection } from "./velocity.js?v=255";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=255";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=255";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=255";
+import { createNotesSection } from "./scale.js?v=256";
+import { createHumaniseSection } from "./humanise.js?v=256";
+import { createVelocitySection } from "./velocity.js?v=256";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=256";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=256";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=256";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -190,6 +190,49 @@ export function buildGrooveBar() {
   container.append(traditionalHumaniseSection.sectEl, traditionalVelocitySection.sectEl);
 }
 
+export function buildNotesBar() {
+  const container = document.getElementById("notes-bar");
+  if (!container) return;
+
+  traditionalNotesSection = createNotesSection({
+    container,
+    title: "Notes",
+    scaleKey: "scale",
+    customScaleKey: "customScale",
+    rootKey: "root",
+    rootNoteKey: "rootNote",
+    rootOctaveKey: "rootOctave",
+    quantKey: "quantSteps",
+    octaveKey: "octave",
+    octaveModeKey: "octaveMode",
+    defaultOctave: 4,
+    scaleLabel: "Scale",
+    isFullWidth: true,
+    badgeText: "Key & Scale",
+    onChange: () => {
+      // Mirror to ca* and turing*
+      state.caScale = state.scale;
+      state.turingScale = state.scale;
+      state.caCustomScale = state.customScale;
+      state.turingCustomScale = state.customScale;
+      state.caRoot = state.root;
+      state.turingRoot = state.root;
+      state.caRootNote = state.rootNote;
+      state.turingRootNote = state.rootNote;
+      state.caRootOctave = state.rootOctave;
+      state.turingRootOctave = state.rootOctave;
+      state.caQuantSteps = state.quantSteps;
+      state.turingQuantSteps = state.quantSteps;
+      state.caOctave = state.octave;
+      state.turingOctave = state.octave;
+      state.caOctaveMode = state.octaveMode;
+      state.turingOctaveMode = state.octaveMode;
+
+      scheduleRegen();
+    }
+  });
+}
+
 export function buildRack() {
   buildGlobalBar();
   const panel = document.getElementById("panel");
@@ -197,25 +240,6 @@ export function buildRack() {
   panel.innerHTML = "";
 
   panel.append(
-    (() => {
-      traditionalNotesSection = createNotesSection({
-        title: "Notes",
-        scaleKey: "scale",
-        customScaleKey: "customScale",
-        rootKey: "root",
-        rootNoteKey: "rootNote",
-        rootOctaveKey: "rootOctave",
-        quantKey: "quantSteps",
-        octaveKey: "octave",
-        octaveModeKey: "octaveMode",
-        defaultOctave: 4,
-        scaleLabel: "Scale",
-        onChange: () => {
-          scheduleRegen();
-        }
-      });
-      return traditionalNotesSection.sectEl;
-    })(),
 
     (() => {
       const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
@@ -397,6 +421,7 @@ window.addEventListener("resize", () => { fitSteps(); renderScope(); });
 // Application Bootstrap
 buildTheme();
 buildRack();
+buildNotesBar();
 buildGrooveBar();
 refreshLoopRanges();
 buildTransport();
@@ -409,6 +434,7 @@ doGenerate(true);
 initMidi();
 initModes({
   onEnterModel: (modelId) => {
+    if (traditionalNotesSection) traditionalNotesSection.sync();
     if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
     if (traditionalVelocitySection) traditionalVelocitySection.sync();
     if (modelId === "traditional") {
