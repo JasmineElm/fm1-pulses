@@ -1628,12 +1628,11 @@ body {
 }
 
 .rhythm-bar-label {
-  flex: 0 0 54px;
-  width: 54px;
+  flex: 0 0 46px;
+  width: 46px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  align-items: flex-start;
   padding: 2px 4px;
   background: var(--panel2);
   border: 1px solid var(--line);
@@ -1642,18 +1641,12 @@ body {
   user-select: none;
 }
 
-.rhythm-bar-tag {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
 .rhythm-bar-range {
   font-size: 9px;
+  font-weight: 600;
   color: var(--dim);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
 }
 
 .rhythm-row-steps {

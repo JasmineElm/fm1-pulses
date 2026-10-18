@@ -831,13 +831,10 @@ export function initRhythm(containerEl) {
     // Row Label
     const barLabel = document.createElement("div");
     barLabel.className = "rhythm-bar-label";
-    const barTag = document.createElement("span");
-    barTag.className = "rhythm-bar-tag";
-    barTag.textContent = `Bar ${bar + 1}`;
     const barRange = document.createElement("span");
     barRange.className = "rhythm-bar-range";
     barRange.textContent = `${bar * 16 + 1}–${(bar + 1) * 16}`;
-    barLabel.append(barTag, barRange);
+    barLabel.appendChild(barRange);
 
     // Row Steps (16 buttons)
     const stepsWrap = document.createElement("div");
