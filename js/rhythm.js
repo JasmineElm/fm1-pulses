@@ -5,7 +5,7 @@ import {
 import {
   euclid, classicName, quantize, midiName
 } from "./generator.js";
-import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=251";
+import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=253";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)

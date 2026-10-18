@@ -10,7 +10,6 @@ import {
 import { knob, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
 import { createNotesSection, SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
-import { createHumaniseSection } from "./humanise.js";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js?v=236";
 import { quantize, midiName, SCALES } from "./generator.js";
@@ -53,7 +52,6 @@ initDefaultBits();
 let lastLiveStep = -1;
 let turingContainer = null;
 let turingNotesSection = null;
-let turingHumaniseSection = null;
 
 // UI element references
 let bitButtons = [];
@@ -204,7 +202,6 @@ export function randomizeTuring() {
 
   // 7. Sync sections
   if (turingNotesSection) turingNotesSection.sync();
-  if (turingHumaniseSection) turingHumaniseSection.sync();
 
   doGenerate(true);
   syncRhythmGrid();
@@ -580,19 +577,7 @@ export function initTuring() {
 
   engineSect.append(engineControls, probRow, bitActionsRow);
 
-  // 2. REUSED HUMANISE SECTION (Micro-timing Jitter & Step Swing)
-  turingHumaniseSection = createHumaniseSection({
-    title: "Humanise",
-    humanizeKey: "humanize",
-    swingKey: "swing",
-    span: 0,
-    extraClass: "ca-sect",
-    onChange: () => {
-      generateTuringBank();
-    }
-  });
-
-  // 3. REUSED NOTES SECTION (Root Note, Root Octave, Scale Quantizer, Note Selector, Octave Spread)
+  // 2. REUSED NOTES SECTION (Root Note, Root Octave, Scale Quantizer, Note Selector, Octave Spread)
   turingNotesSection = createNotesSection({
     title: "Notes",
     scaleKey: "turingScale",
@@ -610,7 +595,7 @@ export function initTuring() {
     }
   });
 
-  moduleCol.append(engineSect, turingHumaniseSection.sectEl, turingNotesSection.sectEl);
+  moduleCol.append(engineSect, turingNotesSection.sectEl);
 
   // ==========================================
   // RIGHT COLUMN: Shift Register Display & Contour
@@ -781,7 +766,6 @@ export function activateTuringModel() {
   if (refs.rate) refs.rate.setValue(state.rate);
 
   if (turingNotesSection) turingNotesSection.sync();
-  if (turingHumaniseSection) turingHumaniseSection.sync();
 
   doGenerate(false);
   syncRhythmGrid();

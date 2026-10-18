@@ -8,7 +8,7 @@ import {
 
 export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=251";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=253";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
@@ -17,11 +17,11 @@ import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js?v=236";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js";
-import { createHumaniseSection } from "./humanise.js";
-import { createVelocitySection } from "./velocity.js";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=251";
+import { createHumaniseSection } from "./humanise.js?v=255";
+import { createVelocitySection } from "./velocity.js?v=255";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=255";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=255";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=255";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
@@ -164,6 +164,32 @@ export function buildGlobalBar() {
   );
 }
 
+export function buildGrooveBar() {
+  const container = document.getElementById("humanise-velocity-bar");
+  if (!container) return;
+  container.innerHTML = "";
+
+  traditionalHumaniseSection = createHumaniseSection({
+    title: "Humanise",
+    humanizeKey: "humanize",
+    swingKey: "swing",
+    span: 0,
+    onChange: () => {
+      scheduleRegen();
+    }
+  });
+
+  traditionalVelocitySection = createVelocitySection({
+    title: "Velocity",
+    span: 0,
+    onChange: () => {
+      scheduleRegen();
+    }
+  });
+
+  container.append(traditionalHumaniseSection.sectEl, traditionalVelocitySection.sectEl);
+}
+
 export function buildRack() {
   buildGlobalBar();
   const panel = document.getElementById("panel");
@@ -171,19 +197,6 @@ export function buildRack() {
   panel.innerHTML = "";
 
   panel.append(
-    (() => {
-      traditionalHumaniseSection = createHumaniseSection({
-        title: "Humanise",
-        humanizeKey: "humanize",
-        swingKey: "swing",
-        span: 6,
-        onChange: () => {
-          scheduleRegen();
-        }
-      });
-      return traditionalHumaniseSection.sectEl;
-    })(),
-
     (() => {
       traditionalNotesSection = createNotesSection({
         title: "Notes",
@@ -202,17 +215,6 @@ export function buildRack() {
         }
       });
       return traditionalNotesSection.sectEl;
-    })(),
-
-    (() => {
-      traditionalVelocitySection = createVelocitySection({
-        title: "Velocity",
-        span: 6,
-        onChange: () => {
-          scheduleRegen();
-        }
-      });
-      return traditionalVelocitySection.sectEl;
     })(),
 
     (() => {
@@ -395,6 +397,7 @@ window.addEventListener("resize", () => { fitSteps(); renderScope(); });
 // Application Bootstrap
 buildTheme();
 buildRack();
+buildGrooveBar();
 refreshLoopRanges();
 buildTransport();
 buildEditor();
@@ -406,6 +409,8 @@ doGenerate(true);
 initMidi();
 initModes({
   onEnterModel: (modelId) => {
+    if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
+    if (traditionalVelocitySection) traditionalVelocitySection.sync();
     if (modelId === "traditional") {
       deactivateCellularModel();
       deactivateTuringModel();
@@ -413,7 +418,6 @@ initModes({
       renderScope();
       renderBuffer();
       syncRhythmGrid();
-      if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
     } else if (modelId === "cellular") {
       deactivateTuringModel();
       activateCellularModel();

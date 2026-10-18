@@ -38,7 +38,7 @@ export function createHumaniseSection(options = {}) {
   const title = options.title || "Humanise";
   const humanizeKey = options.humanizeKey || "humanize";
   const swingKey = options.swingKey || "swing";
-  const span = options.span || 6;
+  const span = options.span ?? 6;
   const extraClass = options.extraClass || "";
   const onChange = options.onChange || null;
 

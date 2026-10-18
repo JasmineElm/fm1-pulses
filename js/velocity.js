@@ -36,9 +36,15 @@ export function createVelocitySection(options = {}) {
   if (span) sectEl.style.gridColumn = `span ${span}`;
 
   // Section Header
+  const headEl = document.createElement("div");
+  headEl.className = "humanise-head";
   const h3 = document.createElement("h3");
   h3.textContent = title;
-  sectEl.appendChild(h3);
+  const badge = document.createElement("span");
+  badge.className = "humanise-badge";
+  badge.textContent = "Dynamics & Accent";
+  headEl.append(h3, badge);
+  sectEl.appendChild(headEl);
 
   // Section Body Grid (6 rails)
   const grid = document.createElement("div");
