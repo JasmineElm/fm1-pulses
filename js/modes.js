@@ -5,8 +5,6 @@ export const MODELS = [
     id: "traditional",
     name: "Traditional",
     kicker: "Stochastic S&H · Quantizer · Echo Loop",
-    badge: "Active",
-    badgeClass: "badge-active",
     available: true,
     desc: "Classical generative signal chain. Gate probability triggers Sample & Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across 18 scales, with micro-timing humanize and 16-slot bank synthesis for FM-1 SysEx freeze.",
     tags: ["64 Steps", "16-Slot Bank", "18 Scales", "Echo / Deja-Vu", "SysEx Freeze", "Audio Audition"],
@@ -21,8 +19,6 @@ export const MODELS = [
     id: "turing",
     name: "Turing Machine",
     kicker: "Shift Register · Bit Slip · Mutation",
-    badge: "Active",
-    badgeClass: "badge-active",
     available: true,
     desc: "Shift-register melody generator inspired by Tom Whitwell's Turing Machine. A circulating loop of bits slowly mutates according to a write probability, locking into hypnotic melodic cycles or drifting into ever-changing variations.",
     tags: ["Shift Register", "Lock Loop", "Bit Slip", "Probabilistic Write"],
@@ -33,29 +29,9 @@ export const MODELS = [
     </svg>`
   },
   {
-    id: "euclidean",
-    name: "Euclidean Pulses",
-    kicker: "Bjorklund · Polyrhythm · Cross-Pulse",
-    badge: "Coming Soon",
-    badgeClass: "badge-wip",
-    available: false,
-    desc: "Mathematical rhythm generator distributing pulses evenly across arbitrary measure lengths using the Euclidean algorithm (Bjorklund). Combine independent polyrhythmic tracks to produce rich, interlocking syncopations.",
-    tags: ["Bjorklund Algorithm", "Polymeter", "Pulse Density", "Syncopation"],
-    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="12,2 22,8.5 18,20 6,20 2,8.5" />
-      <circle cx="12" cy="2" r="1.5" fill="currentColor" />
-      <circle cx="22" cy="8.5" r="1.5" fill="currentColor" />
-      <circle cx="18" cy="20" r="1.5" fill="currentColor" />
-      <circle cx="6" cy="20" r="1.5" fill="currentColor" />
-      <circle cx="2" cy="8.5" r="1.5" fill="currentColor" />
-    </svg>`
-  },
-  {
     id: "cellular",
     name: "Cellular Automata",
     kicker: "Wolfram 1D Rules · Step Matrix · Emergent",
-    badge: "Active",
-    badgeClass: "badge-active",
     available: true,
     desc: "Step generation driven by 1D elementary cellular automata (Rule 30, 90, 110, 150). Patterns evolve across generations through local neighbor interactions, yielding organic self-similar melodic contours.",
     tags: ["Wolfram 1D Rules", "Rule 30 / 110", "Emergent Evolution", "Seed Genetics", "Polyphonic / Lead"],
@@ -72,8 +48,6 @@ export const MODELS = [
     id: "particles",
     name: "Particles",
     kicker: "2D Kinetic Grid · Multi-Head · Collision Physics",
-    badge: "Active",
-    badgeClass: "badge-active",
     available: true,
     desc: "Multi-head particle collision simulator inspired by Orca and Plinky. Moving directional playheads navigate a 2D physics surface, reflecting elastically off boundaries. When particles collide on the same cell, they trigger musical notes and either deflect at 90°, annihilate, or spawn child particles with finite lifetimes.",
     tags: ["2D Kinetic Grid", "Multi-Head", "Elastic Reflection", "Deflect (90°)", "Spawn Child", "Orca / Plinky"],
@@ -99,7 +73,7 @@ export function renderModelsGrid(container) {
 
   for (const m of MODELS) {
     const card = document.createElement("div");
-    card.className = `model-card ${m.available ? "is-active" : "is-wip"}`;
+    card.className = "model-card is-active";
     card.dataset.modelId = m.id;
 
     card.innerHTML = `
@@ -108,7 +82,6 @@ export function renderModelsGrid(container) {
         <div class="model-header-text">
           <div class="model-title-row">
             <h3 class="model-title">${m.name}</h3>
-            <span class="model-badge ${m.badgeClass}">${m.badge}</span>
           </div>
           <div class="model-kicker">${m.kicker}</div>
         </div>
@@ -120,28 +93,20 @@ export function renderModelsGrid(container) {
         </div>
       </div>
       <div class="model-card-footer">
-        ${
-          m.available
-            ? `<button class="model-launch-btn primary" data-launch="${m.id}" title="Launch ${m.name} Sequencer">
-                Launch ${m.name} Engine <span>→</span>
-              </button>`
-            : `<button class="model-launch-btn disabled" disabled title="In Development">
-                In Development
-              </button>`
-        }
+        <button class="model-launch-btn primary" data-launch="${m.id}" title="Launch ${m.name} Sequencer">
+          Launch ${m.name} Engine <span>→</span>
+        </button>
       </div>
     `;
 
-    if (m.available) {
-      card.querySelector(`[data-launch="${m.id}"]`)?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showModel(m.id);
-      });
-      // Clicking anywhere on the active card also launches it
-      card.addEventListener("click", () => {
-        showModel(m.id);
-      });
-    }
+    card.querySelector(`[data-launch="${m.id}"]`)?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showModel(m.id);
+    });
+    // Clicking anywhere on the active card also launches it
+    card.addEventListener("click", () => {
+      showModel(m.id);
+    });
 
     container.appendChild(card);
   }
