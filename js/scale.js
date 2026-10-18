@@ -297,15 +297,15 @@ export function createNotesSection({
     onChange
   });
 
-  // Pitch Span Dropdown
+  // Octave Spread Dropdown (formerly Pitch Span)
   const pitchSpanCtrl = R(pitchSpanKey, dropdown({
-    label: "Pitch Span",
+    label: "Octave Spread",
     options: PITCH_SPAN_OPTIONS,
     value: String(state[pitchSpanKey] ?? defaultPitchSpan),
     onInput: (v) => {
       state[pitchSpanKey] = Number(v);
       onChange();
-      status(`Pitch Span: ${v} Octaves`);
+      status(`Octave Spread: ${v} Octaves`);
     },
     tip: "Total octave width spanned by the note generator or grid (1 to 4 octaves)."
   }));
@@ -342,9 +342,9 @@ export function createNotesSection({
     tip: "Chance of shifting a note by one octave (Up, Down, or Both)."
   }));
 
-  // Octave Spread Direction Dropdown
+  // Spread Direction Dropdown (formerly Direction)
   const octaveModeCtrl = R(octaveModeKey, dropdown({
-    label: isFullWidth ? "Direction" : "Oct Spread",
+    label: "Spread Direction",
     options: [
       { v: "up", t: "Up" },
       { v: "down", t: "Down" },
@@ -354,10 +354,9 @@ export function createNotesSection({
     onInput: (v) => {
       state[octaveModeKey] = v;
       onChange();
-      status(`Oct Spread: ${v.toUpperCase()}`);
+      status(`Spread Direction: ${v.toUpperCase()}`);
     },
-    tip: "Octave spread direction: Up (+12 st), Down (-12 st), or Both (±12 st).",
-    labelPos: "right"
+    tip: "Octave spread direction: Up (+12 st), Down (-12 st), or Both (±12 st)."
   }));
 
   // Container Div titled 'Notes'
@@ -383,50 +382,48 @@ export function createNotesSection({
   picker.rootNoteCtrl.classList.add("ctrl-root-note");
   picker.rootOctCtrl.classList.add("ctrl-root-oct");
   pitchSpanCtrl.classList.add("ctrl-pitch-span");
+  octaveModeCtrl.classList.add("ctrl-oct-mode");
   picker.scaleCtrl.classList.add("ctrl-scale");
   picker.scaleBox.classList.add("ctrl-scale-box");
   quantCtrl.classList.add("ctrl-quant");
   octaveCtrl.classList.add("ctrl-oct-spread");
-  octaveModeCtrl.classList.add("ctrl-oct-mode");
 
   if (!isFullWidth) {
-    // Row 1: Root Note (2), Root Octave (2), Pitch Span (2)
+    // Row 1: Root Note (2), Root Octave (2), Octave Spread (2)
     picker.rootNoteCtrl.style.gridColumn = "span 2";
     picker.rootOctCtrl.style.gridColumn = "span 2";
     pitchSpanCtrl.style.gridColumn = "span 2";
 
-    // Row 2: Scale Dropdown (6)
-    picker.scaleCtrl.style.gridColumn = "span 6";
+    // Row 2: Spread Direction (2), Scale Dropdown (4)
+    octaveModeCtrl.style.gridColumn = "span 2";
+    picker.scaleCtrl.style.gridColumn = "span 4";
 
     // Row 3: Note Selection (12 buttons) (6)
     picker.scaleBox.style.gridColumn = "span 6";
 
-    // Row 4: Quantize (6)
-    quantCtrl.style.gridColumn = "span 6";
-
-    // Row 5: Octave Spread (4), Direction Mode (2)
-    octaveCtrl.style.gridColumn = "span 4";
-    octaveModeCtrl.style.gridColumn = "span 2";
+    // Row 4: Quantize (3), Octave Spread % (3)
+    quantCtrl.style.gridColumn = "span 3";
+    octaveCtrl.style.gridColumn = "span 3";
 
     grid.append(
       picker.rootNoteCtrl,
       picker.rootOctCtrl,
       pitchSpanCtrl,
+      octaveModeCtrl,
       picker.scaleCtrl,
       picker.scaleBox,
       quantCtrl,
-      octaveCtrl,
-      octaveModeCtrl
+      octaveCtrl
     );
   } else {
     grid.append(
       picker.rootNoteCtrl,
       picker.rootOctCtrl,
       pitchSpanCtrl,
+      octaveModeCtrl,
       picker.scaleCtrl,
       quantCtrl,
       octaveCtrl,
-      octaveModeCtrl,
       picker.scaleBox
     );
   }

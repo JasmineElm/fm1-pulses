@@ -16,7 +16,7 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js?v=267";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=274";
+import { createNotesSection } from "./scale.js?v=276";
 import { createHumaniseSection } from "./humanise.js?v=269";
 import { createVelocitySection } from "./velocity.js?v=269";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=275";
