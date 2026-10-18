@@ -91,23 +91,17 @@ let loopMode = "loop"; // "loop" (resets to seed every 64 steps) | "free"
 
 // Visual representation toggles
 let showTrajectories = true; // Trajectory path prediction lines
-let smoothMotion = true;      // 60 FPS smooth interpolation between clock ticks
 let continuousPreview = false; // Free-running motion preview when transport is stopped
 
-// Cached Trajectory path rays & predicted collision markers (computed on generation/step, NOT in 60 FPS loop)
+// Cached Trajectory path rays & predicted collision markers (computed on generation/step)
 let cachedParticlePaths = null;
 let cachedCollisionTargets = [];
 
-// Timing & Animation tracking
+// Timing & State tracking
 let currentTick = 0;
 let lastLiveStep = -1;
-let collisionEvents = []; // [{ x, y, note, time, color }]
-let wallSparks = [];      // [{ x, y, time, color }]
 let nextParticleId = 1;
-
-let stepStartTime = performance.now();
-let stepDurationMs = 125;
-let animFrameId = null;
+let previewTimerId = null;
 
 // DOM References
 let containerEl = null;
@@ -241,15 +235,12 @@ function cloneParticles(list) {
     id: p.id,
     x: p.x,
     y: p.y,
-    prevX: typeof p.prevX === "number" ? p.prevX : p.x,
-    prevY: typeof p.prevY === "number" ? p.prevY : p.y,
     dx: p.dx,
     dy: p.dy,
     isChild: Boolean(p.isChild),
     life: p.life,
     maxLife: p.maxLife,
-    color: p.color,
-    trail: (p.trail || []).map((t) => ({ ...t }))
+    color: p.color
   }));
 }
 
@@ -265,8 +256,6 @@ function saveToSeed() {
 function restoreFromSeed() {
   particles = cloneParticles(seedParticles);
   obstacles = cloneObstacles(seedObstacles);
-  collisionEvents = [];
-  wallSparks = [];
   updateCachedTrajectories();
 }
 
@@ -453,17 +442,6 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
   for (let i = 0; i < pList.length; i++) {
     const p = pList[i];
 
-    // Store previous coordinates for smooth sub-step 60 FPS motion interpolation
-    p.prevX = p.x;
-    p.prevY = p.y;
-
-    // Store trail
-    if (!isSimulation) {
-      if (!p.trail) p.trail = [];
-      p.trail.unshift({ x: p.x, y: p.y, alpha: 1.0 });
-      if (p.trail.length > 5) p.trail.pop();
-    }
-
     let tx = p.x + p.dx;
     let ty = p.y + p.dy;
     let hitWall = false;
@@ -497,10 +475,6 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
 
     p.x = tx;
     p.y = ty;
-
-    if (hitWall && !isSimulation) {
-      wallSparks.push({ x: p.x, y: p.y, time: performance.now(), color: p.color });
-    }
 
     // Optional wall bounce trigger note
     if (hitWall && wallNotes) {
@@ -591,15 +565,12 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
             id: nextParticleId++,
             x: cx,
             y: cy,
-            prevX: cx,
-            prevY: cy,
             dx: cdx,
             dy: cdy,
             isChild: true,
             life: childLife,
             maxLife: childLife,
-            color: "#ffffff",
-            trail: []
+            color: "#ffffff"
           });
         }
       }
@@ -635,22 +606,12 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
  * Executes a single physics step (used during manual step or preview).
  */
 export function stepPhysicsTick(triggerSound = true) {
-  stepStartTime = performance.now();
   const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
   particles = updated;
 
-  const now = performance.now();
-  for (const c of collisions) {
-    collisionEvents.push({
-      x: c.x,
-      y: c.y,
-      note: c.note,
-      time: now
-    });
-  }
-
   updateCachedTrajectories();
   updateHud(lastLiveStep >= 0 ? lastLiveStep : 0, collisions.length, collisions[0]?.note || null);
+  renderCanvas();
 }
 
 /**
@@ -738,15 +699,12 @@ export function randomizeParticles() {
       id: nextParticleId++,
       x: rx,
       y: ry,
-      prevX: rx,
-      prevY: ry,
       dx: dir.dx,
       dy: dir.dy,
       isChild: false,
       life: 0,
       maxLife: 0,
-      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-      trail: []
+      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length]
     });
   }
 
@@ -764,7 +722,8 @@ export function randomizeParticles() {
 }
 
 /**
- * 60 FPS Render Function: Draws particles, trajectory rays, shockwaves, and obstacles.
+ * Render Function: Draws particles, trajectory rays, obstacles, and grid for the current step.
+ * Shows discrete step positions with no glows or intermediate interpolated motion.
  */
 export function renderCanvas() {
   if (!canvasEl || !ctx) return;
@@ -789,16 +748,8 @@ export function renderCanvas() {
 
   const cellW = w / gridW;
   const cellH = h / gridH;
-  const now = performance.now();
 
-  // Interpolation progress t in [0, 1] for smooth 60 FPS motion
-  let interpT = 1.0;
-  if (smoothMotion && (isLive() || continuousPreview)) {
-    const elapsed = now - stepStartTime;
-    interpT = Math.min(1.0, elapsed / Math.max(16, stepDurationMs));
-  }
-
-  // 1. Grid Lines & Cell Center Dots
+  // 1. Grid Lines
   ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.06)";
   ctx.lineWidth = 1;
 
@@ -863,25 +814,17 @@ export function renderCanvas() {
     }
 
     if (cachedParticlePaths.length > 0) {
-      // Draw dashed path rays
+      // Draw dashed path rays directly from step position
       for (let i = 0; i < cachedParticlePaths.length; i++) {
         const { p, path } = cachedParticlePaths[i];
         if (!path || path.length < 2) continue;
         ctx.save();
-        ctx.strokeStyle = p.isChild ? "rgba(255, 255, 255, 0.4)" : p.color;
+        ctx.strokeStyle = p.isChild ? "rgba(255, 255, 255, 0.45)" : p.color;
         ctx.lineWidth = 1.2;
         ctx.setLineDash([4, 4]);
-        ctx.globalAlpha = 0.38;
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
-
-        // Current smooth position as path start
-        let curX = p.x;
-        let curY = p.y;
-        if (smoothMotion && typeof p.prevX === "number") {
-          curX = p.prevX + (p.x - p.prevX) * interpT;
-          curY = p.prevY + (p.y - p.prevY) * interpT;
-        }
-        ctx.moveTo(curX * cellW + cellW / 2, curY * cellH + cellH / 2);
+        ctx.moveTo(p.x * cellW + cellW / 2, p.y * cellH + cellH / 2);
 
         for (let s = 1; s < path.length; s++) {
           ctx.lineTo(path[s].x * cellW + cellW / 2, path[s].y * cellH + cellH / 2);
@@ -892,15 +835,14 @@ export function renderCanvas() {
 
       // Draw predicted collision target markers
       if (cachedCollisionTargets.length > 0) {
-        const pulse = Math.sin(now * 0.008) * 2;
-        const targetRad = Math.min(cellW, cellH) * 0.38 + pulse;
+        const targetRad = Math.min(cellW, cellH) * 0.38;
 
         ctx.save();
         ctx.strokeStyle = "#ff007f";
         ctx.fillStyle = "rgba(255, 0, 127, 0.18)";
         ctx.lineWidth = 1.8;
         ctx.setLineDash([2, 2]);
-        ctx.font = `bold 8.5px -apple-system, sans-serif`;
+        ctx.font = "bold 8.5px -apple-system, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
@@ -922,124 +864,29 @@ export function renderCanvas() {
     }
   }
 
-  // 4. Wall Bounce Sparks
-  for (let i = wallSparks.length - 1; i >= 0; i--) {
-    const sp = wallSparks[i];
-    const age = (now - sp.time) / 300;
-    if (age >= 1.0) {
-      wallSparks.splice(i, 1);
-      continue;
-    }
-    const cx = sp.x * cellW + cellW / 2;
-    const cy = sp.y * cellH + cellH / 2;
-    const rad = Math.min(cellW, cellH) * 0.5 * (1 + age);
-    ctx.save();
-    ctx.strokeStyle = hexToRgba(sp.color, 1 - age);
-    ctx.lineWidth = 2 * (1 - age);
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 5. Collision Shockwaves
-  for (let i = collisionEvents.length - 1; i >= 0; i--) {
-    const ev = collisionEvents[i];
-    const age = (now - ev.time) / 450;
-    if (age >= 1.0) {
-      collisionEvents.splice(i, 1);
-      continue;
-    }
-
-    const cx = ev.x * cellW + cellW / 2;
-    const cy = ev.y * cellH + cellH / 2;
-    const maxR = Math.min(cellW, cellH) * 1.8;
-    const r = maxR * age;
-    const alpha = (1 - age) * 0.95;
-
-    ctx.save();
-    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-    ctx.lineWidth = 2.5 * (1 - age);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-
-    if (ev.note) {
-      ctx.fillStyle = `rgba(255, 240, 100, ${alpha})`;
-      ctx.font = `bold ${Math.max(10, Math.floor(cellH * 0.45))}px -apple-system, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(ev.note, cx, cy - r - 4);
-    }
-    ctx.restore();
-  }
-
-  // 6. Moving Particles with Smooth Interpolation, Direction Chevrons, and Badges
+  // 4. Particles (Discrete Step Rendering, Clean Discs with Vector Chevrons & IDs)
   for (let i = 0; i < particles.length; i++) {
     const p = particles[i];
-
-    // Smooth interpolated coordinates
-    let renderX = p.x;
-    let renderY = p.y;
-    if (smoothMotion && typeof p.prevX === "number") {
-      renderX = p.prevX + (p.x - p.prevX) * interpT;
-      renderY = p.prevY + (p.y - p.prevY) * interpT;
-    }
-
-    const cx = renderX * cellW + cellW / 2;
-    const cy = renderY * cellH + cellH / 2;
+    const cx = p.x * cellW + cellW / 2;
+    const cy = p.y * cellH + cellH / 2;
     const rad = Math.min(cellW, cellH) * (p.isChild ? 0.32 : 0.4);
-    const pulse = Math.sin(now * 0.007 + p.id * 1.5) * 1.6;
 
-    // Trail comets
-    if (p.trail && p.trail.length > 0) {
-      for (let t = 0; t < p.trail.length; t++) {
-        const tr = p.trail[t];
-        const tcx = tr.x * cellW + cellW / 2;
-        const tcy = tr.y * cellH + cellH / 2;
-        const trailAlpha = (1 - (t + 1) / (p.trail.length + 1)) * 0.4;
-        ctx.save();
-        ctx.fillStyle = p.isChild ? `rgba(255, 255, 255, ${trailAlpha})` : hexToRgba(p.color, trailAlpha);
-        ctx.beginPath();
-        ctx.arc(tcx, tcy, rad * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    // Outer pulsating glow aura
     ctx.save();
-    const glowRad = (rad + pulse) * 2.2;
-    const glowGrad = ctx.createRadialGradient(cx, cy, rad * 0.2, cx, cy, glowRad);
-    glowGrad.addColorStop(0, p.isChild ? "rgba(255, 255, 255, 0.65)" : hexToRgba(p.color, 0.55));
-    glowGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, glowRad, 0, Math.PI * 2);
-    ctx.fill();
 
-    // Particle Body
+    // Solid Particle Body (No Glow/Blur)
     ctx.fillStyle = p.isChild ? "#ffffff" : p.color;
-    ctx.shadowColor = p.isChild ? "#ffffff" : p.color;
-    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.arc(cx, cy, rad, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner bright core
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Particle ID label inside or beside
+    // Particle ID label
     ctx.fillStyle = "#0f0d19";
     ctx.font = `bold ${Math.max(8, Math.floor(rad * 0.95))}px -apple-system, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(`${p.id}`, cx, cy + 0.5);
 
-    // Direction Vector Chevron
+    // Direction Vector Chevron / Arrow
     if (p.dx !== 0 || p.dy !== 0) {
       const arrowLen = Math.min(cellW, cellH) * 0.55;
       const ax = cx + p.dx * arrowLen;
@@ -1052,7 +899,6 @@ export function renderCanvas() {
       ctx.lineTo(ax, ay);
       ctx.stroke();
 
-      // Arrowhead
       const angle = Math.atan2(p.dy, p.dx);
       const headLen = 5;
       ctx.beginPath();
@@ -1069,7 +915,7 @@ export function renderCanvas() {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
       ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.arc(cx, cy, rad + 3.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+      ctx.arc(cx, cy, rad + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
       ctx.stroke();
     }
 
@@ -1077,17 +923,6 @@ export function renderCanvas() {
   }
 
   ctx.restore();
-}
-
-function hexToRgba(hex, alpha) {
-  if (!hex || hex.startsWith("rgba")) return hex || "rgba(0, 240, 255, 0.5)";
-  let c = hex.replace("#", "");
-  if (c.length === 3) c = c.split("").map((x) => x + x).join("");
-  const num = parseInt(c, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 /**
@@ -1127,30 +962,42 @@ function updateHud(stepIndex = 0, collisionCount = 0, lastNoteName = null) {
 }
 
 /**
- * Starts continuous 60 FPS requestAnimationFrame loop for fluid visual motion.
+ * Drives the continuous preview motion timer when transport is stopped.
+ * Only triggers at step boundaries, with zero idle overhead when stopped.
  */
-function startAnimLoop() {
-  if (animFrameId) return;
-  function loop() {
-    animFrameId = requestAnimationFrame(loop);
-    if (containerEl && containerEl.style.display !== "none") {
-      // If continuous preview is active when transport is stopped
-      if (continuousPreview && !isLive()) {
-        const now = performance.now();
-        if (now - stepStartTime >= stepDurationMs) {
-          stepPhysicsTick(false);
-        }
-      }
-      renderCanvas();
+function startPreviewTimer() {
+  stopPreviewTimer();
+  if (!continuousPreview || isLive()) return;
+
+  function tick() {
+    if (!continuousPreview || isLive()) {
+      stopPreviewTimer();
+      return;
     }
+    const tempo = Math.max(20, Math.min(300, state.tempo || 120));
+    const qMs = 60000 / tempo;
+    let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
+    if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
+    const qMult = RATE_QUARTERS[rateIdx] ?? 0.25;
+    const delay = Math.max(20, qMs * qMult);
+
+    stepPhysicsTick(false);
+    previewTimerId = setTimeout(tick, delay);
   }
-  animFrameId = requestAnimationFrame(loop);
+
+  const tempo = Math.max(20, Math.min(300, state.tempo || 120));
+  const qMs = 60000 / tempo;
+  let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
+  if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
+  const qMult = RATE_QUARTERS[rateIdx] ?? 0.25;
+  const delay = Math.max(20, qMs * qMult);
+  previewTimerId = setTimeout(tick, delay);
 }
 
-function stopAnimLoop() {
-  if (animFrameId) {
-    cancelAnimationFrame(animFrameId);
-    animFrameId = null;
+function stopPreviewTimer() {
+  if (previewTimerId) {
+    clearTimeout(previewTimerId);
+    previewTimerId = null;
   }
 }
 
@@ -1202,15 +1049,12 @@ function wireCanvasEvents(canvas) {
           id: nextParticleId++,
           x: cell.x,
           y: cell.y,
-          prevX: cell.x,
-          prevY: cell.y,
           dx,
           dy,
           isChild: false,
           life: 0,
           maxLife: 0,
-          color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length],
-          trail: []
+          color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length]
         });
       }
       saveToSeed();
@@ -1394,6 +1238,11 @@ export function initParticles() {
     continuousPreview,
     (on) => {
       continuousPreview = on;
+      if (on && !isLive()) {
+        startPreviewTimer();
+      } else {
+        stopPreviewTimer();
+      }
       updateHud();
       renderCanvas();
       status(`Continuous Motion Preview: ${on ? "On" : "Off"}`);
@@ -1483,15 +1332,12 @@ export function initParticles() {
       id: nextParticleId++,
       x: rx,
       y: ry,
-      prevX: rx,
-      prevY: ry,
       dx: d.dx,
       dy: d.dy,
       isChild: false,
       life: 0,
       maxLife: 0,
-      color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length],
-      trail: []
+      color: PARTICLE_COLORS[particles.length % PARTICLE_COLORS.length]
     });
     saveToSeed();
     generateParticleBank();
@@ -1637,7 +1483,7 @@ export function initParticles() {
       <canvas id="particle-canvas" class="particle-canvas"></canvas>
     </div>
     <div class="particle-display-footer">
-      <span class="particle-hint">💡 Moving particles glide smoothly · Dashed lines project future paths · Rings show predicted collisions</span>
+      <span class="particle-hint">💡 Moving particles step discretely · Dashed lines project future paths · Rings show predicted collisions</span>
       <span id="particle-step-hover" class="particle-step-hover">—</span>
     </div>
   `;
@@ -1672,22 +1518,20 @@ export function initParticles() {
       lastLiveStep = -1;
       updateHud(-1, 0, null);
       renderCanvas();
+      if (continuousPreview) {
+        startPreviewTimer();
+      }
       return;
     }
 
     if (getActiveModel && getActiveModel() !== "particles") return;
     if (containerEl.style.display === "none") return;
 
-    lastLiveStep = stepIndex;
-    stepStartTime = performance.now();
+    if (previewTimerId) {
+      stopPreviewTimer();
+    }
 
-    // Calculate step duration from tempo and rate
-    const tempo = Math.max(20, Math.min(300, state.tempo || 120));
-    const qMs = 60000 / tempo;
-    let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
-    if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
-    const qMult = RATE_QUARTERS[rateIdx] ?? 0.25;
-    stepDurationMs = qMs * qMult;
+    lastLiveStep = stepIndex;
 
     // Reset to seed on loop boundary (step 0)
     if (stepIndex === 0 && loopMode === "loop") {
@@ -1698,18 +1542,9 @@ export function initParticles() {
     const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH, false);
     particles = updated;
 
-    const now = performance.now();
-    for (const c of collisions) {
-      collisionEvents.push({
-        x: c.x,
-        y: c.y,
-        note: c.note,
-        time: now
-      });
-    }
-
     updateCachedTrajectories();
     updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
+    renderCanvas();
   });
 
   // Watch for theme changes (Dark / Light)
@@ -1743,14 +1578,18 @@ export function activateParticlesModel() {
   updateCachedTrajectories();
   renderCanvas();
   updateHud(0, 0, null);
-  startAnimLoop();
+
+  stopPreviewTimer();
+  if (continuousPreview && !isLive()) {
+    startPreviewTimer();
+  }
 }
 
 /**
  * When deactivating the Particle Collision Simulator model.
  */
 export function deactivateParticlesModel() {
-  stopAnimLoop();
+  stopPreviewTimer();
   continuousPreview = false;
   setModelGenerator(null);
   setModelRandomizer(null);
