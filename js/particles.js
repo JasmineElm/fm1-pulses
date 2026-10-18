@@ -1809,21 +1809,11 @@ export function initParticles() {
 
   module.append(physSect, toolSect, harmSect, presetSect);
 
-  // RIGHT COLUMN: 2D Interactive Canvas & HUD
+  // RIGHT COLUMN: 2D Interactive Canvas
   const display = document.createElement("div");
   display.className = "display particle-display";
 
   display.innerHTML = `
-    <div class="particle-display-header">
-      <div class="particle-hud-bar">
-        <div class="particle-hud-item"><span class="particle-hud-lbl">STEP</span><b id="particle-hud-step" class="particle-hud-val">1 / 64</b></div>
-        <div class="particle-hud-item"><span class="particle-hud-lbl">HEADS</span><b id="particle-hud-particles" class="particle-hud-val">0</b></div>
-        <div class="particle-hud-item"><span class="particle-hud-lbl">COLLISIONS</span><b id="particle-hud-collisions" class="particle-hud-val">0</b></div>
-        <div class="particle-hud-item"><span class="particle-hud-lbl">NOTE</span><b id="particle-hud-note" class="particle-hud-val particle-hud-highlight">—</b></div>
-        <div class="particle-hud-item"><span class="particle-hud-lbl">MODE</span><b id="particle-hud-mode" class="particle-hud-val">Deflect (90°)</b></div>
-        <div class="particle-hud-item"><span class="particle-hud-lbl">STATUS</span><b id="particle-hud-status" class="particle-hud-val">■ STOPPED</b></div>
-      </div>
-    </div>
     <div class="particle-canvas-wrap">
       <canvas id="particle-canvas" class="particle-canvas"></canvas>
     </div>
