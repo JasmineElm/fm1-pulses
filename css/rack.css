@@ -1713,6 +1713,12 @@ body {
   font-weight: 700;
 }
 
+.rhythm-btn-rot {
+  min-width: 22px;
+  padding: 0 5px;
+  font-size: 8.5px;
+}
+
 .rhythm-btn-group {
   display: inline-flex;
   align-items: center;

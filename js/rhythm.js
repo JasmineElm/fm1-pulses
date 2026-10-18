@@ -402,24 +402,6 @@ export function invertGates() {
   status("Inverted all step gates");
 }
 
-/**
- * Duplicates Bar 1 (steps 1–16) across Bars 2, 3, and 4 (steps 17–64).
- */
-export function copyBar1ToAll() {
-  const bank = getBank();
-  const p = bank[0];
-  if (!p || !p.steps) return;
-
-  for (let i = 16; i < 64; i++) {
-    const src = p.steps[i % 16];
-    p.steps[i].notes = src.notes.map((n) => ({ ...n }));
-    if (src._savedNote) p.steps[i]._savedNote = { ...src._savedNote };
-  }
-
-  syncRhythmGrid();
-  renderBuffer();
-  status("Bar 1 (steps 1–16) duplicated across all bars", "ok");
-}
 
 /**
  * Stochastically randomizes gates using current density.
@@ -493,10 +475,6 @@ export function randomizeRhythm() {
     if (refs.euclidRot?.setValue) refs.euclidRot.setValue(0);
     if (rotDisplayEl) rotDisplayEl.textContent = "0";
     randomizeGates();
-    // 50% chance to repeat Bar 1 across all 4 bars for coherent rhythmic phrasing
-    if (Math.random() < 0.5) {
-      copyBar1ToAll();
-    }
   }
 
   syncRhythmGrid();
@@ -816,9 +794,9 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   rotBtnGroup.className = "rhythm-btn-group";
 
   const rotLeftBtn = document.createElement("button");
-  rotLeftBtn.className = "rhythm-btn";
+  rotLeftBtn.className = "rhythm-btn rhythm-btn-rot";
   rotLeftBtn.title = "Rotate pattern 1 step left (earlier)";
-  rotLeftBtn.textContent = "◀ Rot";
+  rotLeftBtn.textContent = "◀";
   rotLeftBtn.addEventListener("click", () => rotatePattern(-1));
 
   rotDisplayEl = document.createElement("span");
@@ -826,9 +804,9 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   rotDisplayEl.textContent = "0";
 
   const rotRightBtn = document.createElement("button");
-  rotRightBtn.className = "rhythm-btn";
+  rotRightBtn.className = "rhythm-btn rhythm-btn-rot";
   rotRightBtn.title = "Rotate pattern 1 step right (later)";
-  rotRightBtn.textContent = "Rot ▶";
+  rotRightBtn.textContent = "▶";
   rotRightBtn.addEventListener("click", () => rotatePattern(1));
 
   rotBtnGroup.append(rotLeftBtn, rotDisplayEl, rotRightBtn);
@@ -862,19 +840,13 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   invertBtn.textContent = "Invert";
   invertBtn.addEventListener("click", invertGates);
 
-  const copyBar1Btn = document.createElement("button");
-  copyBar1Btn.className = "rhythm-btn";
-  copyBar1Btn.title = "Duplicate Bar 1 (steps 1–16) across Bars 2, 3, and 4";
-  copyBar1Btn.textContent = "Bar 1 → All";
-  copyBar1Btn.addEventListener("click", copyBar1ToAll);
-
   const randomBtn = document.createElement("button");
   randomBtn.className = "rhythm-btn";
   randomBtn.title = "Randomize gates using density probability";
   randomBtn.textContent = "Random";
   randomBtn.addEventListener("click", randomizeGates);
 
-  batchBtnGroup.append(allOnBtn, allOffBtn, invertBtn, copyBar1Btn, randomBtn);
+  batchBtnGroup.append(allOnBtn, allOffBtn, invertBtn, randomBtn);
   batchGroup.append(batchLabel, batchBtnGroup);
 
   toolbar.append(euclidGroup, rotGroup, batchGroup);
