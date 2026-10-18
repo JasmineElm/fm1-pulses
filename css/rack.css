@@ -1670,7 +1670,7 @@ body {
 
 /* ---- Step Buttons ---- */
 .rhythm-step-btn {
-  height: 32px;
+  height: 34px;
   min-width: 0;
   padding: 3px 2px;
   border-radius: 4px;
@@ -1684,7 +1684,7 @@ body {
   justify-content: space-between;
   outline: none;
   position: relative;
-  transition: background-color 0.12s, border-color 0.12s;
+  transition: background-color 0.12s, border-color 0.12s, opacity 0.1s;
   user-select: none;
 }
 
@@ -1704,24 +1704,36 @@ body {
   border-top: 2px solid color-mix(in srgb, var(--accent) 70%, var(--line));
 }
 
-/* Active Gate State */
+/* Active Gate State - in the style of the traditional sequencer grid */
 .rhythm-step-btn.is-active {
-  background: color-mix(in srgb, var(--accent) 26%, var(--panel));
+  background: var(--accent);
   border-color: var(--accent);
-  color: var(--fg);
+  color: #ffffff;
+  font-weight: 700;
+  opacity: var(--vel-alpha, 1);
+}
+
+.rhythm-step-btn.is-active.is-downbeat {
+  border-top-color: #ffffff;
 }
 
 .rhythm-step-btn.is-active:hover {
-  background: color-mix(in srgb, var(--accent) 36%, var(--panel));
+  background: color-mix(in srgb, var(--accent) 85%, #ffffff);
+  border-color: #ffffff;
+}
+
+.rhythm-step-btn.is-active .r-step-num {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .rhythm-step-btn.is-active .r-step-led {
-  background: var(--accent);
+  background: #ffffff;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.75);
 }
 
-.rhythm-step-btn.is-active .r-step-trig {
-  background: var(--accent);
-  opacity: 1;
+.rhythm-step-btn.is-active .r-step-note {
+  color: #ffffff;
+  font-weight: 700;
 }
 
 /* Running Playhead Cursor */
@@ -1729,13 +1741,17 @@ body {
   outline: 2px solid var(--fg) !important;
   outline-offset: 1px;
   border-color: var(--fg) !important;
-  background-color: color-mix(in srgb, var(--accent) 45%, var(--panel2)) !important;
+  opacity: 1 !important;
   z-index: 2;
+}
+
+.rhythm-step-btn.now:not(.is-active) {
+  background-color: color-mix(in srgb, var(--accent) 30%, var(--panel2)) !important;
 }
 
 /* Dimmed if step is beyond pattern length */
 .rhythm-step-btn.is-off-length {
-  opacity: 0.38;
+  opacity: 0.35;
 }
 
 /* Button Internal Elements */
@@ -1749,7 +1765,7 @@ body {
 }
 
 .r-step-num {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   line-height: 1;
   color: var(--dim);
@@ -1761,17 +1777,52 @@ body {
   height: 4px;
   border-radius: 50%;
   background: var(--line);
-  transition: background-color 0.1s;
+  transition: background-color 0.1s, box-shadow 0.1s;
 }
 
-.r-step-trig {
-  width: 100%;
-  height: 5px;
-  border-radius: 2px;
-  background: var(--line);
-  opacity: 0.35;
-  transition: background-color 0.1s, opacity 0.1s;
+.r-step-note {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+}
+
+.r-step-vel-wrap {
+  width: 100%;
+  height: 3px;
+  border-radius: 1.5px;
+  background: var(--line);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.r-step-vel-bar {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--dim);
+  border-radius: 1.5px;
+  transition: width 0.12s ease;
+}
+
+.rhythm-step-btn.is-active .r-step-vel-wrap {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.rhythm-step-btn.is-active .r-step-vel-bar {
+  background: #ffffff;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
 }
 
 /* ==========================================================================

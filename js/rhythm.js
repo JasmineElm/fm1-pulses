@@ -3,7 +3,7 @@ import {
   getPrevGateBlend, setPrevGateBlend, DEFAULT, refreshLoopInfo
 } from "./state.js";
 import {
-  euclid, classicName, quantize
+  euclid, classicName, quantize, midiName
 } from "./generator.js";
 import { renderBuffer, onBufferRender } from "./grid.js";
 import { onStep } from "./player.js";
@@ -77,6 +77,37 @@ export function syncRhythmGrid() {
 
     btn.classList.toggle("is-active", !!hasNotes);
     btn.classList.toggle("is-off-length", !isWithinLen);
+
+    const noteEl = btn.querySelector(".r-step-note");
+    const velBarEl = btn.querySelector(".r-step-vel-bar");
+
+    if (hasNotes) {
+      const n0 = st.notes[0];
+      const vel = Math.max(1, Math.min(127, n0.vel ?? 100));
+      // Opacity scales continuously from 0.25 (vel 1) to 1.0 (vel 127), exactly matching traditional grid
+      const alpha = 0.25 + 0.75 * (vel / 127);
+      const velPct = Math.round((vel / 127) * 100);
+
+      btn.style.setProperty("--vel-alpha", alpha.toFixed(3));
+
+      if (noteEl) {
+        noteEl.textContent = midiName(n0.note);
+      }
+      if (velBarEl) {
+        velBarEl.style.width = `${velPct}%`;
+      }
+      btn.title = `Step ${i + 1}: ${st.notes.map((n) => `${midiName(n.note)} v${n.vel}`).join("  ")}`;
+    } else {
+      btn.style.removeProperty("--vel-alpha");
+
+      if (noteEl) {
+        noteEl.textContent = "";
+      }
+      if (velBarEl) {
+        velBarEl.style.width = "0%";
+      }
+      btn.title = `Step ${i + 1}`;
+    }
   }
 
   if (badgeEl) {
@@ -109,7 +140,7 @@ export function toggleStepGate(stepIndex) {
     const vel = st._savedNote ? st._savedNote.vel : (state.velocity ?? 100);
     st.notes = [{ note: Math.max(0, Math.min(127, noteVal)), vel: Math.max(1, Math.min(127, vel)) }];
     delete st.echo;
-    status(`Step ${stepIndex + 1} trigger on`);
+    status(`Step ${stepIndex + 1} trigger on (${midiName(noteVal)} v${vel})`);
   }
 
   syncRhythmGrid();
@@ -819,7 +850,7 @@ export function initRhythm(containerEl) {
       const btn = document.createElement("button");
       btn.className = "rhythm-step-btn" + (isDownbeat ? " is-downbeat" : "");
       btn.dataset.step = String(stepIdx);
-      btn.title = `Step ${stepIdx + 1} (Bar ${bar + 1}, Beat ${Math.floor(s / 4) + 1}.${(s % 4) + 1})`;
+      btn.title = `Step ${stepIdx + 1}`;
 
       const btnHeader = document.createElement("div");
       btnHeader.className = "r-step-header";
@@ -833,11 +864,18 @@ export function initRhythm(containerEl) {
 
       btnHeader.append(numSpan, ledSpan);
 
-      const trigBar = document.createElement("span");
-      trigBar.className = "r-step-trig";
-      trigBar.setAttribute("aria-hidden", "true");
+      const noteSpan = document.createElement("span");
+      noteSpan.className = "r-step-note";
 
-      btn.append(btnHeader, trigBar);
+      const velWrap = document.createElement("div");
+      velWrap.className = "r-step-vel-wrap";
+      velWrap.setAttribute("aria-hidden", "true");
+
+      const velBar = document.createElement("span");
+      velBar.className = "r-step-vel-bar";
+      velWrap.appendChild(velBar);
+
+      btn.append(btnHeader, noteSpan, velWrap);
 
       btn.addEventListener("click", () => {
         toggleStepGate(stepIdx);
