@@ -77,13 +77,27 @@ const PARTICLE_COLORS = [
   "#eab308"  // Gold
 ];
 
+// Obstacle Types (Flat TypedArray Grid representation)
+export const OBS_NONE = 0;
+export const OBS_SLASH = 1;
+export const OBS_BACKSLASH = 2;
+export const OBS_BOUNCER = 3;
+
+export const TOOL_TO_OBS = {
+  slash: OBS_SLASH,
+  backslash: OBS_BACKSLASH,
+  bouncer: OBS_BOUNCER
+};
+
+export const OBS_TO_TOOL = ["none", "slash", "backslash", "bouncer"];
+
 // Particle Simulator State
 let gridW = 16;
 let gridH = 16;
 let particles = [];
 let seedParticles = [];
-let obstacles = new Map(); // key "x,y" -> type ("slash" | "backslash" | "bouncer")
-let seedObstacles = new Map();
+let obstacles = new Uint8Array(gridW * gridH);
+let seedObstacles = new Uint8Array(gridW * gridH);
 
 let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer" | "eraser"
 let selectedDirectionIdx = 2; // East (1, 0)
@@ -124,10 +138,10 @@ export const PARTICLE_PRESETS = [
       gridW = 16; gridH = 16;
       state.particleCollisionMode = "deflect";
       particles = [
-        { id: 1, x: 2, y: 8, prevX: 2, prevY: 8, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 13, y: 8, prevX: 13, prevY: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] }
+        { id: 1, x: 2, y: 8, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 13, y: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -137,12 +151,12 @@ export const PARTICLE_PRESETS = [
       gridW = 16; gridH = 16;
       state.particleCollisionMode = "deflect";
       particles = [
-        { id: 1, x: 8, y: 1, prevX: 8, prevY: 1, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 8, y: 14, prevX: 8, prevY: 14, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 1, y: 8, prevX: 1, prevY: 8, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] },
-        { id: 4, x: 14, y: 8, prevX: 14, prevY: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3], trail: [] }
+        { id: 1, x: 8, y: 1, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 8, y: 14, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 1, y: 8, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 14, y: 8, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -152,12 +166,12 @@ export const PARTICLE_PRESETS = [
       gridW = 16; gridH = 16;
       state.particleCollisionMode = "deflect";
       particles = [
-        { id: 1, x: 4, y: 4, prevX: 4, prevY: 4, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 11, y: 4, prevX: 11, prevY: 4, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 11, y: 11, prevX: 11, prevY: 11, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] },
-        { id: 4, x: 4, y: 11, prevX: 4, prevY: 11, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3], trail: [] }
+        { id: 1, x: 4, y: 4, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 11, y: 4, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 11, y: 11, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 4, y: 11, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -168,11 +182,11 @@ export const PARTICLE_PRESETS = [
       state.particleCollisionMode = "spawn";
       state.particleChildLife = 16;
       particles = [
-        { id: 1, x: 3, y: 6, prevX: 3, prevY: 6, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 12, y: 6, prevX: 12, prevY: 6, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 7, y: 13, prevX: 7, prevY: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] }
+        { id: 1, x: 3, y: 6, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 12, y: 6, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 7, y: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -182,12 +196,12 @@ export const PARTICLE_PRESETS = [
       gridW = 16; gridH = 16;
       state.particleCollisionMode = "deflect";
       particles = [
-        { id: 1, x: 2, y: 3, prevX: 2, prevY: 3, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 10, y: 5, prevX: 10, prevY: 5, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 6, y: 12, prevX: 6, prevY: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] },
-        { id: 4, x: 13, y: 9, prevX: 13, prevY: 9, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3], trail: [] }
+        { id: 1, x: 2, y: 3, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 10, y: 5, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 6, y: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 13, y: 9, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -197,14 +211,14 @@ export const PARTICLE_PRESETS = [
       gridW = 16; gridH = 16;
       state.particleCollisionMode = "annihilate";
       particles = [
-        { id: 1, x: 3, y: 3, prevX: 3, prevY: 3, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 12, y: 3, prevX: 12, prevY: 3, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 3, y: 12, prevX: 3, prevY: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] },
-        { id: 4, x: 12, y: 12, prevX: 12, prevY: 12, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3], trail: [] },
-        { id: 5, x: 7, y: 2, prevX: 7, prevY: 2, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[4], trail: [] },
-        { id: 6, x: 8, y: 13, prevX: 8, prevY: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[5], trail: [] }
+        { id: 1, x: 3, y: 3, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 12, y: 3, dx: -1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 3, y: 12, dx: 1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 12, y: 12, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] },
+        { id: 5, x: 7, y: 2, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[4] },
+        { id: 6, x: 8, y: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[5] }
       ];
-      obstacles.clear();
+      clearObstacles(obstacles);
     }
   },
   {
@@ -215,17 +229,17 @@ export const PARTICLE_PRESETS = [
       state.particleCollisionMode = "hybrid";
       state.particleChildLife = 12;
       particles = [
-        { id: 1, x: 2, y: 2, prevX: 2, prevY: 2, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0], trail: [] },
-        { id: 2, x: 13, y: 2, prevX: 13, prevY: 2, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1], trail: [] },
-        { id: 3, x: 13, y: 13, prevX: 13, prevY: 13, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2], trail: [] },
-        { id: 4, x: 2, y: 13, prevX: 2, prevY: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3], trail: [] },
-        { id: 5, x: 5, y: 8, prevX: 5, prevY: 8, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[4], trail: [] },
-        { id: 6, x: 10, y: 8, prevX: 10, prevY: 8, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[5], trail: [] }
+        { id: 1, x: 2, y: 2, dx: 1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[0] },
+        { id: 2, x: 13, y: 2, dx: 0, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[1] },
+        { id: 3, x: 13, y: 13, dx: -1, dy: 0, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[2] },
+        { id: 4, x: 2, y: 13, dx: 0, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[3] },
+        { id: 5, x: 5, y: 8, dx: 1, dy: 1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[4] },
+        { id: 6, x: 10, y: 8, dx: -1, dy: -1, isChild: false, life: 0, maxLife: 0, color: PARTICLE_COLORS[5] }
       ];
-      obstacles.clear();
-      obstacles.set("8,8", "bouncer");
-      obstacles.set("4,4", "slash");
-      obstacles.set("11,11", "slash");
+      clearObstacles(obstacles);
+      setObstacle(8, 8, OBS_BOUNCER);
+      setObstacle(4, 4, OBS_SLASH);
+      setObstacle(11, 11, OBS_SLASH);
     }
   }
 ];
@@ -244,8 +258,39 @@ function cloneParticles(list) {
   }));
 }
 
-function cloneObstacles(obsMap) {
-  return new Map(obsMap);
+export function setObstacle(x, y, type, obsGrid = obstacles, W = gridW, H = gridH) {
+  if (x < 0 || x >= W || y < 0 || y >= H) return;
+  const numType = typeof type === "number" ? type : (TOOL_TO_OBS[type] ?? OBS_NONE);
+  obsGrid[y * W + x] = numType;
+}
+
+export function getObstacle(x, y, obsGrid = obstacles, W = gridW, H = gridH) {
+  if (x < 0 || x >= W || y < 0 || y >= H) return OBS_NONE;
+  return obsGrid[y * W + x];
+}
+
+export function removeObstacle(x, y, obsGrid = obstacles, W = gridW, H = gridH) {
+  if (x < 0 || x >= W || y < 0 || y >= H) return;
+  obsGrid[y * W + x] = OBS_NONE;
+}
+
+export function clearObstacles(obsGrid = obstacles) {
+  if (obsGrid) obsGrid.fill(OBS_NONE);
+}
+
+function cloneObstacles(obsGrid, W = gridW, H = gridH) {
+  if (!obsGrid) return new Uint8Array(W * H);
+  if (obsGrid instanceof Uint8Array) return obsGrid.slice();
+  const arr = new Uint8Array(W * H);
+  if (typeof obsGrid.entries === "function") {
+    for (const [key, type] of obsGrid.entries()) {
+      const [ox, oy] = key.split(",").map(Number);
+      if (ox >= 0 && ox < W && oy >= 0 && oy < H) {
+        arr[oy * W + ox] = TOOL_TO_OBS[type] ?? OBS_NONE;
+      }
+    }
+  }
+  return arr;
 }
 
 function saveToSeed() {
@@ -262,7 +307,7 @@ function restoreFromSeed() {
 /**
  * Predicts the future path of a particle for N steps (for trajectory ray rendering).
  */
-export function predictTrajectory(p, steps = 10, W = gridW, H = gridH) {
+export function predictTrajectory(p, steps = 10, W = gridW, H = gridH, obsGrid = obstacles) {
   const pts = [{ x: p.x, y: p.y, step: 0 }];
   let cx = p.x;
   let cy = p.y;
@@ -283,13 +328,18 @@ export function predictTrajectory(p, steps = 10, W = gridW, H = gridH) {
       ty = (ty % H + H) % H;
     }
 
-    const obs = obstacles.get(`${tx},${ty}`);
-    if (obs === "slash") {
-      const odx = cdx; cdx = -cdy; cdy = -odx;
-    } else if (obs === "backslash") {
-      const odx = cdx; cdx = cdy; cdy = odx;
-    } else if (obs === "bouncer") {
-      cdx = -cdx; cdy = -cdy;
+    const obs = obsGrid instanceof Uint8Array
+      ? obsGrid[ty * W + tx]
+      : (typeof obsGrid?.get === "function" ? (TOOL_TO_OBS[obsGrid.get(`${tx},${ty}`)] ?? OBS_NONE) : OBS_NONE);
+
+    if (obs !== OBS_NONE) {
+      if (obs === OBS_SLASH) {
+        const odx = cdx; cdx = -cdy; cdy = -odx;
+      } else if (obs === OBS_BACKSLASH) {
+        const odx = cdx; cdx = cdy; cdy = odx;
+      } else if (obs === OBS_BOUNCER) {
+        cdx = -cdx; cdy = -cdy;
+      }
     }
 
     cx = tx;
@@ -547,17 +597,20 @@ export function stepPhysics(pList, obsMap, W = gridW, H = gridH, isSimulation = 
     }
 
     // Handle fixed obstacles (deflectors & bouncers)
-    const obs = obsMap.get(`${p.x},${p.y}`);
-    if (obs) {
-      if (obs === "slash") {
+    const obs = obsMap instanceof Uint8Array
+      ? obsMap[p.y * W + p.x]
+      : (typeof obsMap?.get === "function" ? (TOOL_TO_OBS[obsMap.get(`${p.x},${p.y}`)] ?? OBS_NONE) : OBS_NONE);
+
+    if (obs !== OBS_NONE) {
+      if (obs === OBS_SLASH) {
         const odx = p.dx;
         p.dx = -p.dy;
         p.dy = -odx;
-      } else if (obs === "backslash") {
+      } else if (obs === OBS_BACKSLASH) {
         const odx = p.dx;
         p.dx = p.dy;
         p.dy = odx;
-      } else if (obs === "bouncer") {
+      } else if (obs === OBS_BOUNCER) {
         p.dx = -p.dx;
         p.dy = -p.dy;
       }
@@ -690,7 +743,7 @@ export function generateParticleBank() {
   const polyLimit = Math.max(1, Math.min(4, Number(state.particlePolyphony || 2)));
 
   let simParticles = cloneParticles(seedParticles.length > 0 ? seedParticles : particles);
-  const simObstacles = cloneObstacles(seedObstacles.size > 0 ? seedObstacles : obstacles);
+  const simObstacles = cloneObstacles(seedObstacles.some((v) => v !== 0) ? seedObstacles : obstacles);
   const precomputedSteps = [];
 
   for (let step = 0; step < seqLen; step++) {
@@ -753,7 +806,7 @@ export function randomizeParticles() {
 
   const numParticles = 4 + Math.floor(Math.random() * 4);
   particles = [];
-  obstacles.clear();
+  clearObstacles(obstacles);
 
   for (let i = 0; i < numParticles; i++) {
     const rx = Math.floor(Math.random() * gridW);
@@ -776,7 +829,7 @@ export function randomizeParticles() {
   if (Math.random() < 0.6) {
     const ox = Math.floor(gridW / 2);
     const oy = Math.floor(gridH / 2);
-    obstacles.set(`${ox},${oy}`, "bouncer");
+    setObstacle(ox, oy, OBS_BOUNCER);
   }
 
   saveToSeed();
@@ -834,33 +887,38 @@ export function renderCanvas() {
   }
 
   // 2. Obstacles (Deflectors & Bouncers)
-  for (const [key, type] of obstacles.entries()) {
-    const [ox, oy] = key.split(",").map(Number);
+  const pad = Math.min(cellW, cellH) * 0.25;
+  const bouncerRad = Math.min(cellW, cellH) * 0.35;
+
+  for (let idx = 0; idx < obstacles.length; idx++) {
+    const type = obstacles[idx];
+    if (type === OBS_NONE) continue;
+
+    const ox = idx % gridW;
+    const oy = Math.floor(idx / gridW);
     const cx = ox * cellW + cellW / 2;
     const cy = oy * cellH + cellH / 2;
-    const pad = Math.min(cellW, cellH) * 0.25;
 
-    ctx.save();
-    if (type === "slash") {
+    if (type === OBS_SLASH) {
       ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(ox * cellW + pad, (oy + 1) * cellH - pad);
       ctx.lineTo((ox + 1) * cellW - pad, oy * cellH + pad);
       ctx.stroke();
-    } else if (type === "backslash") {
+    } else if (type === OBS_BACKSLASH) {
       ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(ox * cellW + pad, oy * cellH + pad);
       ctx.lineTo((ox + 1) * cellW - pad, (oy + 1) * cellH - pad);
       ctx.stroke();
-    } else if (type === "bouncer") {
+    } else if (type === OBS_BOUNCER) {
       ctx.strokeStyle = "#ec4899";
       ctx.fillStyle = "rgba(236, 72, 153, 0.25)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx, cy, Math.min(cellW, cellH) * 0.35, 0, Math.PI * 2);
+      ctx.arc(cx, cy, bouncerRad, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -869,7 +927,6 @@ export function renderCanvas() {
       ctx.moveTo(cx, cy - 4); ctx.lineTo(cx, cy + 4);
       ctx.stroke();
     }
-    ctx.restore();
   }
 
   // 3. Predictive Trajectory Rays & Target Crosshairs (Rendered from cached data)
@@ -1127,13 +1184,13 @@ function wireCanvasEvents(canvas) {
       renderCanvas();
       updateHud();
     } else if (activeTool === "slash" || activeTool === "backslash" || activeTool === "bouncer") {
-      obstacles.set(`${cell.x},${cell.y}`, activeTool);
+      setObstacle(cell.x, cell.y, activeTool);
       saveToSeed();
       generateParticleBank();
       renderCanvas();
     } else if (activeTool === "eraser") {
       particles = particles.filter((p) => p.x !== cell.x || p.y !== cell.y);
-      obstacles.delete(`${cell.x},${cell.y}`);
+      removeObstacle(cell.x, cell.y);
       saveToSeed();
       generateParticleBank();
       renderCanvas();
@@ -1367,6 +1424,9 @@ export function initParticles() {
     value: String(gridW),
     onInput: (v) => {
       const s = Number(v);
+      const oldW = gridW;
+      const oldH = gridH;
+      const oldObs = obstacles;
       gridW = s;
       gridH = s;
       state.particleGridSize = s;
@@ -1374,6 +1434,13 @@ export function initParticles() {
         p.x = Math.min(gridW - 1, p.x);
         p.y = Math.min(gridH - 1, p.y);
       });
+      const newObs = new Uint8Array(gridW * gridH);
+      for (let oy = 0; oy < Math.min(oldH, gridH); oy++) {
+        for (let ox = 0; ox < Math.min(oldW, gridW); ox++) {
+          newObs[oy * gridW + ox] = oldObs[oy * oldW + ox];
+        }
+      }
+      obstacles = newObs;
       saveToSeed();
       generateParticleBank();
       renderCanvas();
@@ -1425,7 +1492,7 @@ export function initParticles() {
 
   const clearBtn = actionBtn("Clear All", () => {
     particles = [];
-    obstacles.clear();
+    clearObstacles(obstacles);
     saveToSeed();
     generateParticleBank();
     renderCanvas();
