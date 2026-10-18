@@ -2121,6 +2121,90 @@ body {
   font-weight: 600;
 }
 
+/* Active Particle Heads Inspector List */
+.particle-heads-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.particle-head-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.particle-head-card:hover {
+  border-color: var(--dim);
+}
+.particle-head-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.particle-head-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.particle-head-title {
+  font-weight: 700;
+  color: var(--fg);
+}
+.particle-head-coords {
+  font-size: 9px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.particle-head-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.particle-head-dir-btn {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.1;
+}
+.particle-head-dir-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.particle-head-del-btn {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  line-height: 1.1;
+}
+.particle-head-del-btn:hover {
+  color: #ff007f;
+  background: rgba(255, 0, 127, 0.12);
+}
+
 .particle-preset-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
