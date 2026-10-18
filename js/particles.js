@@ -334,10 +334,30 @@ export function updateCachedTrajectories() {
   cachedCollisionTargets = targets;
 }
 
+// Precomputed Note & Velocity Look-Up Table (LUT)
+let cachedLutSignature = "";
+let noteLUT = null;       // Uint8Array(W * H) of clamped MIDI notes (12..108)
+let noteNamesLUT = null;  // Array(W * H) of precomputed note name strings (e.g. "C3")
+let velFactorLUT = null;  // Float32Array(W * H) of velocity scaling multipliers
+
 /**
- * Maps cell coordinates to musical MIDI note using the unified Notes section scale.
+ * Generates a cache signature string for the current harmonic mapping settings.
  */
-export function mapCoordinateToNote(x, y, W = gridW, H = gridH) {
+function getNoteLutSignature(W, H) {
+  const scaleName = state.scale || state.particleScale || "pentMinor";
+  const customStr = (scaleName === "custom" && state.customScale) ? state.customScale.join(",") : "";
+  const rootNote = state.rootNote ?? 0;
+  const rootOct = state.rootOctave ?? 3;
+  const mapping = state.particleNoteRule || "x-pitch-y-oct";
+  const octaves = state.particleOctaves || 3;
+  return `${W}x${H}|${scaleName}|${customStr}|${rootNote}|${rootOct}|${mapping}|${octaves}`;
+}
+
+/**
+ * Rebuilds the Note and Velocity Look-Up Tables across all grid cells.
+ * Executed once whenever scale, root, octave, pitch rule, or grid size changes.
+ */
+export function rebuildNoteLUT(W = gridW, H = gridH, sig = null) {
   const scaleName = state.scale || state.particleScale || "pentMinor";
   const scaleIntervals = (scaleName === "custom" && state.customScale?.length)
     ? state.customScale
@@ -353,55 +373,100 @@ export function mapCoordinateToNote(x, y, W = gridW, H = gridH) {
   const mapping = state.particleNoteRule || "x-pitch-y-oct";
   const octaves = Number(state.particleOctaves || 3);
   const S = Math.max(1, scaleIntervals.length);
+  const totalDegrees = S * octaves;
 
-  let rawPitch = baseMidi;
+  const totalCells = W * H;
+  noteLUT = new Uint8Array(totalCells);
+  noteNamesLUT = new Array(totalCells);
+  velFactorLUT = new Float32Array(totalCells);
 
-  if (mapping === "x-pitch-y-oct") {
-    // X maps to scale degree; Y maps to octave offset
-    const normX = Math.max(0, Math.min(W - 1, x)) / Math.max(1, W - 1);
-    const normY = Math.max(0, Math.min(H - 1, y)) / Math.max(1, H - 1);
+  const cx = (W - 1) / 2;
+  const cy = (H - 1) / 2;
+  const maxDist = Math.max(0.1, Math.sqrt(cx ** 2 + cy ** 2));
+  const denomX = Math.max(1, W - 1);
+  const denomY = Math.max(1, H - 1);
+  const denomCells = Math.max(1, totalCells - 1);
 
-    const totalDegrees = S * octaves;
-    const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
-    const octOffset = Math.floor(degIndex / S);
-    const degree = scaleIntervals[degIndex % S];
-
-    // High Y = higher octave register boost
+  for (let y = 0; y < H; y++) {
+    const normY = y / denomY;
     const yOctBonus = Math.floor((1 - normY) * 2);
-    rawPitch = baseMidi + (octOffset + yOctBonus) * 12 + degree;
-  } else if (mapping === "x-degree-y-vel") {
-    const normX = Math.max(0, Math.min(W - 1, x)) / Math.max(1, W - 1);
-    const totalDegrees = S * octaves;
-    const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
-    const octOffset = Math.floor(degIndex / S);
-    const degree = scaleIntervals[degIndex % S];
-    rawPitch = baseMidi + octOffset * 12 + degree;
-  } else if (mapping === "radial") {
-    const cx = (W - 1) / 2;
-    const cy = (H - 1) / 2;
-    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-    const maxDist = Math.sqrt(cx ** 2 + cy ** 2);
-    const normDist = Math.min(1, dist / Math.max(0.1, maxDist));
+    const yFactor = 1 - normY;
+    const velMult = mapping === "x-degree-y-vel" ? (0.7 + yFactor * 0.5) : 1.0;
 
-    const totalDegrees = S * octaves;
-    const degIndex = Math.min(totalDegrees - 1, Math.floor(normDist * totalDegrees));
-    const octOffset = Math.floor(degIndex / S);
-    const degree = scaleIntervals[degIndex % S];
-    rawPitch = baseMidi + octOffset * 12 + degree;
-  } else {
-    const idx = y * W + x;
-    const totalCells = W * H;
-    const norm = Math.min(1, idx / Math.max(1, totalCells - 1));
-    const totalDegrees = S * octaves;
-    const degIndex = Math.min(totalDegrees - 1, Math.floor(norm * totalDegrees));
-    const octOffset = Math.floor(degIndex / S);
-    const degree = scaleIntervals[degIndex % S];
-    rawPitch = baseMidi + octOffset * 12 + degree;
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      let rawPitch = baseMidi;
+
+      if (mapping === "x-pitch-y-oct") {
+        const normX = x / denomX;
+        const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
+        const octOffset = Math.floor(degIndex / S);
+        const degree = scaleIntervals[degIndex % S];
+        rawPitch = baseMidi + (octOffset + yOctBonus) * 12 + degree;
+      } else if (mapping === "x-degree-y-vel") {
+        const normX = x / denomX;
+        const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
+        const octOffset = Math.floor(degIndex / S);
+        const degree = scaleIntervals[degIndex % S];
+        rawPitch = baseMidi + octOffset * 12 + degree;
+      } else if (mapping === "radial") {
+        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+        const normDist = Math.min(1, dist / maxDist);
+        const degIndex = Math.min(totalDegrees - 1, Math.floor(normDist * totalDegrees));
+        const octOffset = Math.floor(degIndex / S);
+        const degree = scaleIntervals[degIndex % S];
+        rawPitch = baseMidi + octOffset * 12 + degree;
+      } else {
+        const norm = Math.min(1, idx / denomCells);
+        const degIndex = Math.min(totalDegrees - 1, Math.floor(norm * totalDegrees));
+        const octOffset = Math.floor(degIndex / S);
+        const degree = scaleIntervals[degIndex % S];
+        rawPitch = baseMidi + octOffset * 12 + degree;
+      }
+
+      const quantized = quantize(rawPitch, scaleIntervals, baseMidi, 1);
+      const clampedNote = Math.max(12, Math.min(108, quantized));
+
+      noteLUT[idx] = clampedNote;
+      noteNamesLUT[idx] = midiName(clampedNote);
+      velFactorLUT[idx] = velMult;
+    }
   }
 
-  // Quantize strictly to scale
-  const quantized = quantize(rawPitch, scaleIntervals, baseMidi, 1);
-  const clampedNote = Math.max(12, Math.min(108, quantized));
+  cachedLutSignature = sig || getNoteLutSignature(W, H);
+}
+
+/**
+ * Ensures the Note Look-Up Table is initialized and valid for current parameters.
+ */
+export function ensureNoteLUT(W = gridW, H = gridH) {
+  const sig = getNoteLutSignature(W, H);
+  if (sig === cachedLutSignature && noteLUT && noteLUT.length === W * H) {
+    return;
+  }
+  rebuildNoteLUT(W, H, sig);
+}
+
+/**
+ * Invalidates the cached Note Look-Up Table, forcing a rebuild on next query.
+ */
+export function invalidateNoteLUT() {
+  cachedLutSignature = "";
+}
+
+/**
+ * Maps cell coordinates to musical MIDI note using the precomputed Note LUT.
+ * Instantaneous O(1) array read with zero runtime scale quantization loops.
+ */
+export function mapCoordinateToNote(x, y, W = gridW, H = gridH) {
+  ensureNoteLUT(W, H);
+  const cx = Math.max(0, Math.min(W - 1, x));
+  const cy = Math.max(0, Math.min(H - 1, y));
+  const idx = cy * W + cx;
+
+  const clampedNote = noteLUT[idx];
+  const name = noteNamesLUT[idx];
+  const velMult = velFactorLUT[idx];
 
   // Determine velocity from shared Velocity bar
   const baseVel = state.velocity ?? 100;
@@ -415,14 +480,13 @@ export function mapCoordinateToNote(x, y, W = gridW, H = gridH) {
     finalVel = Math.round(baseVel * (1 - amt) + rnd * amt);
   }
 
-  if (mapping === "x-degree-y-vel") {
-    const yFactor = 1 - (y / Math.max(1, H - 1));
-    finalVel = Math.round(finalVel * (0.7 + yFactor * 0.5));
+  if (velMult !== 1.0) {
+    finalVel = Math.round(finalVel * velMult);
   }
 
   finalVel = Math.max(1, Math.min(127, finalVel));
 
-  return { note: clampedNote, vel: finalVel, name: midiName(clampedNote) };
+  return { note: clampedNote, vel: finalVel, name };
 }
 
 /**
@@ -618,6 +682,7 @@ export function stepPhysicsTick(triggerSound = true) {
  * Generates the full 64-step sequence bank from particle physics simulation.
  */
 export function generateParticleBank() {
+  ensureNoteLUT(gridW, gridH);
   const seqLen = Math.max(1, Math.min(64, state.length || 64));
   let rateIdx = typeof state.rate === "number" ? state.rate : RATE_NAMES.indexOf(state.rate);
   if (rateIdx < 0 || rateIdx >= RATE_QUARTERS.length) rateIdx = 6;
