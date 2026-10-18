@@ -76,6 +76,7 @@ export const OBS_BACKSLASH = 2;
 export const OBS_BOUNCER = 3;
 
 export const TOOL_TO_OBS = {
+  deflector: OBS_SLASH,
   slash: OBS_SLASH,
   backslash: OBS_BACKSLASH,
   bouncer: OBS_BOUNCER
@@ -91,7 +92,7 @@ let seedObstacles = new Uint8Array(gridW * gridH);
 const flippedDeflectors = new Set();
 const playheadClickCounts = new Map();
 
-let activeTool = "particle"; // "particle" | "slash" | "backslash" | "bouncer"
+let activeTool = "particle"; // "particle" | "deflector" | "bouncer"
 let selectedDirectionIdx = 2; // East (1, 0)
 let loopMode = state.particleLoopMode || "loop"; // "loop" (resets to seed every sequence length) | "free" (carries on indefinitely)
 let totalFreeSteps = 0;
@@ -1382,7 +1383,7 @@ function wireCanvasEvents(canvas) {
       generateParticleBank();
       renderCanvas();
       updateHud();
-    } else if (activeTool === "slash" || activeTool === "backslash") {
+    } else if (activeTool === "deflector" || activeTool === "slash" || activeTool === "backslash") {
       const obsIdx = cell.y * gridW + cell.x;
       const currentObs = obstacles[obsIdx];
       if (currentObs === OBS_SLASH || currentObs === OBS_BACKSLASH) {
@@ -1397,9 +1398,9 @@ function wireCanvasEvents(canvas) {
           status(`Flipped deflector at (${cell.x}, ${cell.y}) to ${newObs === OBS_SLASH ? "/" : "\\"}`);
         }
       } else {
-        setObstacle(cell.x, cell.y, activeTool);
+        setObstacle(cell.x, cell.y, "deflector");
         flippedDeflectors.delete(obsIdx);
-        status(`Placed ${activeTool === "slash" ? "Deflector /" : "Deflector \\"} at (${cell.x}, ${cell.y})`);
+        status(`Placed Deflector at (${cell.x}, ${cell.y})`);
       }
       saveToSeed();
       generateParticleBank();
@@ -1634,8 +1635,7 @@ export function initParticles() {
 
   const STAMP_TOOLS = [
     { v: "particle", label: "Playhead •", title: "Playhead Particle (•) — Click grid to place playhead, drag to aim direction, click 8 times to cycle compass and remove." },
-    { v: "slash", label: "Deflector /", title: "Deflector / (45° Up) — Reflects particles at 45°. Click deflector to flip rotation; click again to remove." },
-    { v: "backslash", label: "Deflector \\", title: "Deflector \\ (45° Down) — Reflects particles at 45°. Click deflector to flip rotation; click again to remove." },
+    { v: "deflector", label: "Deflector", title: "Deflector (/) — Reflects particles at 45°. Click grid to place; click deflector to flip rotation, click again to remove." },
     { v: "bouncer", label: "Omni Bounce *", title: "Omni Bouncer * (180°) — Bounces particles straight back. Click placed bouncer to erase." }
   ];
 
