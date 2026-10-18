@@ -14,14 +14,14 @@ import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, in
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
-import { initModes, getActiveModel } from "./modes.js?v=267";
+import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
 import { createNotesSection } from "./scale.js?v=276";
 import { createHumaniseSection } from "./humanise.js?v=269";
 import { createVelocitySection } from "./velocity.js?v=269";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=275";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=275";
-import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=280";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=281";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=275";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";

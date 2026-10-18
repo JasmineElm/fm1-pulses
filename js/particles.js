@@ -15,7 +15,7 @@ import {
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
 import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=275";
-import { getActiveModel } from "./modes.js?v=260";
+import { getActiveModel } from "./modes.js";
 
 export const GRID_SIZES = [
   { v: "16", t: "16 × 16 (Standard)" },
@@ -97,6 +97,7 @@ let selectedDirectionIdx = 2; // East (1, 0)
 let loopMode = state.particleLoopMode || "loop"; // "loop" (resets to seed every sequence length) | "free" (carries on indefinitely)
 let totalFreeSteps = 0;
 let particleRhythmOverridden = false; // When false, note triggering is strictly determined by particle collisions
+let isParticlesActive = false;
 
 export function isParticleRhythmOverridden() {
   return particleRhythmOverridden;
@@ -1912,7 +1913,7 @@ export function initParticles() {
       return;
     }
 
-    if (getActiveModel && getActiveModel() !== "particles") return;
+    if (!isParticlesActive && getActiveModel && getActiveModel() !== "particles") return;
     if (!containerEl || containerEl.style.display === "none") return;
 
     if (loopMode === "free") {
@@ -2002,7 +2003,7 @@ export function initParticles() {
 
   // Listen for user edits from Euclidean controls or manual rhythm step toggling
   onRhythmUserEdit(() => {
-    if (getActiveModel && getActiveModel() !== "particles") return;
+    if (!isParticlesActive && getActiveModel && getActiveModel() !== "particles") return;
     particleRhythmOverridden = true;
     const curBank = getBank();
     const curP = curBank?.[0];
@@ -2018,6 +2019,7 @@ export function initParticles() {
  * When activating the Particle Collision Simulator model.
  */
 export function activateParticlesModel() {
+  isParticlesActive = true;
   particleRhythmOverridden = false;
   setSelected(0);
   setModelGenerator(generateParticleBank);
@@ -2036,6 +2038,7 @@ export function activateParticlesModel() {
  * When deactivating the Particle Collision Simulator model.
  */
 export function deactivateParticlesModel() {
+  isParticlesActive = false;
   setModelGenerator(null);
   setModelRandomizer(null);
 }
