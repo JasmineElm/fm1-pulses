@@ -255,17 +255,27 @@ export function generate(params) {
   // (Legacy: gateMode "euclid" = blend 100.)
   const blend = Math.min(1, Math.max(0,
     (params.gateBlend ?? (params.gateMode === "euclid" ? 100 : 0)) / 100));
-  const loopLen0 = Math.round(params.loop || 0);
-  const divSetting = params.euclidDiv;
-  const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
-    ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
-    : Math.max(2, blend > 0 && loopLen0 >= 2 ? loopLen0 : 16);
-  const N = blend > 0 ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
+  const mode = params.euclidMode || "hits";
+  const rot = ((params.euclidRot ?? 0) % len + len) % len;
   let eMask = null;
   if (blend > 0) {
-    eMask = euclid(N, M);
-    const rot = ((params.euclidRot ?? 0) % M + M) % M;
-    if (rot) eMask = [...eMask.slice(rot), ...eMask.slice(0, rot)];
+    eMask = new Array(len).fill(0);
+    if (mode === "hits") {
+      // Hits mode: activates a step every n steps
+      const n = Math.max(1, Math.min(64, Math.round(Number(params.euclidHits) || 4)));
+      for (let i = 0; i < len; i++) {
+        if (((i - rot) % n + n) % n === 0) {
+          eMask[i] = 1;
+        }
+      }
+    } else {
+      // Div mode: activates a step every (sequence length)/div
+      const div = Math.max(1, Math.min(64, Math.round(Number(params.euclidDiv) || 16)));
+      const baseMask = euclid(div, len);
+      for (let i = 0; i < len; i++) {
+        eMask[i] = baseMask[(i - rot + len * 100) % len];
+      }
+    }
   }
   const loopStart = Math.max(0, Math.round(params.loopFrom ?? 1) - 1);  // 1-based in the UI, 0-based here
   const loopLen = Math.round(params.loop || 0);                 // motif length in steps (0 = off)
@@ -291,8 +301,8 @@ export function generate(params) {
     const active = i < len && (blend <= 0
       ? rng() < gateProb
       : blend >= 1
-        ? eMask[i % M] === 1
-        : (rng() < blend ? eMask[i % M] === 1 : rng() < gateProb));
+        ? eMask[i] === 1
+        : (rng() < blend ? eMask[i] === 1 : rng() < gateProb));
     gates[i] = active ? 1 : 0;
 
     // Pitch source — the LFO free-runs every step (the design: the clock

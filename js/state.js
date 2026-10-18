@@ -13,7 +13,7 @@ export const DEFAULT = {
   seed: (Math.random() * 1e9) | 0,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, velMin: 1, velMax: 127, humanize: 0, gateQuant: 0, snapGrid: 4,
-  gateBlend: 0, euclidRot: 0, euclidDiv: "auto",
+  gateBlend: 0, euclidRot: 0, euclidDiv: "16", euclidHits: 4, euclidMode: "hits",
   scale: "pentMinor",
   customScale: [0, 3, 5, 7, 10],
   root: 60,
@@ -90,14 +90,17 @@ export function refreshLoopInfo() {
   const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
   if (state.gateBlend > 0) {
     const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
-    const divSetting = state.euclidDiv;
-    const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
-      ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
-      : Math.max(2, n >= 2 ? n : 16);
-    const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
-    const rot = ((state.euclidRot ?? 0) % M + M) % M;
-    const classic = classicName(N, M);
-    el.textContent = `${loopTxt} · E(${N},${M})${classic ? " (" + classic + ")" : ""}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
+    const mode = state.euclidMode || "hits";
+    const rot = ((state.euclidRot ?? 0) % L + L) % L;
+    let info = "";
+    if (mode === "hits") {
+      const hitsVal = Math.max(1, Math.round(Number(state.euclidHits) || 4));
+      info = `every ${hitsVal}st`;
+    } else {
+      const divVal = Math.max(1, Math.round(Number(state.euclidDiv) || 16));
+      info = `div ${divVal}`;
+    }
+    el.textContent = `${loopTxt} · ${info}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
   } else el.textContent = loopTxt;
 }
 

@@ -5,7 +5,7 @@ import {
 import {
   euclid, classicName, quantize, midiName
 } from "./generator.js";
-import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=250";
+import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=251";
 import { onStep } from "./player.js";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
@@ -188,6 +188,67 @@ export function applyEuclidPattern(hits, div, rot = 0) {
   renderBuffer();
   const classic = classicName(N, M);
   status(`Applied Euclid E(${N},${M})${classic ? ` [${classic}]` : ""}${effRot ? ` rot ${effRot}` : ""}`, "ok");
+}
+
+/**
+ * Applies the currently active Euclidean mode ("hits" or "div") across sequence steps.
+ * In "hits" mode: activates a step every n steps.
+ * In "div" mode: activates a step every (sequence length)/div.
+ * Mutually exclusive: changing or selecting one does not affect the other.
+ */
+export function applyActiveEuclidRhythm() {
+  const bank = getBank();
+  const p = bank[0];
+  if (!p || !p.steps) return;
+
+  const seqLen = Math.max(1, Math.min(64, state.length || 64));
+  const mode = state.euclidMode || "hits";
+  const rot = ((state.euclidRot ?? 0) % seqLen + seqLen) % seqLen;
+
+  let mask = new Array(seqLen).fill(0);
+
+  if (mode === "hits") {
+    // Hits mode: activates a step every n steps
+    const n = Math.max(1, Math.min(64, Math.round(Number(state.euclidHits) || 4)));
+    for (let i = 0; i < seqLen; i++) {
+      if (((i - rot) % n + n) % n === 0) {
+        mask[i] = 1;
+      }
+    }
+    const hitCount = mask.filter((x) => x === 1).length;
+    status(`Hits mode: step every ${n} steps (${hitCount}/${seqLen} active)${rot ? ` rot ${rot}` : ""}`);
+  } else {
+    // Div mode: activates a step every (sequence length)/div
+    const div = Math.max(1, Math.min(64, Math.round(Number(state.euclidDiv) || 16)));
+    const baseMask = euclid(div, seqLen);
+    for (let i = 0; i < seqLen; i++) {
+      mask[i] = baseMask[(i - rot + seqLen * 100) % seqLen];
+    }
+    const hitCount = mask.filter((x) => x === 1).length;
+    status(`Div mode: ${div} divisions across ${seqLen} steps (${hitCount} active)${rot ? ` rot ${rot}` : ""}`);
+  }
+
+  for (let i = 0; i < seqLen; i++) {
+    const isHit = mask[i] === 1;
+    const st = p.steps[i];
+    if (isHit) {
+      if (!st.notes || st.notes.length === 0) {
+        const noteVal = st._savedNote ? st._savedNote.note : getDefaultNoteForStep(i);
+        const vel = st._savedNote ? st._savedNote.vel : (state.velocity ?? 100);
+        st.notes = [{ note: noteVal, vel }];
+      }
+    } else {
+      if (st.notes && st.notes.length > 0) {
+        st._savedNote = { ...st.notes[0] };
+        st.notes = [];
+      }
+    }
+    delete st.echo;
+  }
+
+  syncRhythmGrid();
+  renderBuffer();
+  refreshLoopInfo();
 }
 
 /**
@@ -528,7 +589,12 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   euclidInputsWrap.className = "rhythm-euclid-inputs";
 
   // Mode Toggle: switch between "Hits" and "Div"
-  let euclidMode = "hits"; // "hits" | "div"
+  // "Hits" activates a step every n steps.
+  // "Div" activates a step every (sequence length)/div.
+  // Mutually exclusive: changing or setting one does not affect the other.
+  state.euclidMode = state.euclidMode || "hits";
+  state.euclidHits = state.euclidHits || 4;
+  state.euclidDiv = (state.euclidDiv && state.euclidDiv !== "auto") ? String(state.euclidDiv) : "16";
 
   const modeToggleWrap = document.createElement("div");
   modeToggleWrap.className = "rhythm-toggle-group";
@@ -537,48 +603,50 @@ export function initRhythm(containerEl, sequenceContainerEl) {
 
   const btnHits = document.createElement("button");
   btnHits.type = "button";
-  btnHits.className = "rhythm-toggle-btn is-active";
+  btnHits.className = `rhythm-toggle-btn${state.euclidMode === "hits" ? " is-active" : ""}`;
   btnHits.textContent = "Hits";
-  btnHits.title = "Control Euclidean Hits (Pulse count)";
+  btnHits.title = "Hits mode: activate a step every n steps";
   btnHits.setAttribute("role", "radio");
-  btnHits.setAttribute("aria-checked", "true");
+  btnHits.setAttribute("aria-checked", state.euclidMode === "hits" ? "true" : "false");
 
   const btnDiv = document.createElement("button");
   btnDiv.type = "button";
-  btnDiv.className = "rhythm-toggle-btn";
+  btnDiv.className = `rhythm-toggle-btn${state.euclidMode === "div" ? " is-active" : ""}`;
   btnDiv.textContent = "Div";
-  btnDiv.title = "Control Euclidean Division (Cycle length in steps)";
+  btnDiv.title = "Div mode: activate a step every (sequence length)/div steps";
   btnDiv.setAttribute("role", "radio");
-  btnDiv.setAttribute("aria-checked", "false");
+  btnDiv.setAttribute("aria-checked", state.euclidMode === "div" ? "true" : "false");
 
   modeToggleWrap.append(btnHits, btnDiv);
 
   euclidHitsInput = document.createElement("input");
   euclidHitsInput.type = "number";
   euclidHitsInput.className = "rhythm-num-input";
-  euclidHitsInput.min = "0";
+  euclidHitsInput.min = "1";
   euclidHitsInput.max = "64";
-  const initDiv = state.euclidDiv === "auto" ? 16 : (parseInt(state.euclidDiv, 10) || 16);
-  euclidHitsInput.value = String(Math.round(((state.gateProb ?? 70) / 100) * initDiv));
-  euclidHitsInput.title = "Euclidean hits / Gate density";
+  euclidHitsInput.step = "1";
+  euclidHitsInput.value = String(state.euclidHits);
+  euclidHitsInput.title = "Step interval: activates a step every n steps";
 
   const hitsWrap = document.createElement("div");
   hitsWrap.className = "rhythm-mode-input-wrap";
+  hitsWrap.style.display = state.euclidMode === "hits" ? "inline-flex" : "none";
   hitsWrap.appendChild(euclidHitsInput);
 
   euclidDivSelect = document.createElement("select");
   euclidDivSelect.className = "rhythm-select-sm";
-  euclidDivSelect.title = "Cycle length in steps (Division)";
+  euclidDivSelect.title = "Sequence division: activates a step every (sequence length)/div steps";
   const divOptions = [
-    { v: "auto", t: "Auto" },
-    { v: "16", t: "16" },
-    { v: "12", t: "12" },
-    { v: "8", t: "8" },
-    { v: "7", t: "7" },
-    { v: "6", t: "6" },
-    { v: "5", t: "5" },
-    { v: "4", t: "4" },
+    { v: "2", t: "2" },
     { v: "3", t: "3" },
+    { v: "4", t: "4" },
+    { v: "5", t: "5" },
+    { v: "6", t: "6" },
+    { v: "7", t: "7" },
+    { v: "8", t: "8" },
+    { v: "12", t: "12" },
+    { v: "16", t: "16" },
+    { v: "24", t: "24" },
     { v: "32", t: "32" },
     { v: "64", t: "64" },
   ];
@@ -586,17 +654,17 @@ export function initRhythm(containerEl, sequenceContainerEl) {
     const opt = document.createElement("option");
     opt.value = d.v;
     opt.textContent = d.t;
-    if (String(state.euclidDiv || "auto") === d.v) opt.selected = true;
+    if (String(state.euclidDiv) === d.v) opt.selected = true;
     euclidDivSelect.appendChild(opt);
   }
 
   const divWrap = document.createElement("div");
   divWrap.className = "rhythm-mode-input-wrap";
-  divWrap.style.display = "none";
+  divWrap.style.display = state.euclidMode === "div" ? "inline-flex" : "none";
   divWrap.appendChild(euclidDivSelect);
 
-  function setEuclidMode(mode) {
-    euclidMode = mode;
+  function setEuclidMode(mode, apply = true) {
+    state.euclidMode = mode;
     const isHits = mode === "hits";
     btnHits.classList.toggle("is-active", isHits);
     btnHits.setAttribute("aria-checked", isHits ? "true" : "false");
@@ -604,11 +672,13 @@ export function initRhythm(containerEl, sequenceContainerEl) {
     btnDiv.setAttribute("aria-checked", !isHits ? "true" : "false");
     hitsWrap.style.display = isHits ? "inline-flex" : "none";
     divWrap.style.display = !isHits ? "inline-flex" : "none";
-    status(isHits ? "Euclidean: Hits mode" : "Euclidean: Division mode");
+    if (apply) {
+      applyActiveEuclidRhythm();
+    }
   }
 
-  btnHits.addEventListener("click", () => setEuclidMode("hits"));
-  btnDiv.addEventListener("click", () => setEuclidMode("div"));
+  btnHits.addEventListener("click", () => setEuclidMode("hits", true));
+  btnDiv.addEventListener("click", () => setEuclidMode("div", true));
 
   const blendLabel = document.createElement("label");
   blendLabel.title = "Euclidean blend: 0% = random placement, 100% = even Euclidean spacing";
@@ -627,21 +697,20 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   blendLabel.append(blendInput, blendVal);
 
   euclidHitsInput.addEventListener("input", (e) => {
-    const h = parseInt(e.target.value, 10) || 0;
-    const dVal = euclidDivSelect.value;
-    const dNum = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
-    state.gateProb = Math.min(100, Math.max(0, Math.round((h / dNum) * 100)));
-    refreshLoopInfo();
-    scheduleRegen();
+    const n = Math.max(1, Math.min(64, parseInt(e.target.value, 10) || 1));
+    state.euclidHits = n;
+    // Mutually exclusive: does NOT affect state.euclidDiv or euclidDivSelect
+    if (state.euclidMode === "hits") {
+      applyActiveEuclidRhythm();
+    }
   });
 
   euclidDivSelect.addEventListener("change", (e) => {
     state.euclidDiv = e.target.value;
-    const dVal = e.target.value;
-    const dNum = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
-    euclidHitsInput.value = String(Math.round(((state.gateProb ?? 70) / 100) * dNum));
-    refreshLoopInfo();
-    scheduleRegen();
+    // Mutually exclusive: does NOT affect state.euclidHits or euclidHitsInput
+    if (state.euclidMode === "div") {
+      applyActiveEuclidRhythm();
+    }
   });
 
   blendInput.addEventListener("input", (e) => {
@@ -659,10 +728,6 @@ export function initRhythm(containerEl, sequenceContainerEl) {
 
     const preset = EUCLID_PRESETS.find((p) => p.id === val);
     if (preset && preset.n !== undefined) {
-      euclidHitsInput.value = String(preset.n);
-      euclidDivSelect.value = String(preset.m);
-      state.euclidDiv = String(preset.m);
-      state.gateProb = Math.min(100, Math.max(0, Math.round((preset.n / preset.m) * 100)));
       state.gateBlend = 100;
       blendInput.value = "100";
       blendVal.textContent = "100%";
@@ -677,12 +742,6 @@ export function initRhythm(containerEl, sequenceContainerEl) {
     const genre = GENRE_PRESETS.find((p) => p.id === val);
     if (genre && genre.fn) {
       applyGenrePreset(genre.id);
-      const bank = getBank();
-      const p = bank[0];
-      const seqLen = Math.max(1, Math.min(64, state.length || 64));
-      const activeHits = p?.steps ? p.steps.filter((st, i) => i < seqLen && st.notes?.length > 0).length : 0;
-      euclidHitsInput.value = String(activeHits);
-      state.gateProb = Math.min(100, Math.max(0, Math.round((activeHits / seqLen) * 100)));
       refreshLoopInfo();
     }
   });
@@ -691,14 +750,25 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   euclidGroup.append(euclidLabel, euclidSelect, euclidInputsWrap);
 
   // Register refs for synchronization
-  R("gateProb", {
+  R("euclidMode", {
+    setValue: (v) => setEuclidMode(v, false),
+    get value() { return state.euclidMode; }
+  });
+
+  R("euclidHits", {
     setValue: (v) => {
-      state.gateProb = Number(v) || 0;
-      const dVal = euclidDivSelect.value;
-      const d = dVal === "auto" ? 16 : (parseInt(dVal, 10) || 16);
-      euclidHitsInput.value = String(Math.round((state.gateProb / 100) * d));
+      state.euclidHits = Math.max(1, Math.min(64, parseInt(v, 10) || 4));
+      if (euclidHitsInput) euclidHitsInput.value = String(state.euclidHits);
     },
-    get value() { return state.gateProb; }
+    get value() { return state.euclidHits; }
+  });
+
+  R("euclidDiv", {
+    setValue: (v) => {
+      state.euclidDiv = String(v);
+      if (euclidDivSelect) euclidDivSelect.value = String(v);
+    },
+    get value() { return state.euclidDiv; }
   });
 
   R("gateBlend", {
@@ -709,14 +779,6 @@ export function initRhythm(containerEl, sequenceContainerEl) {
     },
     setCheckbox: () => {},
     get value() { return state.gateBlend; }
-  });
-
-  R("euclidDiv", {
-    setValue: (v) => {
-      state.euclidDiv = String(v);
-      euclidDivSelect.value = String(v);
-    },
-    get value() { return state.euclidDiv; }
   });
 
   R("euclidRot", {
