@@ -233,7 +233,7 @@ export function generate(params) {
   const amp = (params.lfoAmp ?? 50) / 100;
   const offset = (params.lfoOffset ?? 0) / 100;         // -1..1
   const center = params.root;                            // notes swing around the root
-  const span = 36;                                      // semitones of swing
+  const span = (Number(params.pitchSpan ?? 3) || 3) * 12; // semitones of swing (1-4 octaves)
   const wave = params.lfoWave || "sine";
   const isRandom = wave === "random";
   const shapeAmt = Math.min(1, Math.max(0, (params.lfoShape ?? 0) / 100));

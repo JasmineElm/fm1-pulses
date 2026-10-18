@@ -94,7 +94,7 @@ function getDacValueAtStep(step) {
 function getNoteAtStep(step) {
   const { val, maxVal } = getDacValueAtStep(step);
   const norm = maxVal > 0 ? val / maxVal : 0;
-  const spanSemitones = (state.turingSpan || 2) * 12;
+  const spanSemitones = (state.pitchSpan ?? state.turingSpan ?? 2) * 12;
   const semitones = Math.round(norm * spanSemitones);
 
   // Octave spread offset if configured
@@ -504,6 +504,8 @@ export function initTuring() {
     format: (v) => `${Math.round(v)} Oct`,
     onInput: (v) => {
       state.turingSpan = Math.round(v);
+      state.pitchSpan = state.turingSpan;
+      if (refs.pitchSpan?.setValue) refs.pitchSpan.setValue(String(state.pitchSpan), false);
       generateTuringBank();
       status(`Pitch Span: ${state.turingSpan} Octaves`);
     },

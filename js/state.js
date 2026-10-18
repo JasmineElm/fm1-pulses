@@ -19,6 +19,7 @@ export const DEFAULT = {
   root: 60,
   rootNote: 0,
   rootOctave: 4,
+  pitchSpan: 3,
   lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, octaveMode: "up", gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
 

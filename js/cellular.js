@@ -43,13 +43,6 @@ export const NOTE_RULES = [
   { v: "random", t: "Random Cell (Stochastic)", desc: "Picks a random live cell uniformly — unpredictable generative textures" }
 ];
 
-export const OCTAVE_OPTIONS = [
-  { v: "1", t: "1 Octave (12 semitones)" },
-  { v: "2", t: "2 Octaves (24 semitones)" },
-  { v: "3", t: "3 Octaves (36 semitones - Default)" },
-  { v: "4", t: "4 Octaves (48 semitones)" },
-  { v: "5", t: "5 Octaves (60 semitones)" }
-];
 
 // Conway Engine State
 let gridSize = DEFAULT_GRID_SIZE;
@@ -283,7 +276,7 @@ export function mapCellToNote(cell, N) {
   let scale = (scaleName === "custom" && (state.customScale || state.caCustomScale)) ? (state.customScale || state.caCustomScale) : (SCALES[scaleName] || SCALES.pentMinor);
   if (!scale || scale.length === 0) scale = [0];
   const root = typeof state.root === "number" ? state.root : (typeof state.caRoot === "number" ? state.caRoot : 48);
-  const octaves = typeof state.caOctaves === "number" ? state.caOctaves : 3;
+  const octaves = typeof state.pitchSpan === "number" ? state.pitchSpan : (typeof state.caOctaves === "number" ? state.caOctaves : 3);
   const minVel = typeof state.caMinVel === "number" ? state.caMinVel : 30;
   const maxVel = typeof state.caMaxVel === "number" ? state.caMaxVel : 120;
 
@@ -1361,20 +1354,7 @@ export function buildCellularPanel(container) {
   }));
   ruleCtrl.classList.add("ca-span-full");
 
-  const spanCtrl = R("caOctaves", dropdown({
-    label: "Pitch Span",
-    options: OCTAVE_OPTIONS,
-    value: String(state.caOctaves ?? 3),
-    onInput: (v) => {
-      state.caOctaves = Number(v);
-      generateCaBank();
-      status(`Pitch Span: ${v} octaves`);
-    },
-    tip: "Horizontal keyboard span across the X axis."
-  }));
-  spanCtrl.classList.add("ca-span-full");
-
-  triggerControls.append(ruleCtrl, spanCtrl);
+  triggerControls.append(ruleCtrl);
   triggerSect.append(triggerControls);
 
   // 4. PRESET PATTERNS LIBRARY

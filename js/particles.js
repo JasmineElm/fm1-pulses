@@ -38,13 +38,6 @@ export const PITCH_MAPPINGS = [
   { v: "linear", t: "Linear Matrix (Row-Major)", desc: "Standard 2D raster scan index quantized to scale" }
 ];
 
-export const OCTAVE_SPANS = [
-  { v: "1", t: "1 Octave (12 semitones)" },
-  { v: "2", t: "2 Octaves (24 semitones)" },
-  { v: "3", t: "3 Octaves (36 semitones - Default)" },
-  { v: "4", t: "4 Octaves (48 semitones)" }
-];
-
 export const POLYPHONY_OPTIONS = [
   { v: "1", t: "1 Note (Monophonic Lead)" },
   { v: "2", t: "2 Notes (Duophonic - Default)" },
@@ -394,7 +387,7 @@ function getNoteLutSignature(W, H) {
   const rootNote = state.rootNote ?? 0;
   const rootOct = state.rootOctave ?? 3;
   const mapping = state.particleNoteRule || "x-pitch-y-oct";
-  const octaves = state.particleOctaves || 3;
+  const octaves = state.pitchSpan || state.particleOctaves || 3;
   return `${W}x${H}|${scaleName}|${customStr}|${rootNote}|${rootOct}|${mapping}|${octaves}`;
 }
 
@@ -414,7 +407,7 @@ export function rebuildNoteLUT(W = gridW, H = gridH, sig = null) {
   const baseMidi = rootMidiBase + (rootOct + 1) * 12;
 
   const mapping = state.particleNoteRule || "x-pitch-y-oct";
-  const octaves = Number(state.particleOctaves || 3);
+  const octaves = Number(state.pitchSpan || state.particleOctaves || 3);
   const S = Math.max(1, scaleIntervals.length);
   const totalDegrees = S * octaves;
 
@@ -1620,19 +1613,6 @@ export function initParticles() {
     },
     tip: "Geometric mapping from 2D collision coordinates to musical scale intervals."
   }));
-  mapCtrl.classList.add("particle-span-full");
-
-  const octCtrl = R("particleOctaves", dropdown({
-    label: "Pitch Span",
-    options: OCTAVE_SPANS,
-    value: String(state.particleOctaves || 3),
-    onInput: (v) => {
-      state.particleOctaves = Number(v);
-      generateParticleBank();
-      status(`Pitch Span: ${v} octaves`);
-    },
-    tip: "Keyboard octave width across the grid."
-  }));
 
   const polyCtrl = R("particlePolyphony", dropdown({
     label: "Polyphony",
@@ -1646,7 +1626,7 @@ export function initParticles() {
     tip: "Maximum simultaneous collision notes triggered on any step."
   }));
 
-  harmGrid.append(mapCtrl, octCtrl, polyCtrl);
+  harmGrid.append(mapCtrl, polyCtrl);
   harmSect.append(harmGrid);
 
   // 4. Presets Library Section

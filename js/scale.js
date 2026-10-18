@@ -39,6 +39,13 @@ export const ROOT_OCTAVE_OPTIONS = [
   { v: "5", t: "Octave 5" }
 ];
 
+export const PITCH_SPAN_OPTIONS = [
+  { v: "1", t: "1 Octave" },
+  { v: "2", t: "2 Octaves" },
+  { v: "3", t: "3 Octaves" },
+  { v: "4", t: "4 Octaves" }
+];
+
 export function findPredefinedScale(intervals) {
   const target = intervals.join(",");
   for (const [key, ivs] of Object.entries(SCALES)) {
@@ -268,10 +275,12 @@ export function createNotesSection({
   rootKey = "root",
   rootNoteKey = "rootNote",
   rootOctaveKey = "rootOctave",
+  pitchSpanKey = "pitchSpan",
   quantKey = "quantSteps",
   octaveKey = "octave",
   octaveModeKey = "octaveMode",
   defaultOctave = 4,
+  defaultPitchSpan = 3,
   scaleLabel = "Scale",
   isFullWidth = false,
   badgeText = "Key & Scale",
@@ -287,6 +296,19 @@ export function createNotesSection({
     scaleLabel,
     onChange
   });
+
+  // Pitch Span Dropdown
+  const pitchSpanCtrl = R(pitchSpanKey, dropdown({
+    label: "Pitch Span",
+    options: PITCH_SPAN_OPTIONS,
+    value: String(state[pitchSpanKey] ?? defaultPitchSpan),
+    onInput: (v) => {
+      state[pitchSpanKey] = Number(v);
+      onChange();
+      status(`Pitch Span: ${v} Octaves`);
+    },
+    tip: "Total octave width spanned by the note generator or grid (1 to 4 octaves)."
+  }));
 
   // Quantize Fader
   const quantCtrl = R(quantKey, fader({
@@ -348,7 +370,6 @@ export function createNotesSection({
   const h = document.createElement("h3");
   h.textContent = title;
   const badge = document.createElement("span");
-  badge.className = "humanise-badge";
   badge.textContent = badgeText;
   headEl.append(h, badge);
 
@@ -361,6 +382,7 @@ export function createNotesSection({
 
   picker.rootNoteCtrl.classList.add("ctrl-root-note");
   picker.rootOctCtrl.classList.add("ctrl-root-oct");
+  pitchSpanCtrl.classList.add("ctrl-pitch-span");
   picker.scaleCtrl.classList.add("ctrl-scale");
   picker.scaleBox.classList.add("ctrl-scale-box");
   quantCtrl.classList.add("ctrl-quant");
@@ -368,24 +390,28 @@ export function createNotesSection({
   octaveModeCtrl.classList.add("ctrl-oct-mode");
 
   if (!isFullWidth) {
-    // Row 1: Root Note (2), Root Octave (2), Scale Dropdown (2)
+    // Row 1: Root Note (2), Root Octave (2), Pitch Span (2)
     picker.rootNoteCtrl.style.gridColumn = "span 2";
     picker.rootOctCtrl.style.gridColumn = "span 2";
-    picker.scaleCtrl.style.gridColumn = "span 2";
+    pitchSpanCtrl.style.gridColumn = "span 2";
 
-    // Row 2: Note Selection (12 buttons) (6)
+    // Row 2: Scale Dropdown (6)
+    picker.scaleCtrl.style.gridColumn = "span 6";
+
+    // Row 3: Note Selection (12 buttons) (6)
     picker.scaleBox.style.gridColumn = "span 6";
 
-    // Row 3: Quantize (6)
+    // Row 4: Quantize (6)
     quantCtrl.style.gridColumn = "span 6";
 
-    // Row 4: Octave Spread (4), Direction Mode (2)
+    // Row 5: Octave Spread (4), Direction Mode (2)
     octaveCtrl.style.gridColumn = "span 4";
     octaveModeCtrl.style.gridColumn = "span 2";
 
     grid.append(
       picker.rootNoteCtrl,
       picker.rootOctCtrl,
+      pitchSpanCtrl,
       picker.scaleCtrl,
       picker.scaleBox,
       quantCtrl,
@@ -396,6 +422,7 @@ export function createNotesSection({
     grid.append(
       picker.rootNoteCtrl,
       picker.rootOctCtrl,
+      pitchSpanCtrl,
       picker.scaleCtrl,
       quantCtrl,
       octaveCtrl,
@@ -408,6 +435,7 @@ export function createNotesSection({
 
   function sync() {
     picker.sync();
+    if (refs[pitchSpanKey]?.setValue) refs[pitchSpanKey].setValue(String(state[pitchSpanKey] ?? defaultPitchSpan), false);
     if (refs[quantKey]?.setValue) refs[quantKey].setValue(state[quantKey] ?? 100, false);
     if (refs[octaveKey]?.setValue) refs[octaveKey].setValue(state[octaveKey] ?? 0, false);
     if (refs[octaveModeKey]?.setValue) refs[octaveModeKey].setValue(state[octaveModeKey] || "up", false);
@@ -417,6 +445,7 @@ export function createNotesSection({
     sectEl,
     rootNoteCtrl: picker.rootNoteCtrl,
     rootOctCtrl: picker.rootOctCtrl,
+    pitchSpanCtrl,
     scaleCtrl: picker.scaleCtrl,
     scaleBox: picker.scaleBox,
     quantCtrl,

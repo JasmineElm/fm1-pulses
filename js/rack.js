@@ -16,12 +16,12 @@ import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js?v=267";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=258";
+import { createNotesSection } from "./scale.js?v=274";
 import { createHumaniseSection } from "./humanise.js?v=269";
 import { createVelocitySection } from "./velocity.js?v=269";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=258";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=258";
-import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=273";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=274";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=274";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=274";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=258";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
@@ -203,6 +203,8 @@ export function buildNotesBar() {
     rootKey: "root",
     rootNoteKey: "rootNote",
     rootOctaveKey: "rootOctave",
+    pitchSpanKey: "pitchSpan",
+    defaultPitchSpan: 3,
     quantKey: "quantSteps",
     octaveKey: "octave",
     octaveModeKey: "octaveMode",
@@ -211,7 +213,7 @@ export function buildNotesBar() {
     isFullWidth: true,
     badgeText: "Key & Scale",
     onChange: () => {
-      // Mirror to ca* and turing*
+      // Mirror to ca*, turing*, and particle*
       state.caScale = state.scale;
       state.turingScale = state.scale;
       state.particleScale = state.scale;
@@ -227,6 +229,11 @@ export function buildNotesBar() {
       state.caRootOctave = state.rootOctave;
       state.turingRootOctave = state.rootOctave;
       state.particleRootOctave = state.rootOctave;
+      state.caPitchSpan = state.pitchSpan;
+      state.caOctaves = state.pitchSpan;
+      state.turingSpan = state.pitchSpan;
+      state.particleOctaves = state.pitchSpan;
+      if (refs.turingSpan?.setValue) refs.turingSpan.setValue(state.pitchSpan, false);
       state.caQuantSteps = state.quantSteps;
       state.turingQuantSteps = state.quantSteps;
       state.particleQuantSteps = state.quantSteps;
