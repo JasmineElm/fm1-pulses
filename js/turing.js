@@ -9,7 +9,7 @@ import {
 } from "./state.js";
 import { knob, dropdown, actionBtn } from "./controls.js";
 import { onStep, isLive } from "./player.js";
-import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS } from "./scale.js";
+import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
 import { quantize, midiName, SCALES } from "./generator.js";
@@ -89,36 +89,20 @@ function getDacValueAtStep(step) {
 function getNoteAtStep(step) {
   const { val, maxVal } = getDacValueAtStep(step);
   const norm = maxVal > 0 ? val / maxVal : 0;
-  const spanSemitones = (state.pitchSpan ?? state.turingSpan ?? 2) * 12;
-  const semitones = Math.round(norm * spanSemitones);
+  const rng = () => (((step * 9301 + 49297) % 233280) / 233280);
 
-  // Octave spread offset if configured
-  let octShift = 0;
-  const octVal = state.octave ?? state.turingOctave ?? 0;
-  if (octVal > 0) {
-    const octProb = octVal / 100;
-    // Derive deterministic octave shift for step
-    const octRnd = (((step * 9301 + 49297) % 233280) / 233280);
-    if (octRnd < octProb) {
-      const mode = state.octaveMode || state.turingOctaveMode || "up";
-      if (mode === "up") octShift = 12;
-      else if (mode === "down") octShift = -12;
-      else if (mode === "up2") octShift = 24;
-      else if (mode === "down2") octShift = -24;
-      else octShift = octRnd < octProb / 2 ? 12 : -12;
-    }
-  }
+  const note = mapNormalizedToNote({
+    norm,
+    root: getRootMidi(),
+    scale: getActiveScaleIntervals(state.scale || state.turingScale),
+    octaveSpread: state.pitchSpan ?? state.turingSpan ?? 2,
+    spreadDirection: state.octaveMode || state.turingOctaveMode || "up",
+    octChance: ((state.octave ?? state.turingOctave ?? 0) / 100),
+    quantStrength: ((state.quantSteps ?? state.turingQuantSteps ?? 100) / 100),
+    rng
+  });
 
-  const root = typeof state.root === "number" ? state.root : (typeof state.turingRoot === "number" ? state.turingRoot : 48);
-  const rawNote = root + semitones + octShift;
-  const quantNote = quantize(
-    rawNote,
-    state.scale || state.turingScale || "pentMinor",
-    (state.quantSteps ?? state.turingQuantSteps) ?? 100,
-    state.customScale || state.turingCustomScale
-  );
-
-  return { note: Math.max(0, Math.min(127, quantNote)), val, norm };
+  return { note, val, norm };
 }
 
 /**

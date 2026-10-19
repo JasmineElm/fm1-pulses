@@ -7,6 +7,7 @@
 // Includes predictive trajectory rays and predicted collision target crosshairs to visualize physics.
 
 import { SCALES, quantize, midiName } from "./generator.js";
+import { mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import {
   state, refs, R, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
@@ -421,7 +422,8 @@ function getNoteLutSignature(W, H) {
   const rootOct = state.rootOctave ?? 3;
   const mapping = state.particleNoteRule || "x-pitch-y-oct";
   const octaves = state.pitchSpan || state.particleOctaves || 3;
-  return `${W}x${H}|${scaleName}|${customStr}|${rootNote}|${rootOct}|${mapping}|${octaves}`;
+  const spreadDir = state.octaveMode || "up";
+  return `${W}x${H}|${scaleName}|${customStr}|${rootNote}|${rootOct}|${mapping}|${octaves}|${spreadDir}`;
 }
 
 /**
@@ -430,19 +432,12 @@ function getNoteLutSignature(W, H) {
  */
 export function rebuildNoteLUT(W = gridW, H = gridH, sig = null) {
   const scaleName = state.scale || state.particleScale || "pentMinor";
-  const scaleIntervals = (scaleName === "custom" && state.customScale?.length)
-    ? state.customScale
-    : (SCALES[scaleName] || SCALES.pentMinor);
-
-  const rootMidiBase = Number(state.rootNote ?? 0) || 0;
-
-  const rootOct = state.rootOctave !== undefined ? Number(state.rootOctave) : 3;
-  const baseMidi = rootMidiBase + (rootOct + 1) * 12;
+  const scaleIntervals = getActiveScaleIntervals(scaleName, state.customScale);
+  const baseMidi = getRootMidi();
 
   const mapping = state.particleNoteRule || "x-pitch-y-oct";
   const octaves = Number(state.pitchSpan || state.particleOctaves || 3);
-  const S = Math.max(1, scaleIntervals.length);
-  const totalDegrees = S * octaves;
+  const spreadDir = state.octaveMode || "up";
 
   const totalCells = W * H;
   noteLUT = new Uint8Array(totalCells);
@@ -464,37 +459,33 @@ export function rebuildNoteLUT(W = gridW, H = gridH, sig = null) {
 
     for (let x = 0; x < W; x++) {
       const idx = y * W + x;
-      let rawPitch = baseMidi;
+      let normVal = 0;
+      let yExtraOct = 0;
 
       if (mapping === "x-pitch-y-oct") {
-        const normX = x / denomX;
-        const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
-        const octOffset = Math.floor(degIndex / S);
-        const degree = scaleIntervals[degIndex % S];
-        rawPitch = baseMidi + (octOffset + yOctBonus) * 12 + degree;
+        normVal = x / denomX;
+        yExtraOct = yOctBonus;
       } else if (mapping === "x-degree-y-vel") {
-        const normX = x / denomX;
-        const degIndex = Math.min(totalDegrees - 1, Math.floor(normX * totalDegrees));
-        const octOffset = Math.floor(degIndex / S);
-        const degree = scaleIntervals[degIndex % S];
-        rawPitch = baseMidi + octOffset * 12 + degree;
+        normVal = x / denomX;
       } else if (mapping === "radial") {
         const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-        const normDist = Math.min(1, dist / maxDist);
-        const degIndex = Math.min(totalDegrees - 1, Math.floor(normDist * totalDegrees));
-        const octOffset = Math.floor(degIndex / S);
-        const degree = scaleIntervals[degIndex % S];
-        rawPitch = baseMidi + octOffset * 12 + degree;
+        normVal = Math.min(1, dist / maxDist);
       } else {
-        const norm = Math.min(1, idx / denomCells);
-        const degIndex = Math.min(totalDegrees - 1, Math.floor(norm * totalDegrees));
-        const octOffset = Math.floor(degIndex / S);
-        const degree = scaleIntervals[degIndex % S];
-        rawPitch = baseMidi + octOffset * 12 + degree;
+        normVal = Math.min(1, idx / denomCells);
       }
 
-      const quantized = quantize(rawPitch, scaleIntervals, baseMidi, 1);
-      const clampedNote = Math.max(12, Math.min(108, quantized));
+      const note = mapNormalizedToNote({
+        norm: normVal,
+        root: baseMidi + yExtraOct * 12,
+        scale: scaleIntervals,
+        octaveSpread: octaves,
+        spreadDirection: spreadDir,
+        octChance: 0,
+        quantStrength: 1,
+        rng: () => 0
+      });
+
+      const clampedNote = Math.max(12, Math.min(108, note));
 
       noteLUT[idx] = clampedNote;
       noteNamesLUT[idx] = midiName(clampedNote);

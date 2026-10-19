@@ -5,6 +5,7 @@ import {
 import {
   euclid, classicName, quantize, midiName
 } from "./generator.js";
+import { getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=253";
 import { onStep } from "./player.js";
 
@@ -60,8 +61,8 @@ export function notifyRhythmUserEdit() {
  * Creates a default note for an activated step if none exists.
  */
 function getDefaultNoteForStep(stepIndex) {
-  const root = state.root ?? 48;
-  const scale = state.scale ?? "pentatonicMinor";
+  const root = getRootMidi();
+  const scale = getActiveScaleIntervals();
   const offset = state.lfoOffset ?? 0;
   return quantize(Math.max(0, Math.min(127, root + offset)), scale, root);
 }

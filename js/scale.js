@@ -1,5 +1,5 @@
 // scale.js — Unified Musical Scale & Root Note/Octave management for FM-1 Pulses.
-import { SCALES, NOTE_NAMES, midiName } from "./generator.js";
+import { SCALES, NOTE_NAMES, midiName, quantize } from "./generator.js";
 import { state, refs, R, status } from "./state.js";
 import { dropdown, fader } from "./controls.js";
 
@@ -55,6 +55,82 @@ export function findPredefinedScale(intervals) {
     }
   }
   return null;
+}
+
+/**
+ * Resolves the active scale interval array.
+ */
+export function getActiveScaleIntervals(scaleName = state.scale, customScale = state.customScale) {
+  if (scaleName === "custom" && Array.isArray(customScale) && customScale.length > 0) {
+    return customScale;
+  }
+  return SCALES[scaleName] || SCALES.pentMinor;
+}
+
+/**
+ * Returns the effective root MIDI note number (0..127).
+ */
+export function getRootMidi() {
+  if (typeof state.root === "number") return state.root;
+  const note = Number(state.rootNote ?? 0) || 0;
+  const oct = typeof state.rootOctave === "number" ? state.rootOctave : 3;
+  return (oct + 1) * 12 + note;
+}
+
+/**
+ * Computes an octave shift (in semitones) given an octave chance and mode.
+ * @param {number} octChance - 0..1 probability of octave shift
+ * @param {string} mode - "up", "down", or "both"
+ * @param {Function} rng - Random number generator returning [0, 1)
+ * @returns {number} - 0, 12, or -12 semitones
+ */
+export function computeOctaveShift(octChance = 0, mode = "up", rng = Math.random) {
+  if (octChance <= 0 || rng() >= octChance) return 0;
+  const m = (mode || "up").toLowerCase();
+  if (m === "down") return -12;
+  if (m === "both") return rng() < 0.5 ? 12 : -12;
+  return 12; // "up"
+}
+
+/**
+ * Unified note mapper from normalized continuous pitch [0..1] to a scale-quantized MIDI note.
+ */
+export function mapNormalizedToNote({
+  norm = 0,
+  root = getRootMidi(),
+  scale = getActiveScaleIntervals(),
+  octaveSpread = Number(state.pitchSpan || 2),
+  spreadDirection = state.octaveMode || "up",
+  octChance = ((state.octave ?? 0) / 100),
+  quantStrength = ((state.quantSteps ?? 100) / 100),
+  rng = Math.random
+} = {}) {
+  const clampedNorm = Math.max(0, Math.min(1, Number(norm) || 0));
+  const spanSemitones = Math.max(1, octaveSpread) * 12;
+  const intervals = Array.isArray(scale) && scale.length > 0 ? scale : getActiveScaleIntervals(scale);
+
+  // Calculate raw pitch base according to Spread Direction
+  let rawPitch;
+  const dir = (spreadDirection || "up").toLowerCase();
+  if (dir === "down") {
+    rawPitch = root - (clampedNorm * spanSemitones);
+  } else if (dir === "both") {
+    rawPitch = root + ((clampedNorm - 0.5) * spanSemitones);
+  } else {
+    // "up" (default)
+    rawPitch = root + (clampedNorm * spanSemitones);
+  }
+
+  // Apply scale quantization
+  let note = quantize(rawPitch, intervals, root, quantStrength, rng);
+
+  // Apply octave jump if configured
+  const shift = computeOctaveShift(octChance, dir, rng);
+  if (shift !== 0 && note + shift >= 0 && note + shift <= 127) {
+    note += shift;
+  }
+
+  return Math.max(0, Math.min(127, Math.round(note)));
 }
 
 /**
