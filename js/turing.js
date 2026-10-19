@@ -34,6 +34,7 @@ export const BIT_PATTERNS = [
   { name: "Syncopated", pattern: [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0] },
   { name: "Euclid 5/16", pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0] },
   { name: "Fibonacci", pattern: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1] },
+  { name: "Dense Cluster", pattern: [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0] },
 ];
 
 // Internal shift register bit array (64 bits)
@@ -510,15 +511,47 @@ export function initTuring() {
 
   engineSect.append(engineControls, probRow, bitActionsRow);
 
-  moduleCol.append(engineSect);
+  // 2. Bit Seed Presets Library (Left Module Column)
+  const presetSect = document.createElement("section");
+  presetSect.className = "sect turing-sect";
+  presetSect.innerHTML = `
+    <div class="ca-sect-head">
+      <h3>Shift Register Seed Presets</h3>
+      <span class="ca-hint-inline">1-Click Seed</span>
+    </div>
+  `;
+
+  const presetGrid = document.createElement("div");
+  presetGrid.className = "ca-preset-grid";
+
+  BIT_PATTERNS.forEach((p) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ca-preset-btn";
+    btn.textContent = p.name;
+    btn.title = `Load ${p.name} bit pattern`;
+    btn.addEventListener("click", () => {
+      const len = Math.max(2, Math.min(64, state.turingLength || 16));
+      for (let i = 0; i < len; i++) {
+        turingBits[i] = p.pattern[i % p.pattern.length];
+      }
+      generateTuringBank();
+      renderBitGrid();
+      renderDacContour();
+      status(`Loaded Turing Seed: ${p.name}`);
+    });
+    presetGrid.appendChild(btn);
+  });
+
+  presetSect.appendChild(presetGrid);
+
+  moduleCol.append(engineSect, presetSect);
 
   // ==========================================
   // RIGHT COLUMN: Shift Register Display & Contour
   // ==========================================
   const displayCol = document.createElement("div");
   displayCol.className = "ca-display";
-
-
 
   // Shift Register Bit Matrix (Tape) Container
   const tapeWrap = document.createElement("div");
@@ -546,42 +579,14 @@ export function initTuring() {
   dacCanvas.style.width = "100%";
   contourWrap.appendChild(dacCanvas);
 
-  // Bit Seed Presets Library
-  const presetBox = document.createElement("div");
-  presetBox.className = "ca-sect";
-  presetBox.style.marginTop = "8px";
-  presetBox.innerHTML = `
-    <div class="ca-sect-head">
-      <h3>Shift Register Seed Presets</h3>
-      <span class="ca-hint-inline">Click to load pattern</span>
-    </div>
+  const displayFooter = document.createElement("div");
+  displayFooter.className = "ca-display-footer";
+  displayFooter.style.marginTop = "8px";
+  displayFooter.innerHTML = `
+    <span class="ca-hint">💡 8-bit DAC window slides across the shift register · Notes quantized to active scale &amp; pitch span</span>
   `;
 
-  const presetGrid = document.createElement("div");
-  presetGrid.className = "ca-preset-grid";
-
-  BIT_PATTERNS.forEach((p) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ca-preset-btn";
-    btn.textContent = p.name;
-    btn.title = `Load ${p.name} bit pattern`;
-    btn.addEventListener("click", () => {
-      const len = Math.max(2, Math.min(64, state.turingLength || 16));
-      for (let i = 0; i < len; i++) {
-        turingBits[i] = p.pattern[i % p.pattern.length];
-      }
-      generateTuringBank();
-      renderBitGrid();
-      renderDacContour();
-      status(`Loaded Turing Seed: ${p.name}`);
-    });
-    presetGrid.appendChild(btn);
-  });
-
-  presetBox.appendChild(presetGrid);
-
-  displayCol.append(tapeWrap, contourWrap, presetBox);
+  displayCol.append(tapeWrap, contourWrap, displayFooter);
 
   layout.append(moduleCol, displayCol);
   container.appendChild(layout);
