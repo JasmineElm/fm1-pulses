@@ -7,7 +7,7 @@ import {
 } from "./generator.js";
 import { getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import { renderBuffer, onBufferRender, selectStep, getEditStep } from "./grid.js?v=253";
-import { onStep } from "./player.js";
+import { onStep } from "./player.js?v=270";
 
 // Classic Euclidean Rhythm Presets (N hits over M steps with optional rotation)
 export const EUCLID_PRESETS = [

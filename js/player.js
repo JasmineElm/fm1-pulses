@@ -75,6 +75,19 @@ export function onStep(fn) {
   return () => stepListeners.delete(fn);
 }
 
+let modelStepHandler = null;
+
+/**
+ * Sets or clears the active sequencer model's step tick handler.
+ * Called when switching models so that only the currently active model
+ * is notified during playback ticks.
+ *
+ * @param {Function|null} fn - Handler function receiving stepIndex (or null on stop)
+ */
+export function setModelStepHandler(fn) {
+  modelStepHandler = typeof fn === "function" ? fn : null;
+}
+
 export function clearPlayhead() {
   if (nowCell) nowCell.classList.remove("now");
   nowCell = null;
@@ -83,11 +96,17 @@ export function clearPlayhead() {
   for (const fn of stepListeners) {
     try { fn(null); } catch (_) {}
   }
+  if (modelStepHandler) {
+    try { modelStepHandler(null); } catch (_) {}
+  }
 }
 
 export function markStep(i) {
   for (const fn of stepListeners) {
     try { fn(i); } catch (_) {}
+  }
+  if (modelStepHandler) {
+    try { modelStepHandler(i); } catch (_) {}
   }
   const el = document.getElementById("steps");
   if (el && el.offsetParent !== null) {
@@ -121,6 +140,9 @@ export function toggleLive() {
   if (onPlayStartSyncCallback) onPlayStartSyncCallback();
   for (const fn of stepListeners) {
     try { fn(null); } catch (_) {}
+  }
+  if (modelStepHandler) {
+    try { modelStepHandler(null); } catch (_) {}
   }
   liveLoop(liveToken);
 }

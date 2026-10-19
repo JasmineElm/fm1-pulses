@@ -9,7 +9,7 @@ import {
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
 } from "./state.js";
 import { fader, dropdown, actionBtn } from "./controls.js";
-import { onStep, isLive } from "./player.js";
+import { isLive, setModelStepHandler } from "./player.js?v=270";
 import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
@@ -1453,77 +1453,74 @@ export function randomizeCa() {
   status(`Randomized Cellular Automata pattern & Rhythm · seed ${state.seed >>> 0}`, "ok");
 }
 
+// Step Hook for Live Transport Playback
+function handleCellularStep(stepIndex) {
+  if (stepIndex === null) {
+    lastTriggeredNote = null;
+    redrawCaCanvas();
+    updateHud();
+    return;
+  }
+
+  // Check loop mode: reset to seed when wrapping around
+  if (loopMode === "loop") {
+    const loopLen = Math.max(1, Math.min(64, state.length || 64));
+    if (stepIndex === 0 && generation > 0) {
+      resetToSeed();
+    }
+  }
+
+  // 1. Collect all live cells from currentGrid
+  const N = gridSize;
+  const liveCells = [];
+  for (let y = 0; y < N; y++) {
+    const rowIdx = y * N;
+    for (let x = 0; x < N; x++) {
+      const age = currentGrid[rowIdx + x];
+      if (age > 0) liveCells.push({ x, y, age });
+    }
+  }
+
+  // 2. Pick cell using active rule
+  const rule = state.caNoteRule || "closest";
+  const picked = pickCell(liveCells, rule, prevCell, currentGrid, N);
+
+  const bank = getBank();
+  const curP = bank[getSelected()];
+  const st = curP?.steps?.[stepIndex];
+  const isRhythmActive = st && st.notes && st.notes.length > 0;
+
+  if (picked) {
+    prevCell = { x: picked.x, y: picked.y };
+    const mapped = mapCellToNote(picked, N);
+    if (st) {
+      st._savedNote = { note: mapped.note, vel: mapped.vel };
+      if (isRhythmActive) {
+        lastTriggeredNote = mapped;
+        st.notes = [{ note: mapped.note, vel: mapped.vel }];
+      } else {
+        lastTriggeredNote = null;
+        st.notes = [];
+      }
+    }
+  } else {
+    lastTriggeredNote = null;
+    if (st) {
+      st.notes = [];
+    }
+  }
+
+  // 3. Step 1 generation of Conway's Game of Life
+  stepConway();
+  redrawCaCanvas();
+  updateHud();
+}
+
 // INITIALIZATION
 export function initCellular() {
   const container = document.getElementById("model-cellular");
   if (!container) return;
   buildCellularPanel(container);
-
-  // Hook step clock advancement from live transport loop
-  onStep((stepIndex) => {
-    if (stepIndex === null) {
-      lastTriggeredNote = null;
-      redrawCaCanvas();
-      updateHud();
-      return;
-    }
-    if (getActiveModel && getActiveModel() !== "cellular") return;
-    const modelEl = document.getElementById("model-cellular");
-    if (!modelEl || modelEl.style.display === "none") return;
-
-    // Check loop mode: reset to seed when wrapping around
-    if (loopMode === "loop") {
-      const loopLen = Math.max(1, Math.min(64, state.length || 64));
-      if (stepIndex === 0 && generation > 0) {
-        resetToSeed();
-      }
-    }
-
-    // 1. Collect all live cells from currentGrid
-    const N = gridSize;
-    const liveCells = [];
-    for (let y = 0; y < N; y++) {
-      const rowIdx = y * N;
-      for (let x = 0; x < N; x++) {
-        const age = currentGrid[rowIdx + x];
-        if (age > 0) liveCells.push({ x, y, age });
-      }
-    }
-
-    // 2. Pick cell using active rule
-    const rule = state.caNoteRule || "closest";
-    const picked = pickCell(liveCells, rule, prevCell, currentGrid, N);
-
-    const bank = getBank();
-    const curP = bank[getSelected()];
-    const st = curP?.steps?.[stepIndex];
-    const isRhythmActive = st && st.notes && st.notes.length > 0;
-
-    if (picked) {
-      prevCell = { x: picked.x, y: picked.y };
-      const mapped = mapCellToNote(picked, N);
-      if (st) {
-        st._savedNote = { note: mapped.note, vel: mapped.vel };
-        if (isRhythmActive) {
-          lastTriggeredNote = mapped;
-          st.notes = [{ note: mapped.note, vel: mapped.vel }];
-        } else {
-          lastTriggeredNote = null;
-          st.notes = [];
-        }
-      }
-    } else {
-      lastTriggeredNote = null;
-      if (st) {
-        st.notes = [];
-      }
-    }
-
-    // 3. Step 1 generation of Conway's Game of Life
-    stepConway();
-    redrawCaCanvas();
-    updateHud();
-  });
 
   // Hook bank regenerations
   onRegen(() => {
@@ -1547,6 +1544,7 @@ export function activateCellularModel() {
   setSelected(0);
   setModelGenerator(generateCaBank);
   setModelRandomizer(randomizeCa);
+  setModelStepHandler(handleCellularStep);
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
   doGenerate(false);
@@ -1557,6 +1555,7 @@ export function activateCellularModel() {
 
 // When deactivating Cellular Automata Model
 export function deactivateCellularModel() {
+  setModelStepHandler(null);
   setModelGenerator(null);
   setModelRandomizer(null);
 }

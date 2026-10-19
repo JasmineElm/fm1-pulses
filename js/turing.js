@@ -8,7 +8,7 @@ import {
   setModelGenerator, setModelRandomizer
 } from "./state.js";
 import { knob, dropdown, actionBtn } from "./controls.js";
-import { onStep, isLive } from "./player.js";
+import { isLive, setModelStepHandler } from "./player.js?v=270";
 import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
@@ -586,39 +586,6 @@ export function initTuring() {
   layout.append(moduleCol, displayCol);
   container.appendChild(layout);
 
-  // Hook live playhead & mutation on step ticks
-  onStep((stepIndex) => {
-    if (stepIndex === null) {
-      lastLiveStep = -1;
-      updatePlayheadBit(-1);
-      renderDacContour();
-      return;
-    }
-
-    if (getActiveModel && getActiveModel() !== "turing") return;
-    if (container.style.display === "none") return;
-
-    lastLiveStep = stepIndex;
-    const len = Math.max(2, Math.min(64, state.turingLength || 16));
-    const activeStep = stepIndex % len;
-
-    // Live Mutation Engine: test bit mutation if running with prob > 0
-    const prob = state.turingProb ?? 0;
-    if (isLive() && prob > 0) {
-      // Chance to mutate a bit on step wrap or continuous flux
-      const chance = (prob / 100) * 0.35;
-      if (Math.random() < chance) {
-        const mutateBitIdx = Math.floor(Math.random() * len);
-        turingBits[mutateBitIdx] ^= 1;
-        generateTuringBank();
-        renderBitGrid();
-      }
-    }
-
-    updatePlayheadBit(activeStep);
-    renderDacContour();
-  });
-
   // Watch for theme changes (Dark / Light) to instantly update canvas colors
   const themeObserver = new MutationObserver(() => {
     if (container.style.display !== "none") {
@@ -628,6 +595,36 @@ export function initTuring() {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }
 
+// Step Hook for Live Transport Playback
+function handleTuringStep(stepIndex) {
+  if (stepIndex === null) {
+    lastLiveStep = -1;
+    updatePlayheadBit(-1);
+    renderDacContour();
+    return;
+  }
+
+  lastLiveStep = stepIndex;
+  const len = Math.max(2, Math.min(64, state.turingLength || 16));
+  const activeStep = stepIndex % len;
+
+  // Live Mutation Engine: test bit mutation if running with prob > 0
+  const prob = state.turingProb ?? 0;
+  if (isLive() && prob > 0) {
+    // Chance to mutate a bit on step wrap or continuous flux
+    const chance = (prob / 100) * 0.35;
+    if (Math.random() < chance) {
+      const mutateBitIdx = Math.floor(Math.random() * len);
+      turingBits[mutateBitIdx] ^= 1;
+      generateTuringBank();
+      renderBitGrid();
+    }
+  }
+
+  updatePlayheadBit(activeStep);
+  renderDacContour();
+}
+
 /**
  * When activating the Turing Machine model.
  */
@@ -635,6 +632,7 @@ export function activateTuringModel() {
   setSelected(0);
   setModelGenerator(generateTuringBank);
   setModelRandomizer(randomizeTuring);
+  setModelStepHandler(handleTuringStep);
 
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
@@ -649,6 +647,7 @@ export function activateTuringModel() {
  * When deactivating the Turing Machine model.
  */
 export function deactivateTuringModel() {
+  setModelStepHandler(null);
   setModelGenerator(null);
   setModelRandomizer(null);
 }

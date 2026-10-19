@@ -14,7 +14,7 @@ import {
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
 } from "./state.js";
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
-import { onStep, isLive } from "./player.js";
+import { isLive, setModelStepHandler } from "./player.js?v=270";
 import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=275";
 import { getActiveModel } from "./modes.js";
 
@@ -1764,111 +1764,6 @@ export function initParticles() {
   saveToSeed();
   updateCachedTrajectories();
 
-  // Step Hook for Live Transport Playback
-  onStep((stepIndex) => {
-    if (stepIndex === null) {
-      lastLiveStep = -1;
-      if (loopMode === "loop" && precomputedInitialState) {
-        particles = precomputedInitialState.particles;
-        cachedParticlePaths = precomputedInitialState.paths;
-        cachedCollisionTargets = precomputedInitialState.targets;
-      }
-      renderCanvas();
-      return;
-    }
-
-    if (!isParticlesActive && getActiveModel && getActiveModel() !== "particles") return;
-    if (!containerEl || containerEl.style.display === "none") return;
-
-    if (loopMode === "free") {
-      totalFreeSteps++;
-      lastLiveStep = stepIndex;
-
-      // 1. Advance particle physics forward 1 continuous tick
-      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
-      particles = updated;
-
-      updateCachedTrajectories();
-
-      // 2. Route notes directly to the current bank step so player.js plays them
-      const polyLimit = Math.max(1, Math.min(4, Number(state.particlePolyphony || 2)));
-      const stepNotes = notes.slice(0, polyLimit);
-
-      const bank = getBank();
-      const curP = bank?.[getSelected()];
-      const st = curP?.steps?.[stepIndex];
-      if (st) {
-        if (!particleRhythmOverridden) {
-          // Default: note triggering determined strictly by particle collisions
-          st.notes = stepNotes.map((n) => ({ ...n }));
-        } else {
-          // Override: respect user Euclidean or manual rhythm gate
-          const isGateOn = st._userRhythmActive ?? (st.notes && st.notes.length > 0);
-          if (isGateOn) {
-            if (stepNotes.length > 0) {
-              st.notes = stepNotes.map((n) => ({ ...n }));
-            } else if (!st.notes || st.notes.length === 0) {
-              const defNote = st._savedNote || { note: state.root ?? 48, vel: state.velocity ?? 100 };
-              st.notes = [{ ...defNote }];
-            }
-          } else {
-            if (st.notes && st.notes.length > 0) {
-              st._savedNotes = st.notes.map((n) => ({ ...n }));
-              st._savedNote = { ...st.notes[0] };
-            }
-            st.notes = [];
-          }
-        }
-      }
-
-      renderCanvas();
-      return;
-    }
-
-    // Loop Mode: O(1) Ring Buffer Lookup
-    lastLiveStep = stepIndex;
-
-    const stepState = (stepIndex >= 0 && stepIndex < precomputedStepStates.length)
-      ? precomputedStepStates[stepIndex]
-      : null;
-
-    if (stepState) {
-      particles = stepState.particles;
-      cachedParticlePaths = stepState.paths;
-      cachedCollisionTargets = stepState.targets;
-    } else {
-      if (stepIndex === 0) {
-        restoreFromSeed();
-      }
-      const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
-      particles = updated;
-      updateCachedTrajectories();
-    }
-
-    renderCanvas();
-  });
-
-  // Watch for theme changes (Dark / Light)
-  const themeObserver = new MutationObserver(() => {
-    if (containerEl.style.display !== "none") {
-      renderCanvas();
-    }
-  });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-
-  window.addEventListener("resize", () => {
-    if (containerEl && containerEl.style.display !== "none") {
-      renderCanvas();
-    }
-  });
-
-  // Hook bank regenerations
-  onRegen(() => {
-    if (containerEl && containerEl.style.display !== "none") {
-      renderCanvas();
-    }
-  });
-
   // Listen for user edits from Euclidean controls or manual rhythm step toggling
   onRhythmUserEdit(() => {
     if (!isParticlesActive && getActiveModel && getActiveModel() !== "particles") return;
@@ -1883,6 +1778,87 @@ export function initParticles() {
   });
 }
 
+// Step Hook for Live Transport Playback
+function handleParticlesStep(stepIndex) {
+  if (stepIndex === null) {
+    lastLiveStep = -1;
+    if (loopMode === "loop" && precomputedInitialState) {
+      particles = precomputedInitialState.particles;
+      cachedParticlePaths = precomputedInitialState.paths;
+      cachedCollisionTargets = precomputedInitialState.targets;
+    }
+    renderCanvas();
+    return;
+  }
+
+  if (loopMode === "free") {
+    totalFreeSteps++;
+    lastLiveStep = stepIndex;
+
+    // 1. Advance particle physics forward 1 continuous tick
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
+    particles = updated;
+
+    updateCachedTrajectories();
+
+    // 2. Route notes directly to the current bank step so player.js plays them
+    const polyLimit = Math.max(1, Math.min(4, Number(state.particlePolyphony || 2)));
+    const stepNotes = notes.slice(0, polyLimit);
+
+    const bank = getBank();
+    const curP = bank?.[getSelected()];
+    const st = curP?.steps?.[stepIndex];
+    if (st) {
+      if (!particleRhythmOverridden) {
+        // Default: note triggering determined strictly by particle collisions
+        st.notes = stepNotes.map((n) => ({ ...n }));
+      } else {
+        // Override: respect user Euclidean or manual rhythm gate
+        const isGateOn = st._userRhythmActive ?? (st.notes && st.notes.length > 0);
+        if (isGateOn) {
+          if (stepNotes.length > 0) {
+            st.notes = stepNotes.map((n) => ({ ...n }));
+          } else if (!st.notes || st.notes.length === 0) {
+            const defNote = st._savedNote || { note: state.root ?? 48, vel: state.velocity ?? 100 };
+            st.notes = [{ ...defNote }];
+          }
+        } else {
+          if (st.notes && st.notes.length > 0) {
+            st._savedNotes = st.notes.map((n) => ({ ...n }));
+            st._savedNote = { ...st.notes[0] };
+          }
+          st.notes = [];
+        }
+      }
+    }
+
+    renderCanvas();
+    return;
+  }
+
+  // Loop Mode: O(1) Ring Buffer Lookup
+  lastLiveStep = stepIndex;
+
+  const stepState = (stepIndex >= 0 && stepIndex < precomputedStepStates.length)
+    ? precomputedStepStates[stepIndex]
+    : null;
+
+  if (stepState) {
+    particles = stepState.particles;
+    cachedParticlePaths = stepState.paths;
+    cachedCollisionTargets = stepState.targets;
+  } else {
+    if (stepIndex === 0) {
+      restoreFromSeed();
+    }
+    const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
+    particles = updated;
+    updateCachedTrajectories();
+  }
+
+  renderCanvas();
+}
+
 /**
  * When activating the Particle Collision Simulator model.
  */
@@ -1892,6 +1868,7 @@ export function activateParticlesModel() {
   setSelected(0);
   setModelGenerator(generateParticleBank);
   setModelRandomizer(randomizeParticles);
+  setModelStepHandler(handleParticlesStep);
 
   if (state.rate === undefined) state.rate = 6;
   if (refs.rate) refs.rate.setValue(state.rate);
@@ -1906,6 +1883,8 @@ export function activateParticlesModel() {
  */
 export function deactivateParticlesModel() {
   isParticlesActive = false;
+  handleParticlesStep(null);
+  setModelStepHandler(null);
   setModelGenerator(null);
   setModelRandomizer(null);
 }
