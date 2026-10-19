@@ -140,12 +140,6 @@ let nextParticleId = 1;
 let containerEl = null;
 let canvasEl = null;
 let ctx = null;
-let hudStep = null;
-let hudParticles = null;
-let hudCollisions = null;
-let hudNote = null;
-let hudMode = null;
-let hudStatus = null;
 let hoverCoordEl = null;
 
 // Built-in Classic Presets
@@ -843,7 +837,6 @@ export function stepPhysicsTick(triggerSound = true) {
     const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
     particles = updated;
     updateCachedTrajectories();
-    updateHud(lastLiveStep, collisions.length, collisions[0]?.note || null);
     renderCanvas();
     return;
   }
@@ -857,12 +850,10 @@ export function stepPhysicsTick(triggerSound = true) {
     particles = stepState.particles;
     cachedParticlePaths = stepState.paths;
     cachedCollisionTargets = stepState.targets;
-    updateHud(nextStep, stepState.collisionsCount, stepState.primaryNote);
   } else {
     const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
     particles = updated;
     updateCachedTrajectories();
-    updateHud(nextStep, collisions.length, collisions[0]?.note || null);
   }
 
   renderCanvas();
@@ -1040,7 +1031,6 @@ export function randomizeParticles() {
   generateParticleBank();
   randomizeRhythm();
   renderCanvas();
-  updateHud(0, 0, null);
   status(`Randomized Particles physics & Rhythm · seed ${state.seed >>> 0}`, "ok");
 }
 
@@ -1252,56 +1242,6 @@ export function renderCanvas() {
   ctx.restore();
 }
 
-/**
- * Updates the HUD readout elements.
- */
-function updateHud(stepIndex = 0, collisionCount = 0, lastNoteName = null) {
-  if (hudStep) {
-    if (loopMode === "free") {
-      const live = isLive();
-      if (live && totalFreeSteps > 0) {
-        hudStep.textContent = `${totalFreeSteps} (Free)`;
-      } else {
-        hudStep.textContent = "Free Run (∞)";
-      }
-    } else {
-      const s = typeof stepIndex === "number" && stepIndex >= 0 ? stepIndex + 1 : 1;
-      hudStep.textContent = `${s} / ${state.length || 64}`;
-    }
-  }
-  if (hudParticles) {
-    const parents = particles.filter((p) => !p.isChild).length;
-    const children = particles.filter((p) => p.isChild).length;
-    hudParticles.textContent = `${particles.length} (${parents}P / ${children}C)`;
-  }
-  if (hudCollisions) {
-    hudCollisions.textContent = String(collisionCount);
-  }
-  if (hudNote) {
-    if (lastNoteName) {
-      hudNote.textContent = lastNoteName;
-      hudNote.classList.add("particle-hud-highlight");
-    } else if (lastLiveStep < 0) {
-      hudNote.textContent = "—";
-      hudNote.classList.remove("particle-hud-highlight");
-    }
-  }
-  if (hudMode) {
-    const sel = COLLISION_MODES.find((m) => m.v === state.particleCollisionMode);
-    const modeName = sel ? sel.t : "Deflect (90°)";
-    hudMode.textContent = loopMode === "free" ? `${modeName} · Free` : modeName;
-  }
-  if (hudStatus) {
-    const live = isLive();
-    if (live) {
-      hudStatus.textContent = loopMode === "free" ? "▶ FREE RUN" : "▶ PLAYING";
-      hudStatus.style.color = "var(--accent)";
-    } else {
-      hudStatus.textContent = "■ STOPPED";
-      hudStatus.style.color = "var(--dim)";
-    }
-  }
-}
 
 /**
  * Interactive Mouse & Touch Handler for Canvas.
@@ -1385,7 +1325,6 @@ function wireCanvasEvents(canvas) {
       saveToSeed();
       generateParticleBank();
       renderCanvas();
-      updateHud();
     } else if (activeTool === "deflector" || activeTool === "slash" || activeTool === "backslash") {
       const obsIdx = cell.y * gridW + cell.x;
       const currentObs = obstacles[obsIdx];
@@ -1507,7 +1446,6 @@ export function initParticles() {
     onInput: (v) => {
       state.particleCollisionMode = v;
       generateParticleBank();
-      updateHud();
       const sel = COLLISION_MODES.find((m) => m.v === v);
       status(`Collision Mode: ${sel ? sel.t : v}`);
     },
@@ -1530,7 +1468,6 @@ export function initParticles() {
         restoreFromSeed();
         generateParticleBank();
       }
-      updateHud();
       renderCanvas();
       status(`Cycle Mode: ${v === "loop" ? "Loop cycle (resets at length)" : "Free run (carries on indefinitely)"}`);
     },
@@ -1696,7 +1633,6 @@ export function initParticles() {
       saveToSeed();
       generateParticleBank();
       renderCanvas();
-      updateHud();
       status(`Grid: ${s} × ${s}`);
     },
     tip: "2D surface grid dimensions."
@@ -1715,7 +1651,6 @@ export function initParticles() {
     saveToSeed();
     generateParticleBank();
     renderCanvas();
-    updateHud();
     status("Cleared all particles and obstacles");
   }, "Remove all particles and obstacles from the grid");
 
@@ -1799,7 +1734,6 @@ export function initParticles() {
       saveToSeed();
       generateParticleBank();
       renderCanvas();
-      updateHud();
       status(`Loaded Preset: ${p.name}`, "ok");
     });
     presetGrid.appendChild(btn);
@@ -1825,13 +1759,6 @@ export function initParticles() {
   layout.append(module, display);
   containerEl.appendChild(layout);
 
-  // Capture HUD elements
-  hudStep = document.getElementById("particle-hud-step");
-  hudParticles = document.getElementById("particle-hud-particles");
-  hudCollisions = document.getElementById("particle-hud-collisions");
-  hudNote = document.getElementById("particle-hud-note");
-  hudMode = document.getElementById("particle-hud-mode");
-  hudStatus = document.getElementById("particle-hud-status");
   hoverCoordEl = document.getElementById("particle-step-hover");
 
   // Canvas setup
@@ -1855,7 +1782,6 @@ export function initParticles() {
         cachedParticlePaths = precomputedInitialState.paths;
         cachedCollisionTargets = precomputedInitialState.targets;
       }
-      updateHud(-1, 0, null);
       renderCanvas();
       return;
     }
@@ -1904,7 +1830,6 @@ export function initParticles() {
         }
       }
 
-      updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
       renderCanvas();
       return;
     }
@@ -1920,7 +1845,6 @@ export function initParticles() {
       particles = stepState.particles;
       cachedParticlePaths = stepState.paths;
       cachedCollisionTargets = stepState.targets;
-      updateHud(stepIndex, stepState.collisionsCount, stepState.primaryNote);
     } else {
       if (stepIndex === 0) {
         restoreFromSeed();
@@ -1928,7 +1852,6 @@ export function initParticles() {
       const { particles: updated, notes, collisions } = stepPhysics(particles, obstacles, gridW, gridH);
       particles = updated;
       updateCachedTrajectories();
-      updateHud(stepIndex, collisions.length, collisions[0]?.note || null);
     }
 
     renderCanvas();
@@ -1952,7 +1875,6 @@ export function initParticles() {
   onRegen(() => {
     if (containerEl && containerEl.style.display !== "none") {
       renderCanvas();
-      updateHud();
     }
   });
 
@@ -1986,7 +1908,6 @@ export function activateParticlesModel() {
   doGenerate(false);
   syncRhythmGrid();
   renderCanvas();
-  updateHud(0, 0, null);
 }
 
 /**
