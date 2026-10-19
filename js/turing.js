@@ -55,11 +55,6 @@ let turingContainer = null;
 // UI element references
 let bitButtons = [];
 let dacCanvas = null;
-let hudStep = null;
-let hudRegister = null;
-let hudDac = null;
-let hudNote = null;
-let hudLock = null;
 
 /**
  * Returns whether a given step index has an active note trigger
@@ -163,7 +158,6 @@ export function generateTuringBank() {
   }
 
   setBank([phrase]);
-  updateHud(lastLiveStep >= 0 ? lastLiveStep : 0);
   renderDacContour();
   return [phrase];
 }
@@ -210,52 +204,7 @@ export function randomizeTuring() {
   status(`Turing randomized · ${state.turingLength} steps · ${state.turingScale}`);
 }
 
-/**
- * Update the Turing HUD readout elements.
- */
-function updateHud(step = 0) {
-  const len = Math.max(2, Math.min(64, state.turingLength || 16));
-  const activeStep = step % len;
-  const { val } = getDacValueAtStep(activeStep);
-  const { note } = getNoteAtStep(activeStep);
-  const prob = state.turingProb ?? 0;
 
-  if (hudStep) {
-    hudStep.textContent = `${activeStep + 1} / ${len}`;
-  }
-
-  if (hudRegister) {
-    // Show register state as hex byte or bit string
-    let hexVal = 0;
-    for (let k = 0; k < Math.min(16, len); k++) {
-      if (turingBits[k]) hexVal |= (1 << k);
-    }
-    hudRegister.textContent = `0x${hexVal.toString(16).toUpperCase().padStart(4, "0")}`;
-  }
-
-  if (hudDac) {
-    hudDac.textContent = `${val} / 255`;
-  }
-
-  if (hudNote) {
-    const isNoteActive = isStepActive(activeStep);
-    hudNote.textContent = isNoteActive ? `${midiName(note)} (${note})` : "Rest (—)";
-    hudNote.className = `ca-hud-val ${isNoteActive ? "ca-hud-highlight" : ""}`;
-  }
-
-  if (hudLock) {
-    if (prob === 0) {
-      hudLock.textContent = "🔒 LOCKED (0%)";
-      hudLock.style.color = "var(--ok)";
-    } else if (prob < 25) {
-      hudLock.textContent = `🌱 EVOLVING (${prob}%)`;
-      hudLock.style.color = "var(--accent)";
-    } else {
-      hudLock.textContent = `⚡ FLUX (${prob}%)`;
-      hudLock.style.color = "var(--accent2)";
-    }
-  }
-}
 
 /**
  * Render the interactive shift register bit matrix.
@@ -469,7 +418,6 @@ export function initTuring() {
     format: (v) => `${Math.round(v)}%`,
     onInput: (v) => {
       state.turingProb = Math.round(v);
-      updateHud(lastLiveStep >= 0 ? lastLiveStep : 0);
       status(`Write Mutation: ${Math.round(v)}% (${v === 0 ? "Locked" : v === 100 ? "Random" : "Evolving"})`);
     },
     tip: "Write probability: chance circulating bits mutate. 0% = locked repeating loop; 100% = pure random walk; 5%–15% = slow organic evolution."
@@ -536,7 +484,6 @@ export function initTuring() {
       if (refs.turingProb) refs.turingProb.setValue(p.value, false);
       probRow.querySelectorAll(".humanise-pill-btn").forEach((b) => b.classList.remove("is-active"));
       btn.classList.add("is-active");
-      updateHud(lastLiveStep >= 0 ? lastLiveStep : 0);
       status(`Mutation: ${p.label}`);
     });
     probRow.appendChild(btn);
@@ -587,47 +534,7 @@ export function initTuring() {
   const displayCol = document.createElement("div");
   displayCol.className = "ca-display";
 
-  // HUD Readout Bar
-  const hudBar = document.createElement("div");
-  hudBar.className = "ca-hud-bar";
 
-  hudStep = document.createElement("span");
-  hudStep.className = "ca-hud-val";
-  hudStep.textContent = "1 / 16";
-
-  hudRegister = document.createElement("span");
-  hudRegister.className = "ca-hud-val";
-  hudRegister.textContent = "0x0000";
-
-  hudDac = document.createElement("span");
-  hudDac.className = "ca-hud-val";
-  hudDac.textContent = "0 / 255";
-
-  hudNote = document.createElement("span");
-  hudNote.className = "ca-hud-val ca-hud-highlight";
-  hudNote.textContent = "—";
-
-  hudLock = document.createElement("span");
-  hudLock.className = "ca-hud-val";
-  hudLock.textContent = "🔒 LOCKED (0%)";
-
-  const mkHudItem = (label, valEl) => {
-    const item = document.createElement("div");
-    item.className = "ca-hud-item";
-    const lbl = document.createElement("span");
-    lbl.className = "ca-hud-lbl";
-    lbl.textContent = label;
-    item.append(lbl, valEl);
-    return item;
-  };
-
-  hudBar.append(
-    mkHudItem("Step", hudStep),
-    mkHudItem("Register", hudRegister),
-    mkHudItem("DAC", hudDac),
-    mkHudItem("Note", hudNote),
-    mkHudItem("Mode", hudLock)
-  );
 
   // Shift Register Bit Matrix (Tape) Container
   const tapeWrap = document.createElement("div");
@@ -690,7 +597,7 @@ export function initTuring() {
 
   presetBox.appendChild(presetGrid);
 
-  displayCol.append(hudBar, tapeWrap, contourWrap, presetBox);
+  displayCol.append(tapeWrap, contourWrap, presetBox);
 
   layout.append(moduleCol, displayCol);
   container.appendChild(layout);
@@ -724,7 +631,6 @@ export function initTuring() {
       }
     }
 
-    updateHud(activeStep);
     updatePlayheadBit(activeStep);
     renderDacContour();
   });
@@ -753,7 +659,6 @@ export function activateTuringModel() {
   syncRhythmGrid();
   renderBitGrid();
   renderDacContour();
-  updateHud(0);
 }
 
 /**
@@ -768,7 +673,6 @@ export function deactivateTuringModel() {
 onBufferRender(() => {
   if (getActiveModel && getActiveModel() === "turing") {
     renderDacContour();
-    updateHud(lastLiveStep >= 0 ? lastLiveStep : 0);
   }
 });
 

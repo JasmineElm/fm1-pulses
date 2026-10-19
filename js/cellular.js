@@ -1040,48 +1040,9 @@ export function redrawCaCanvas() {
   if (canvas) renderCaCanvas(canvas);
 }
 
-// UPDATE HUD & HEADER INFO
+// UPDATE FOOTER HOVER / ACTIVE NOTE INFO
 export function updateHud() {
-  const genEl = document.getElementById("ca-hud-gen");
-  const popEl = document.getElementById("ca-hud-pop");
-  const sizeEl = document.getElementById("ca-hud-size");
-  const modeEl = document.getElementById("ca-hud-mode");
-  const statusEl = document.getElementById("ca-hud-status");
-  const noteEl = document.getElementById("ca-hud-note");
-  const velEl = document.getElementById("ca-hud-vel");
   const footerNoteEl = document.getElementById("ca-step-hover");
-
-  if (genEl) genEl.textContent = String(generation);
-  if (popEl) {
-    const total = gridSize * gridSize;
-    const pct = ((population / total) * 100).toFixed(1);
-    popEl.textContent = `${population} cells (${pct}%)`;
-  }
-  if (sizeEl) sizeEl.textContent = `${gridSize} × ${gridSize}`;
-  if (modeEl) {
-    const loopLen = Math.max(1, Math.min(64, state.length || 64));
-    modeEl.textContent = loopMode === "loop" ? `Loop (${loopLen} steps)` : "Free Run (Continuous)";
-  }
-  if (statusEl) {
-    const running = isLive();
-    statusEl.textContent = running ? "▶ RUNNING" : "■ STOPPED";
-    statusEl.style.color = running ? "var(--accent)" : "var(--dim)";
-  }
-  if (noteEl) {
-    if (lastTriggeredNote) {
-      const name = midiName(lastTriggeredNote.note);
-      noteEl.textContent = `${name} (${lastTriggeredNote.note})`;
-    } else {
-      noteEl.textContent = isLive() ? "Rest" : "—";
-    }
-  }
-  if (velEl) {
-    if (lastTriggeredNote) {
-      velEl.textContent = String(lastTriggeredNote.vel);
-    } else {
-      velEl.textContent = "—";
-    }
-  }
   if (footerNoteEl && !hoverCell) {
     if (lastTriggeredNote) {
       const name = midiName(lastTriggeredNote.note);
@@ -1385,22 +1346,11 @@ export function buildCellularPanel(container) {
 
   module.append(gridSect, evoSect, triggerSect, presetSect);
 
-  // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS & HUD
+  // RIGHT COLUMN: 2D GAME OF LIFE SQUARE CANVAS
   const display = document.createElement("div");
   display.className = "display ca-display";
 
   display.innerHTML = `
-    <div class="ca-display-header">
-      <div class="ca-hud-bar">
-        <div class="ca-hud-item"><span class="ca-hud-lbl">GEN</span><b id="ca-hud-gen" class="ca-hud-val">0</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">POP</span><b id="ca-hud-pop" class="ca-hud-val">0 cells</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">GRID</span><b id="ca-hud-size" class="ca-hud-val">${gridSize} × ${gridSize}</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">NOTE (X)</span><b id="ca-hud-note" class="ca-hud-val ca-hud-highlight">—</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">VEL (Y)</span><b id="ca-hud-vel" class="ca-hud-val ca-hud-highlight">—</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">CYCLE</span><b id="ca-hud-mode" class="ca-hud-val">Loop (64 steps)</b></div>
-        <div class="ca-hud-item"><span class="ca-hud-lbl">STATUS</span><b id="ca-hud-status" class="ca-hud-val">■ STOPPED</b></div>
-      </div>
-    </div>
     <div class="ca-canvas-wrap">
       <canvas id="ca-canvas" class="ca-canvas"></canvas>
     </div>

@@ -1079,42 +1079,6 @@ body {
   margin-top: 0;
   background: var(--panel2);
 }
-.ca-display-header {
-  margin-bottom: 8px;
-}
-.ca-hud-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 12px;
-}
-.ca-hud-item {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-}
-.ca-hud-lbl {
-  font-size: 9px;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: var(--dim);
-  font-weight: 700;
-}
-.ca-hud-val {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--fg);
-  font-variant-numeric: tabular-nums;
-}
-.ca-hud-val.ca-hud-highlight {
-  color: var(--accent);
-  font-weight: 800;
-}
 
 .ca-canvas-wrap {
   width: 100%;
@@ -1185,7 +1149,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px 12px;
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .turing-tape-header {
