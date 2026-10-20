@@ -210,7 +210,26 @@ export function initDxPatch() {
     stepFeedback(e.deltaY < 0 ? 1 : -1);
   }, { passive: false });
 
+  // Transpose Stepper
   bindVoiceParam("dxpatch-transpose-input", (v) => (currentPatch.transpose = clamp(v, 0, 48)), "Updated Transpose");
+  const stepTranspose = (delta) => {
+    if (!currentPatch) return;
+    const nextVal = clamp(currentPatch.transpose + delta, 0, 48);
+    if (nextVal !== currentPatch.transpose) {
+      currentPatch.transpose = nextVal;
+      onPatchEdited("Updated Transpose");
+    }
+  };
+  document.getElementById("dxpatch-transpose-prev")?.addEventListener("click", () => stepTranspose(-1));
+  document.getElementById("dxpatch-transpose-next")?.addEventListener("click", () => stepTranspose(1));
+  document.getElementById("dxpatch-transpose-input")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepTranspose(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+  document.getElementById("dxpatch-transpose-note")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepTranspose(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
 
   // LFO Wave Stepper
   bindVoiceParam("dxpatch-lfo-wave", (v) => (currentPatch.lfo.waveform = clamp(v, 0, 5)), "Updated LFO Waveform");

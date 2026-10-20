@@ -168,6 +168,17 @@
   gap: 5px;
 }
 
+.dxpatch-transpose-note {
+  font: 700 11px/1 ui-monospace, monospace;
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 6px;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
 .dxpatch-card-hint {
   font-size: 9px;
   color: var(--dim);

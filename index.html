@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=2">
-<link rel="stylesheet" href="css/dxpatch.css?v=3">
+<link rel="stylesheet" href="css/dxpatch.css?v=4">
 </head>
 <body>
 <div class="case">
@@ -315,8 +315,12 @@
           <div class="dxpatch-param-pill">
             <span class="dxpatch-micro-label">TRANSPOSE</span>
             <div class="dxpatch-pill-control">
-              <input type="number" id="dxpatch-transpose-input" min="0" max="48" value="24" />
-              <span id="dxpatch-transpose-note" class="unit">C3</span>
+              <div class="dxpatch-stepper">
+                <button type="button" id="dxpatch-transpose-prev" class="dxpatch-stepper-btn" title="Decrease Transpose (semitone down)">‹</button>
+                <input type="number" id="dxpatch-transpose-input" min="0" max="48" value="24" class="dxpatch-stepper-input" title="Transpose (0–48 semitones, 24=C3)" />
+                <button type="button" id="dxpatch-transpose-next" class="dxpatch-stepper-btn" title="Increase Transpose (semitone up)">›</button>
+              </div>
+              <span id="dxpatch-transpose-note" class="dxpatch-transpose-note" title="Musical Note">C3</span>
             </div>
           </div>
 
@@ -460,6 +464,6 @@
     </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=4"></script>
+<script type="module" src="js/rack.js?v=5"></script>
 </body>
 </html>
