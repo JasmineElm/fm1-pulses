@@ -7,15 +7,15 @@
 // Includes predictive trajectory rays and predicted collision target crosshairs to visualize physics.
 
 import { SCALES, quantize, midiName } from "./generator.js";
-import { mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=277";
+import { mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=1";
 import {
   state, refs, R, doGenerate,
   getBank, setBank, getSelected, setSelected, status, onRegen,
   setModelGenerator, setModelRandomizer, RATE_NAMES, RATE_QUARTERS
 } from "./state.js";
 import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
-import { isLive, setModelStepHandler } from "./player.js?v=270";
-import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=275";
+import { isLive, setModelStepHandler } from "./player.js?v=1";
+import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=1";
 import { getActiveModel } from "./modes.js";
 
 export const GRID_SIZES = [

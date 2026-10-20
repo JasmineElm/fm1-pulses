@@ -8,21 +8,21 @@ import {
 
 export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
-import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=253";
-import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=270";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=1";
+import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=1";
 import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
 import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
 import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
-import { createNotesSection } from "./scale.js?v=277";
-import { createHumaniseSection } from "./humanise.js?v=269";
-import { createVelocitySection } from "./velocity.js?v=269";
-import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=279";
-import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=279";
-import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=288";
-import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=276";
+import { createNotesSection } from "./scale.js?v=1";
+import { createHumaniseSection } from "./humanise.js?v=1";
+import { createVelocitySection } from "./velocity.js?v=1";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=1";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=1";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=1";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
