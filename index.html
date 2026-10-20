@@ -7,8 +7,8 @@
 <title>FM-1 Pulses</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
-<link rel="stylesheet" href="css/rack.css?v=3">
-<link rel="stylesheet" href="css/dxpatch.css?v=5">
+<link rel="stylesheet" href="css/rack.css?v=4">
+<link rel="stylesheet" href="css/dxpatch.css?v=6">
 </head>
 <body>
 <div class="case">
@@ -313,28 +313,18 @@
 
           <div class="dxpatch-param-pill">
             <span class="dxpatch-micro-label">TRANSPOSE</span>
-            <div class="dxpatch-pill-control">
-              <div class="dxpatch-stepper">
-                <button type="button" id="dxpatch-transpose-prev" class="dxpatch-stepper-btn" title="Decrease Transpose (semitone down)">‹</button>
-                <input type="number" id="dxpatch-transpose-input" min="0" max="48" value="24" class="dxpatch-stepper-input" title="Transpose (0–48 semitones, 24=C3)" />
-                <button type="button" id="dxpatch-transpose-next" class="dxpatch-stepper-btn" title="Increase Transpose (semitone up)">›</button>
-              </div>
-              <span id="dxpatch-transpose-note" class="dxpatch-transpose-note" title="Musical Note">C3</span>
+            <div class="dxpatch-stepper">
+              <button type="button" id="dxpatch-transpose-prev" class="dxpatch-stepper-btn" title="Decrease Transpose (0–48)">‹</button>
+              <input type="number" id="dxpatch-transpose-input" min="0" max="48" value="24" class="dxpatch-stepper-input" title="Transpose (0–48 semitones)" />
+              <button type="button" id="dxpatch-transpose-next" class="dxpatch-stepper-btn" title="Increase Transpose (0–48)">›</button>
             </div>
           </div>
 
           <div class="dxpatch-param-pill">
             <span class="dxpatch-micro-label">LFO WAVE</span>
-            <div class="dxpatch-stepper">
+            <div class="dxpatch-stepper" title="LFO Waveform (use buttons or wheel)">
               <button type="button" id="dxpatch-lfo-wave-prev" class="dxpatch-stepper-btn" title="Previous LFO Waveform">‹</button>
-              <select id="dxpatch-lfo-wave" class="dxpatch-stepper-select" title="LFO Waveform">
-                <option value="0">Triangle</option>
-                <option value="1">Saw Down</option>
-                <option value="2">Saw Up</option>
-                <option value="3">Square</option>
-                <option value="4">Sine</option>
-                <option value="5">S&amp;H</option>
-              </select>
+              <span id="dxpatch-lfo-wave" class="dxpatch-stepper-val" title="LFO Waveform">Triangle</span>
               <button type="button" id="dxpatch-lfo-wave-next" class="dxpatch-stepper-btn" title="Next LFO Waveform">›</button>
             </div>
           </div>
@@ -463,6 +453,6 @@
     </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=7"></script>
+<script type="module" src="js/rack.js?v=8"></script>
 </body>
 </html>
