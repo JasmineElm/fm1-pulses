@@ -622,7 +622,7 @@ export function initRhythm(containerEl, sequenceContainerEl) {
 
   euclidHitsInput = document.createElement("input");
   euclidHitsInput.type = "number";
-  euclidHitsInput.className = "rhythm-num-input";
+  euclidHitsInput.className = "stepper-input rhythm-num-input";
   euclidHitsInput.min = "1";
   euclidHitsInput.max = "64";
   euclidHitsInput.step = "1";
@@ -630,12 +630,48 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   euclidHitsInput.title = "Step interval: activates a step every n steps";
 
   const hitsWrap = document.createElement("div");
-  hitsWrap.className = "rhythm-mode-input-wrap";
+  hitsWrap.className = "stepper rhythm-stepper rhythm-mode-input-wrap";
   hitsWrap.style.display = state.euclidMode === "hits" ? "inline-flex" : "none";
-  hitsWrap.appendChild(euclidHitsInput);
+
+  const hitsPrev = document.createElement("button");
+  hitsPrev.type = "button";
+  hitsPrev.className = "stepper-btn dxpatch-stepper-btn";
+  hitsPrev.textContent = "‹";
+  hitsPrev.title = "Decrease hits interval";
+  hitsPrev.addEventListener("click", () => {
+    const cur = parseInt(euclidHitsInput.value, 10) || 1;
+    const next = Math.max(1, cur - 1);
+    euclidHitsInput.value = String(next);
+    state.euclidHits = next;
+    if (state.euclidMode === "hits") applyActiveEuclidRhythm();
+  });
+
+  const hitsNext = document.createElement("button");
+  hitsNext.type = "button";
+  hitsNext.className = "stepper-btn dxpatch-stepper-btn";
+  hitsNext.textContent = "›";
+  hitsNext.title = "Increase hits interval";
+  hitsNext.addEventListener("click", () => {
+    const cur = parseInt(euclidHitsInput.value, 10) || 1;
+    const next = Math.min(64, cur + 1);
+    euclidHitsInput.value = String(next);
+    state.euclidHits = next;
+    if (state.euclidMode === "hits") applyActiveEuclidRhythm();
+  });
+
+  euclidHitsInput.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const cur = parseInt(euclidHitsInput.value, 10) || 1;
+    const next = Math.max(1, Math.min(64, cur + (e.deltaY < 0 ? 1 : -1)));
+    euclidHitsInput.value = String(next);
+    state.euclidHits = next;
+    if (state.euclidMode === "hits") applyActiveEuclidRhythm();
+  }, { passive: false });
+
+  hitsWrap.append(hitsPrev, euclidHitsInput, hitsNext);
 
   euclidDivSelect = document.createElement("select");
-  euclidDivSelect.className = "rhythm-select-sm";
+  euclidDivSelect.className = "stepper-select rhythm-select-sm";
   euclidDivSelect.title = "Sequence division: activates a step every (sequence length)/div steps";
   const divOptions = [
     { v: "2", t: "2" },
@@ -660,9 +696,36 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   }
 
   const divWrap = document.createElement("div");
-  divWrap.className = "rhythm-mode-input-wrap";
+  divWrap.className = "stepper rhythm-stepper rhythm-mode-input-wrap";
   divWrap.style.display = state.euclidMode === "div" ? "inline-flex" : "none";
-  divWrap.appendChild(euclidDivSelect);
+
+  const divPrev = document.createElement("button");
+  divPrev.type = "button";
+  divPrev.className = "stepper-btn dxpatch-stepper-btn";
+  divPrev.textContent = "‹";
+  divPrev.title = "Previous division";
+  divPrev.addEventListener("click", () => {
+    if (euclidDivSelect.selectedIndex > 0) {
+      euclidDivSelect.selectedIndex--;
+      state.euclidDiv = euclidDivSelect.value;
+      if (state.euclidMode === "div") applyActiveEuclidRhythm();
+    }
+  });
+
+  const divNext = document.createElement("button");
+  divNext.type = "button";
+  divNext.className = "stepper-btn dxpatch-stepper-btn";
+  divNext.textContent = "›";
+  divNext.title = "Next division";
+  divNext.addEventListener("click", () => {
+    if (euclidDivSelect.selectedIndex < euclidDivSelect.options.length - 1) {
+      euclidDivSelect.selectedIndex++;
+      state.euclidDiv = euclidDivSelect.value;
+      if (state.euclidMode === "div") applyActiveEuclidRhythm();
+    }
+  });
+
+  divWrap.append(divPrev, euclidDivSelect, divNext);
 
   function setEuclidMode(mode, apply = true) {
     state.euclidMode = mode;
@@ -817,22 +880,25 @@ export function initRhythm(containerEl, sequenceContainerEl) {
   rotLabel.textContent = "Rotate";
 
   const rotBtnGroup = document.createElement("div");
-  rotBtnGroup.className = "rhythm-btn-group";
+  rotBtnGroup.className = "stepper rhythm-stepper";
 
   const rotLeftBtn = document.createElement("button");
-  rotLeftBtn.className = "rhythm-btn rhythm-btn-rot";
+  rotLeftBtn.type = "button";
+  rotLeftBtn.className = "stepper-btn dxpatch-stepper-btn";
   rotLeftBtn.title = "Rotate pattern 1 step left (earlier)";
-  rotLeftBtn.textContent = "◀";
+  rotLeftBtn.textContent = "‹";
   rotLeftBtn.addEventListener("click", () => rotatePattern(-1));
 
   rotDisplayEl = document.createElement("span");
   rotDisplayEl.className = "rhythm-rot-display";
+  rotDisplayEl.style.padding = "2px 6px";
   rotDisplayEl.textContent = "0";
 
   const rotRightBtn = document.createElement("button");
-  rotRightBtn.className = "rhythm-btn rhythm-btn-rot";
+  rotRightBtn.type = "button";
+  rotRightBtn.className = "stepper-btn dxpatch-stepper-btn";
   rotRightBtn.title = "Rotate pattern 1 step right (later)";
-  rotRightBtn.textContent = "▶";
+  rotRightBtn.textContent = "›";
   rotRightBtn.addEventListener("click", () => rotatePattern(1));
 
   rotBtnGroup.append(rotLeftBtn, rotDisplayEl, rotRightBtn);
