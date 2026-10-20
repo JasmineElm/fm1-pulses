@@ -2,7 +2,7 @@
 
 Browser-based generative MIDI workstation for the **M-VAVE FM-1** (6-operator FM synthesizer). Built with vanilla JavaScript, Web MIDI, Web Audio, and PWA standards. Zero dependencies, no build steps, and no server required.
 
-**▶ Live App:** https://mene311.github.io/fm1-pulses/
+**▶ Live:** https://james-lemin.com/fm1-pulses/
 
 ---
 
