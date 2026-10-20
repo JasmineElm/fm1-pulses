@@ -868,6 +868,14 @@ export class VAAudioPlayer {
     return this.ctx;
   }
 
+  playNote(patch, midiNote = 60, velocity = 100, duration = 0.9) {
+    return this.playPatchNote(patch, midiNote, velocity, duration);
+  }
+
+  stopAllNotes() {
+    // One-shot audio nodes self-terminate; method provided for lifecycle symmetry
+  }
+
   playPatchNote(patch, midiNote = 60, velocity = 100, duration = 0.9) {
     const ctx = this._ensureCtx();
     const now = ctx.currentTime;
