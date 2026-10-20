@@ -111,6 +111,8 @@
   color: #fff;
 }
 
+.dxpatch-stepper input[type="number"],
+.dxpatch-stepper .dxpatch-stepper-input,
 .dxpatch-stepper .dxpatch-alg-input {
   width: 26px;
   background: transparent;
@@ -127,14 +129,43 @@
   -moz-appearance: textfield;
 }
 
+.dxpatch-stepper input[type="number"]::-webkit-outer-spin-button,
+.dxpatch-stepper input[type="number"]::-webkit-inner-spin-button,
+.dxpatch-stepper .dxpatch-stepper-input::-webkit-outer-spin-button,
+.dxpatch-stepper .dxpatch-stepper-input::-webkit-inner-spin-button,
 .dxpatch-stepper .dxpatch-alg-input::-webkit-outer-spin-button,
 .dxpatch-stepper .dxpatch-alg-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
+.dxpatch-stepper input[type="number"]:focus,
+.dxpatch-stepper .dxpatch-stepper-input:focus,
 .dxpatch-stepper .dxpatch-alg-input:focus {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.dxpatch-stepper-select {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--fg);
+  font: 600 10.5px/1.2 ui-sans-serif, system-ui, sans-serif;
+  padding: 2px 4px;
+  outline: none;
+  cursor: pointer;
+  max-width: 82px;
+}
+.dxpatch-stepper-select option {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.dxpatch-lfo-steppers-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .dxpatch-card-hint {
