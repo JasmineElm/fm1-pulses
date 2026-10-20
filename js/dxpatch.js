@@ -371,8 +371,6 @@ function handleKeyDown(e) {
 }
 
 function getGenerationOptions() {
-  const seedVal = document.getElementById("dxpatch-seed-input")?.value.trim();
-  const seed = seedVal ? Number(seedVal) || seedVal : null;
   const forceAlgVal = document.getElementById("dxpatch-force-alg-select")?.value;
   const algorithm = forceAlgVal ? Number(forceAlgVal) : null;
   const category = document.getElementById("dxpatch-category-select")?.value || "keys";
@@ -380,7 +378,6 @@ function getGenerationOptions() {
   const profile = profileVal === "none" ? null : profileVal;
 
   return new GenerationOptions({
-    seed,
     algorithm,
     category,
     profile,
