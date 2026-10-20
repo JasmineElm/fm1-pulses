@@ -37,6 +37,8 @@ const OP_NUM_COLUMNS = [
   ["eg_level_4", 0, 99],
 ];
 
+const LFO_WAVE_NAMES = ["Triangle", "Saw Down", "Saw Up", "Square", "Sine", "S&H"];
+
 const PIANO_NOTES = [
   { midi: 48, label: "C3", key: "A", black: false },
   { midi: 49, label: "C#", key: "W", black: true },
@@ -226,13 +228,8 @@ export function initDxPatch() {
     e.preventDefault();
     stepTranspose(e.deltaY < 0 ? 1 : -1);
   }, { passive: false });
-  document.getElementById("dxpatch-transpose-note")?.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    stepTranspose(e.deltaY < 0 ? 1 : -1);
-  }, { passive: false });
 
   // LFO Wave Stepper
-  bindVoiceParam("dxpatch-lfo-wave", (v) => (currentPatch.lfo.waveform = clamp(v, 0, 5)), "Updated LFO Waveform");
   const stepLfoWave = (delta) => {
     if (!currentPatch) return;
     let nextVal = currentPatch.lfo.waveform + delta;
@@ -498,11 +495,8 @@ function refreshPatchUI() {
   const transEl = document.getElementById("dxpatch-transpose-input");
   if (transEl) transEl.value = String(patch.transpose);
 
-  const transNote = document.getElementById("dxpatch-transpose-note");
-  if (transNote) transNote.textContent = patch.transpose_note;
-
   const lfoWave = document.getElementById("dxpatch-lfo-wave");
-  if (lfoWave) lfoWave.value = String(patch.lfo.waveform);
+  if (lfoWave) lfoWave.textContent = LFO_WAVE_NAMES[patch.lfo.waveform] ?? "Triangle";
 
   const lfoSpd = document.getElementById("dxpatch-lfo-speed");
   if (lfoSpd) lfoSpd.value = String(patch.lfo.speed);

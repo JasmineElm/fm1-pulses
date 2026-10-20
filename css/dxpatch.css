@@ -93,17 +93,6 @@
   gap: 5px;
 }
 
-.dxpatch-transpose-note {
-  font: 700 11px/1 var(--font-mono, monospace);
-  color: var(--accent);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 6px;
-  letter-spacing: 0.5px;
-  user-select: none;
-}
-
 .dxpatch-card-hint {
   font-size: 9.5px;
   color: var(--dim);
@@ -361,7 +350,8 @@
 }
 
 .dxpatch-title-group {
-  flex: 2 1 180px;
+  flex: 1 1 180px;
+  min-width: 140px;
 }
 
 .dxpatch-micro-label {
@@ -396,31 +386,11 @@
 }
 
 .dxpatch-param-pill {
-  flex: 1 1 80px;
+  flex: 0 0 auto;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 4px 6px;
-}
-
-.dxpatch-pill-control {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.dxpatch-pill-control input[type="number"] {
-  width: 38px;
-  background: transparent;
-  border: none;
-  color: var(--fg);
-  font: 700 12px ui-monospace, monospace;
-  outline: none;
-}
-
-.dxpatch-pill-control .unit {
-  font-size: 9px;
-  color: var(--dim);
 }
 
 /* Visualizer Grid */
