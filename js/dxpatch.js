@@ -193,10 +193,60 @@ export function initDxPatch() {
     e.preventDefault();
     stepAlgorithm(e.deltaY < 0 ? 1 : -1);
   }, { passive: false });
+  // Feedback Stepper
   bindVoiceParam("dxpatch-fb-input", (v) => (currentPatch.feedback = clamp(v, 0, 7)), "Updated Feedback");
+  const stepFeedback = (delta) => {
+    if (!currentPatch) return;
+    const nextVal = clamp(currentPatch.feedback + delta, 0, 7);
+    if (nextVal !== currentPatch.feedback) {
+      currentPatch.feedback = nextVal;
+      onPatchEdited("Updated Feedback");
+    }
+  };
+  document.getElementById("dxpatch-fb-prev")?.addEventListener("click", () => stepFeedback(-1));
+  document.getElementById("dxpatch-fb-next")?.addEventListener("click", () => stepFeedback(1));
+  document.getElementById("dxpatch-fb-input")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepFeedback(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+
   bindVoiceParam("dxpatch-transpose-input", (v) => (currentPatch.transpose = clamp(v, 0, 48)), "Updated Transpose");
+
+  // LFO Wave Stepper
   bindVoiceParam("dxpatch-lfo-wave", (v) => (currentPatch.lfo.waveform = clamp(v, 0, 5)), "Updated LFO Waveform");
+  const stepLfoWave = (delta) => {
+    if (!currentPatch) return;
+    let nextVal = currentPatch.lfo.waveform + delta;
+    if (nextVal > 5) nextVal = 0;
+    if (nextVal < 0) nextVal = 5;
+    currentPatch.lfo.waveform = nextVal;
+    onPatchEdited("Updated LFO Waveform");
+  };
+  document.getElementById("dxpatch-lfo-wave-prev")?.addEventListener("click", () => stepLfoWave(-1));
+  document.getElementById("dxpatch-lfo-wave-next")?.addEventListener("click", () => stepLfoWave(1));
+  document.getElementById("dxpatch-lfo-wave")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepLfoWave(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+
+  // LFO Speed Stepper
   bindVoiceParam("dxpatch-lfo-speed", (v) => (currentPatch.lfo.speed = clamp(v, 0, 99)), "Updated LFO Speed");
+  const stepLfoSpeed = (delta) => {
+    if (!currentPatch) return;
+    const nextVal = clamp(currentPatch.lfo.speed + delta, 0, 99);
+    if (nextVal !== currentPatch.lfo.speed) {
+      currentPatch.lfo.speed = nextVal;
+      onPatchEdited("Updated LFO Speed");
+    }
+  };
+  document.getElementById("dxpatch-lfo-spd-prev")?.addEventListener("click", () => stepLfoSpeed(-1));
+  document.getElementById("dxpatch-lfo-spd-next")?.addEventListener("click", () => stepLfoSpeed(1));
+  document.getElementById("dxpatch-lfo-speed")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepLfoSpeed(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+
+  // LFO Pitch Mod Depth Stepper
   bindVoiceParam(
     "dxpatch-lfo-pmd",
     (v) => {
@@ -207,6 +257,23 @@ export function initDxPatch() {
     },
     "Updated LFO Pitch Mod Depth"
   );
+  const stepLfoPmd = (delta) => {
+    if (!currentPatch) return;
+    const nextVal = clamp(currentPatch.lfo.pitch_mod_depth + delta, 0, 99);
+    if (nextVal !== currentPatch.lfo.pitch_mod_depth) {
+      currentPatch.lfo.pitch_mod_depth = nextVal;
+      if (currentPatch.lfo.pitch_mod_depth > 0 && currentPatch.lfo.pitch_mod_sens === 0) {
+        currentPatch.lfo.pitch_mod_sens = 2;
+      }
+      onPatchEdited("Updated LFO Pitch Mod Depth");
+    }
+  };
+  document.getElementById("dxpatch-lfo-pmd-prev")?.addEventListener("click", () => stepLfoPmd(-1));
+  document.getElementById("dxpatch-lfo-pmd-next")?.addEventListener("click", () => stepLfoPmd(1));
+  document.getElementById("dxpatch-lfo-pmd")?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepLfoPmd(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
 
   // Hardware SysEx actions
   document.getElementById("dxpatch-chk-auto-send")?.addEventListener("change", (e) => {
