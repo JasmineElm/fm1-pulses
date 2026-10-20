@@ -78,38 +78,63 @@
 .dxpatch-alg-title-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-.dxpatch-alg-title-wrap .unit {
-  font-size: 10px;
-  color: var(--dim);
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.dxpatch-alg-input {
-  width: 34px;
-  background: var(--panel);
+.dxpatch-stepper {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.dxpatch-stepper-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font: 700 13px/1 ui-monospace, monospace;
+  padding: 3px 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s;
+}
+
+.dxpatch-stepper-btn:hover {
+  background: var(--line);
+  color: var(--accent);
+}
+
+.dxpatch-stepper-btn:active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dxpatch-stepper .dxpatch-alg-input {
+  width: 26px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
   color: var(--accent);
   font: 700 12px ui-monospace, monospace;
   text-align: center;
-  padding: 1px 2px;
-  border-radius: 3px;
+  padding: 2px 0;
+  border-radius: 0;
   outline: none;
   box-sizing: border-box;
   -moz-appearance: textfield;
 }
 
-.dxpatch-alg-input::-webkit-outer-spin-button,
-.dxpatch-alg-input::-webkit-inner-spin-button {
+.dxpatch-stepper .dxpatch-alg-input::-webkit-outer-spin-button,
+.dxpatch-stepper .dxpatch-alg-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.dxpatch-alg-input:focus {
-  border-color: var(--accent);
+.dxpatch-stepper .dxpatch-alg-input:focus {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .dxpatch-card-hint {

@@ -175,6 +175,24 @@ export function initDxPatch() {
   };
 
   bindVoiceParam("dxpatch-alg-input", (v) => (currentPatch.algorithm = clamp(v, 1, 32)), "Updated Algorithm");
+
+  const stepAlgorithm = (delta) => {
+    if (!currentPatch) return;
+    let nextAlg = currentPatch.algorithm + delta;
+    if (nextAlg > 32) nextAlg = 1;
+    if (nextAlg < 1) nextAlg = 32;
+    currentPatch.algorithm = nextAlg;
+    onPatchEdited("Updated Algorithm");
+  };
+
+  document.getElementById("dxpatch-alg-prev")?.addEventListener("click", () => stepAlgorithm(-1));
+  document.getElementById("dxpatch-alg-next")?.addEventListener("click", () => stepAlgorithm(1));
+
+  const algInputEl = document.getElementById("dxpatch-alg-input");
+  algInputEl?.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    stepAlgorithm(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
   bindVoiceParam("dxpatch-fb-input", (v) => (currentPatch.feedback = clamp(v, 0, 7)), "Updated Feedback");
   bindVoiceParam("dxpatch-transpose-input", (v) => (currentPatch.transpose = clamp(v, 0, 48)), "Updated Transpose");
   bindVoiceParam("dxpatch-lfo-wave", (v) => (currentPatch.lfo.waveform = clamp(v, 0, 5)), "Updated LFO Waveform");
