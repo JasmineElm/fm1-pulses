@@ -1,9 +1,9 @@
 // player.js — Transport audition, playback loop, and live MIDI streaming.
-import { state, getBank, getSelected, RATE_QUARTERS, status, sleep } from "./state.js?v=100";
-import * as midi from "./midi.js?v=100";
-import * as audio from "./audio.js?v=100";
-import { setScopeNow, renderScope } from "./scope.js?v=100";
-import { knob, sw } from "./knob.js?v=100";
+import { state, getBank, getSelected, RATE_NAMES, RATE_QUARTERS, status, sleep } from "./state.js";
+import * as midi from "./midi.js";
+import * as audio from "./audio.js";
+import { setScopeNow, renderScope } from "./scope.js";
+import { knob, sw } from "./knob.js";
 
 let live = false;
 let liveToken = 0;
@@ -69,21 +69,53 @@ export async function playOnce(index) {
   }
 }
 
+const stepListeners = new Set();
+export function onStep(fn) {
+  stepListeners.add(fn);
+  return () => stepListeners.delete(fn);
+}
+
+let modelStepHandler = null;
+
+/**
+ * Sets or clears the active sequencer model's step tick handler.
+ * Called when switching models so that only the currently active model
+ * is notified during playback ticks.
+ *
+ * @param {Function|null} fn - Handler function receiving stepIndex (or null on stop)
+ */
+export function setModelStepHandler(fn) {
+  modelStepHandler = typeof fn === "function" ? fn : null;
+}
+
 export function clearPlayhead() {
   if (nowCell) nowCell.classList.remove("now");
   nowCell = null;
   setScopeNow(null);
-  renderScope();
+  try { renderScope(); } catch (_) {}
+  for (const fn of stepListeners) {
+    try { fn(null); } catch (_) {}
+  }
+  if (modelStepHandler) {
+    try { modelStepHandler(null); } catch (_) {}
+  }
 }
 
 export function markStep(i) {
+  for (const fn of stepListeners) {
+    try { fn(i); } catch (_) {}
+  }
+  if (modelStepHandler) {
+    try { modelStepHandler(i); } catch (_) {}
+  }
   const el = document.getElementById("steps");
-  if (!el) return;
-  if (nowCell) nowCell.classList.remove("now");
-  nowCell = el.children[i] || null;
-  if (nowCell) nowCell.classList.add("now");
+  if (el && el.offsetParent !== null) {
+    if (nowCell) nowCell.classList.remove("now");
+    nowCell = el.children[i] || null;
+    if (nowCell) nowCell.classList.add("now");
+  }
   setScopeNow(i);
-  renderScope();
+  try { renderScope(); } catch (_) {}
 }
 
 export function stopLive() {
@@ -106,11 +138,17 @@ export function toggleLive() {
   if (btn) { btn.textContent = "■ Stop"; btn.classList.add("playing"); }
   status("playing (loop)");
   if (onPlayStartSyncCallback) onPlayStartSyncCallback();
+  for (const fn of stepListeners) {
+    try { fn(null); } catch (_) {}
+  }
+  if (modelStepHandler) {
+    try { modelStepHandler(null); } catch (_) {}
+  }
   liveLoop(liveToken);
 }
 
 export async function liveLoop(token) {
-  const t0 = performance.now();
+  let t0 = performance.now();
   let elapsed = 0;
   let i = 0;
   while (live && token === liveToken) {
@@ -121,10 +159,13 @@ export async function liveLoop(token) {
       if (i >= p.length) i = 0;
       if (performance.now() - (t0 + elapsed) > 250) t0 = performance.now() - elapsed;
 
-      const st = p.steps[i];
+      const st = p.steps?.[i] || { notes: [], rate: p.rate ?? 6 };
       const qMs = 60000 / Math.max(20, Math.min(300, state.tempo || 120));
       const gate = Math.min(100, Math.max(5, state.gate ?? 50)) / 100;
-      const stepMs = qMs * (RATE_QUARTERS[st.rate] ?? RATE_QUARTERS[p.rate]);
+      const rIdx = typeof st.rate === "number" ? st.rate : RATE_NAMES.indexOf(st.rate);
+      const prIdx = typeof p.rate === "number" ? p.rate : RATE_NAMES.indexOf(p.rate);
+      const qMult = RATE_QUARTERS[rIdx >= 0 ? rIdx : (prIdx >= 0 ? prIdx : 6)] ?? 0.25;
+      const stepMs = qMs * qMult;
       const late = i % 2 === 1 ? stepMs * swingFrac() : 0;
       const humFactor = (state.humanize ?? 0) / 100;
       const humJitter = humFactor > 0 ? (Math.random() * 2 - 1) * humFactor * 0.15 * stepMs : 0;

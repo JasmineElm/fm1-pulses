@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses — guide</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=68">
-<link rel="stylesheet" href="css/rack.css?v=68">
+<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/rack.css?v=1">
 <style>
   body { padding: 12px; }
   .wrap { max-width: 760px; margin: 0 auto; }
@@ -18,7 +18,7 @@
   .top h1 { font-size: 18px; margin: 0; letter-spacing: 3.6px; font-weight: 700; color: var(--fg); }
   .top h1 b { color: var(--accent); }
   .top .sub { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-left: auto; }
-  .intro { color: var(--dim); max-width: 62ch; margin: 0 0 4px; }
+  .intro { color: var(--dim); max-width: 62ch; margin: 0 0 6px; font-size: 13px; line-height: 1.45; }
   h2 { font-size: 9px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--dim); font-weight: 700; margin: 18px 0 6px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
   .param {
     border-radius: 3px; background-color: rgba(0,0,0,.07);
@@ -26,9 +26,8 @@
     padding: 8px 10px; margin: 6px 0;
   }
   .param h3 { margin: 0 0 3px; font-size: 12px; letter-spacing: .4px; color: var(--fg); }
-  .param h3 .rng { color: var(--dim); font-weight: 400; font-size: 10px; margin-left: 8px; }
   .param h3 .kind { color: var(--accent); font-weight: 700; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-left: 8px; }
-  .param p { margin: 0; font-size: 12.5px; color: var(--fg); opacity: .9; }
+  .param p { margin: 0; font-size: 12.5px; color: var(--fg); opacity: .9; line-height: 1.4; }
   .note {
     border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line);
     border-left: 3px solid var(--accent);
@@ -48,190 +47,71 @@
     <h1>FM-1 <b>PULSES</b></h1>
     <span class="sub">guide</span>
   </div>
-  <p class="intro">Every control on the panel, what it does, and a thing to try. The shape of it: set the settings, generate a bank of 16 patterns, freeze the good ones into the FM-1's own sequencer. <a class="back" href="index.html">← back to the panel</a></p>
-
-  <h2>Reading the panel</h2>
-  <div class="param">
-    <h3>Knobs and switches</h3>
-    <p>Round knobs are continuous: drag up and down, use the wheel, or the arrow keys. Double-click resets to the default. <code>sine</code>-style switches are rotary: one detent per option, and the chosen name prints underneath.</p>
-  </div>
-  <div class="param">
-    <h3>Transport</h3>
-    <p><b>Generate</b> rolls a new seed and rebuilds the bank. <b>Randomize</b> rolls settings too. <b>Play</b> loops the selected slot so you can tweak it live. The <b>sound</b> switch picks the browser preview timbre (e-piano, bell, bass, organ, square); the FM-1 plays its own patch when frozen. <b>Freeze</b> writes the selected slot, <b>Send 16</b> writes the whole bank, <b>Clear</b> wipes the FM-1's sequencer. The strip at the bottom picks the theme. <b>Freeze needs the FM-1+VA / Baud Girl firmware</b> — the pattern-write SysEx only exists there; on stock firmware the app works as a live MIDI broadcaster (▶ Play).</p>
-  </div>
-  <div class="param">
-    <h3>The pattern display</h3>
-    <p>The 16 slots of the bank sit above a 64-step grid, eight wide. Tap a slot to select it. Tap a step to edit it: <b>−</b> and <b>+</b> move it a semitone, <b>✕</b> empties it. Any step you touch is locked, so it survives regeneration. When the loop is on, the tiled region is tinted in the accent colour (its first step a notch brighter), in both the grid and the bank strip.</p>
-  </div>
-
-  <h2>Presets / export / import</h2>
-  <div class="param">
-    <h3>save ▸ / ◂ load <span class="kind">slots 1–5</span></h3>
-    <p>Five local preset slots under the transport keep banks in the browser. Tap a slot to recall it; double-click to overwrite it; or arm <b>save ▸</b> / <b>◂ load</b> and then tap. A preset holds everything an export file does: the knobs, the seed, the locked steps.</p>
-  </div>
-  <div class="param">
-    <h3>export <span class="kind">file</span></h3>
-    <p>Downloads the current state as JSON: every knob, the seed, the locked steps, and the selected slot. The whole bank derives from the seed, so the file <i>is</i> the song — anyone who imports it gets the identical 16 patterns.</p>
-  </div>
-  <div class="param">
-    <h3>import <span class="kind">file</span></h3>
-    <p>Loads a JSON file exported from FM-1 Pulses. Parameters are validated and clamped, the bank regenerates from the file's seed, and locked steps come back as they were.</p>
-  </div>
-  <div class="param">
-    <h3>sysex <span class="kind">file</span></h3>
-    <p>Downloads the whole 16-slot bank as a <code>.syx</code> file — the raw SysEx pattern-write messages, so any other FM-1 tool can push the same bank to the device without the browser.</p>
-  </div>
-
-  <h2>Bluetooth</h2>
-  <div class="param">
-    <h3>bluetooth <span class="kind">link</span></h3>
-    <p>Connects the FM-1 over BLE MIDI for cable-free playback: the ▶ Play loop sends its notes over Bluetooth. <b>Freeze, Send 16, Clear and the device-BPM read still need USB</b> — on this firmware BLE carries notes and controllers only; the pattern SysEx does not ride it (verified on hardware). If the link drops, the app reconnects on its own and shows <i>bluetooth …</i> in the link.</p>
-  </div>
-
-  <h2>Rhythm</h2>
-  <div class="param">
-    <h3>Tempo <span class="rng">30–300 BPM</span><span class="kind">knob</span></h3>
-    <p>Playback speed for the browser player. <b>The FM-1's BPM is device-global and cannot be set over MIDI</b> — this firmware acks the tempo bytes of a pattern write and discards them. Freezing therefore does not change the device's BPM; the unit's own tempo governs standalone playback. After every freeze (and on connect) the app reads the device's real BPM and snaps this knob to it, so what you see is what the device plays.</p>
-  </div>
-  <div class="param">
-    <h3>Swing <span class="rng">50–75%</span><span class="kind">knob</span></h3>
-    <p>Delays every other step. 50% is straight, 75% is triplet (2:1). Heard in the browser and written into the pattern.</p>
-  </div>
-  <div class="param">
-    <h3>Gate <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p><b>Random mode:</b> the chance each step plays a note — 0% silence, 100% every step. <b>Euclid mode:</b> the same knob becomes <i>density</i>: Gate % becomes N hits spread as evenly as possible over the cycle (the Loop length, or 16 steps if the loop is off). E(5,8) = <code>x.xx.xx.</code> (cinquillo), E(4,8) = <code>x.x.x.x.</code>, E(3,8) is a tresillo-family pattern. The loop info line shows the current <code>E(N,M)</code>.</p>
-  </div>
-  <div class="param">
-    <h3>Euclid <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>The gradient between two ways of placing the hits. <b>0% = random</b>: each step rolls the Gate chance (white noise, no structure). <b>100% = euclid</b>: the hits sit at the evenest positions of the cycle — the maths behind clave, tresillo and most world-music rhythms. In between, each step rolls which law it follows, so a pattern erodes gradually from clean Euclid to loose random. Gate % is the density on both ends, and the loop info line names the classics when you land on one:</p>
-    <p><code>tresillo</code> x..x..x. — Gate 37%, Loop 8<br>
-    <code>cinquillo</code> x.xx.xx. — Gate 62%, Loop 8<br>
-    <code>son clave</code> x..x..x...x.x... — Gate 31%, Loop 16<br>
-    The cycle is the Loop length (16 steps if the loop is off); Rotate turns the pattern.</p>
-  </div>
-  <div class="param">
-    <h3>Rotate <span class="rng">0–15</span><span class="kind">knob</span></h3>
-    <p>Euclid mode: turns the hit pattern within its cycle, like rotating a clave. Wraps when the cycle is shorter than 16.</p>
-  </div>
-  <div class="param">
-    <h3>Grid snap <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance a note is kept only if it lands on a grid line. Off-grid notes become rests. Gate still decides how many of those lines fire, so the two work together.</p>
-  </div>
-  <div class="param">
-    <h3>Snap grid <span class="rng">2–8 steps</span><span class="kind">knob</span></h3>
-    <p>Spacing of those grid lines. 4 is one beat at 1/16. Odd values like 3 and 5 do not divide the bar, so they land lopsided and drift.</p>
-  </div>
-  <div class="param">
-    <h3>Gate length <span class="rng">5–100%</span><span class="kind">knob</span></h3>
-    <p>How long each note holds. Low is staccato, high is legato.</p>
-  </div>
-
-  <h2>Global</h2>
-  <div class="param">
-    <h3>Drift <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>How far the 16 slots evolve away from each other. 0% means they share the settings. 100% means slot 1 and slot 16 are far apart.</p>
-  </div>
-  <div class="param">
-    <h3>Seed <span class="kind">knob</span></h3>
-    <p>One number, everything derives from it. Same seed plus same settings gives the same bank. The knob rolls it, so you can hunt for a bank by turning.</p>
-  </div>
-  <div class="param">
-    <h3>Note value</h3>
-    <p>The length of one step, which sets the bar length. At 1/32 a 64-step phrase is 2 bars; at 1/16 it is 4 bars.</p>
-  </div>
-  <div class="param">
-    <h3>Length <span class="rng">1–64 steps</span><span class="kind">knob</span></h3>
-    <p>How many of the 64 steps the pattern plays.</p>
-  </div>
-  <div class="param">
-    <h3>Quantize <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>How hard notes snap to the scale. 100% is always in scale. Lower lets chromatic passing notes through.</p>
-  </div>
-  <div class="param">
-    <h3>Unipolar <span class="kind">switch</span></h3>
-    <p>Off, notes spread both ways around the Offset note. On, the Offset note becomes the floor and notes only rise from it.</p>
-  </div>
-
-  <h2>Pitch</h2>
-  <div class="param">
-    <h3>Wave <span class="kind">switch</span></h3>
-    <p>What makes the pitch move. <code>sine</code>, <code>tri</code>, <code>saw</code> and <code>sqr</code> are fixed contours. <code>perlin</code> is a smooth coherent contour — long evolving arcs, not white noise. <code>random</code> draws a fresh value from the Spread distribution. <code>walk</code>, <code>smooth</code> and <code>hold</code> are the older random shapes.</p>
-  </div>
-  <div class="param">
-    <h3>Shape <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Morphs the wave. On <code>sine</code> it drives the sine into a wavefolder (harmonically richer arcs); on <code>tri</code> and <code>saw</code> it bends the ramp into a curve; on <code>sqr</code> it narrows the pulse width from 50% to 5%; on <code>perlin</code> it adds a detuned octave shimmer; on <code>walk</code> it widens the step size; on <code>smooth</code> it speeds the slew. At 0% every wave is its classic self.</p>
-  </div>
-  <div class="param">
-    <h3>Cycles <span class="rng">1–16</span><span class="kind">knob</span></h3>
-    <p>How many times the contour repeats across the phrase. Whole numbers land on the phrase and repeat; fractional values drift, so every pass differs.</p>
-  </div>
-  <div class="param">
-    <h3>Amplitude <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>How far notes reach above and below the Offset note. 0% is one note. 100% is ±18 semitones.</p>
-  </div>
-  <div class="param">
-    <h3>Offset <span class="rng">−100 to +100%</span><span class="kind">knob</span></h3>
-    <p>The centre of the pitch range. Amplitude spreads evenly around this note. This is where the melody lives.</p>
-  </div>
-  <div class="param">
-    <h3>Scale <span class="kind">switch</span></h3>
-    <p>The note set the melody snaps to. Pentatonic minor is the safe default.</p>
-  </div>
-  <div class="param">
-    <h3>Root <span class="rng">24–84, as a note</span><span class="kind">knob</span></h3>
-    <p>The tonic the scale is built on. This is the key, not where the melody sits.</p>
-  </div>
-
-  <h2>Shape</h2>
-  <div class="param">
-    <h3>Spread <span class="kind">switch</span></h3>
-    <p>The distribution notes come from. <code>constant</code> is one pitch, <code>bell</code> weights the centre, <code>uniform</code> is flat, <code>extremes</code> only hits the two ends. Bites hardest on the random wave.</p>
-  </div>
-  <div class="param">
-    <h3>Bias <span class="rng">−100 to +100</span><span class="kind">knob</span></h3>
-    <p>Tilts the distribution low or high without changing the range. Not a pitch shift, a likelihood shift.</p>
-  </div>
-  <div class="param">
-    <h3>Humanize <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Random per-note velocity wobble, ±40 at 100%. Only the browser player hears this; the FM-1 plays its own velocity.</p>
-  </div>
-  <div class="param">
-    <h3>Velocity <span class="rng">1–127</span><span class="kind">knob</span></h3>
-    <p>Base loudness for the browser player. Same caveat as Humanize.</p>
-  </div>
-  <div class="param">
-    <h3>Octave up <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance a note jumps up one octave. Twelve semitones is the same scale degree, so it stays in key. The jump is written into the note, so the FM-1 plays it too.</p>
-  </div>
-  <div class="param">
-    <h3>Root gravity <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance a note is pulled to the nearest root note. It keeps its register, so the melody gets grounded instead of flattened onto one pitch.</p>
-  </div>
-
-  <h2>Memory</h2>
-  <div class="param">
-    <h3>Loop from <span class="rng">step 1 … Length−2</span><span class="kind">knob</span></h3>
-    <p>Where the repeated region starts. Everything before it is an intro that plays once.</p>
-  </div>
-  <div class="param">
-    <h3>Loop len <span class="rng">2 … the rest of Length</span><span class="kind">knob</span></h3>
-    <p>How long that region is. Together with Loop from it tiles, say, steps 13 to 29 out to the end of the phrase.</p>
-  </div>
-  <div class="param">
-    <h3>Deja Vu <span class="rng">0–100%</span><span class="kind">knob</span></h3>
-    <p>Chance a step past the loop copies the loop instead of playing its own note. 0% plays the phrase as generated, 100% repeats the region to the end. The readout in the display shows the region and how many repeats fit, and copied steps are marked in the grid with a dashed ring — the region itself sounds once, so those marks begin one region after Loop from.</p>
-  </div>
+  <p class="intro">High-level guide to the FM-1 Pulses generative workstation: select an algorithmic sequencer model, shape musical phrases, audition in real time, and freeze patterns into the M-VAVE FM-1's hardware memory. <a class="back" href="index.html">← back to panel</a></p>
 
   <h2>Workflow</h2>
   <div class="note">
-    <p><b>1.</b> Connect the FM-1. The LED lights when it is found.</p>
-    <p><b>2.</b> Set Scale, Root, Offset and Amplitude. Hit <b>Generate</b>.</p>
-    <p><b>3.</b> Tap through the 16 slots. Keep the ones you like.</p>
-    <p><b>4.</b> <b>Freeze</b> writes one slot, <b>Send 16</b> writes the bank.</p>
-    <p><b>5.</b> Unplug it and the FM-1 plays on its own.</p>
+    <p><b>1. Select Model:</b> Choose an engine from the landing hub (or click <code>‹ models</code> in the status bar).</p>
+    <p><b>2. Connect Device:</b> Plug the FM-1 in via USB. The status LED turns green when Web MIDI connects.</p>
+    <p><b>3. Shape &amp; Audition:</b> Tweak parameters or press <b>Randomise</b> (<code>R</code> / <code>G</code>). Click <b>▶ Play</b> (<code>Space</code>) to audition through the browser synth and FM-1.</p>
+    <p><b>4. Freeze:</b> Press <b>Freeze</b> (<code>F</code>) to write the pattern into the FM-1. Stop device playback first.</p>
   </div>
   <div class="note" style="border-left-color: var(--err)">
-    <p><b>Stop the FM-1's sequencer before freezing.</b> It refuses a write while its sequencer is playing. Press SEQ off. STOP alone is not enough.</p>
+    <p><b>Stop device sequencer before freezing:</b> The firmware rejects pattern writes (<code>status 3</code>) while playing. Turn <b>SEQ off</b> on the FM-1 before freezing.</p>
+  </div>
+
+  <h2>Sequencer Models</h2>
+  <div class="param">
+    <h3>Mene311 <span class="kind">Stochastic S&amp;H</span></h3>
+    <p>Analog-inspired generative signal chain. Gate probability triggers Sample &amp; Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across musical scales, and repeated via a looping Deja-Vu buffer.</p>
+  </div>
+  <div class="param">
+    <h3>Turing Machine <span class="kind">Shift Register</span></h3>
+    <p>Probabilistic melody generator inspired by Music Thing Modular. A circulating loop of bits slips and mutates according to write probability, shifting between locked loops and evolving melodic drift.</p>
+  </div>
+  <div class="param">
+    <h3>Cellular Automata <span class="kind">Wolfram 1D Rules</span></h3>
+    <p>Step matrix driven by 1D elementary cellular automata (Rules 30, 90, 110, 150). Contours evolve across successive generations through local neighbor interactions, yielding organic self-similar patterns.</p>
+  </div>
+  <div class="param">
+    <h3>Particles <span class="kind">Kinetic Collision Grid</span></h3>
+    <p>2D multi-head particle simulator inspired by Orca and Plinky. Autonomous playheads traverse an interactive grid, rebounding off boundaries and deflectors. Note events trigger on collision (deflect, bounce, spawn, or annihilate).</p>
+  </div>
+
+  <h2>Shared Workstation Architecture</h2>
+  <div class="param">
+    <h3>Global &amp; Transport</h3>
+    <p><b>▶ Play</b> loops the sequence for live performance and tweaking. <b>Randomise</b> rolls new seeds and parameters. <b>Tempo</b> sets playback speed; on connect and after freezing, the app reads the FM-1's hardware BPM over USB and snaps this value. <b>Length</b> (1–64 steps), <b>Note</b> rate, and <b>Gate length</b> apply across all models.</p>
+  </div>
+  <div class="param">
+    <h3>Notes &amp; Scale Quantizer</h3>
+    <p>Every model feeds into a central quantization engine. Select from 20 musical scale presets or build a custom scale using the chromatic grid. Set the <b>Root</b> tonic note, adjust <b>Quantize</b> snap intensity, and expand register using <b>Octave Span</b> and direction modes.</p>
+  </div>
+  <div class="param">
+    <h3>Rhythm &amp; 16×4 Step Grid</h3>
+    <p>Dedicated 64-step interface in four 16-step bars with live playhead tracking. Tap any step to toggle its gate. The <b>Euclid</b> engine provides instant world rhythm presets (Tresillo, Clave, Bossa Nova, etc.) and algorithmic hit/division blending, plus grid snap and rotation tools.</p>
+  </div>
+  <div class="param">
+    <h3>Groove &amp; Dynamics</h3>
+    <p><b>Humanize</b> introduces micro-timing jitter for organic feel. <b>Swing</b> delays alternate steps, featuring instant groove presets (Straight, Light, MPC, Hard, Triplet) auditioned live and written into FM-1 pattern memory. <b>Velocity</b> sets base loudness and optional randomization.</p>
+  </div>
+  <div class="param">
+    <h3>Pattern Display &amp; Step Locking</h3>
+    <p>Interactive pitch matrix for direct step editing: adjust semitones, clear steps, or lock steps. Locked steps (<code>🔓</code>) survive regeneration and randomization, serving as manual anchors while patterns evolve.</p>
+  </div>
+
+  <h2>Connectivity &amp; Portability</h2>
+  <div class="param">
+    <h3>USB &amp; Bluetooth MIDI</h3>
+    <p>USB MIDI provides full two-way communication: pattern freezing, device BPM sync, and live note streaming. Bluetooth (BLE) MIDI enables wireless playback auditioning (freezing and hardware reads require USB).</p>
+  </div>
+  <div class="param">
+    <h3>Presets &amp; Files</h3>
+    <p>Five internal memory slots (<b>save ▸</b> / <b>◂ load</b>) store workstation states in browser storage. <b>export</b> and <b>import</b> save and restore complete state as reproducible JSON files. <b>sysex</b> downloads raw <code>.syx</code> pattern files for external flashing tools.</p>
+  </div>
+  <div class="param">
+    <h3>Firmware Compatibility</h3>
+    <p>Pattern freezing (SysEx <code>0x20</code>) requires the <b>FM-1+VA / Baud Girl</b> custom firmware. On stock firmware, FM-1 Pulses functions as a real-time generative MIDI performance broadcaster.</p>
   </div>
 
 </div>

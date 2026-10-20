@@ -1,86 +1,137 @@
 <!doctype html>
-<html lang="en" data-theme="purple">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#12101a">
 <title>FM-1 Pulses</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=100">
-<link rel="stylesheet" href="css/rack.css?v=100">
+<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/rack.css?v=1">
 </head>
 <body>
 <div class="case">
   <header class="brand">
-    <h1>FM-1 <b>PULSES</b></h1>
-    <div class="dev">
-      <span class="led" id="led"></span>
-      <span id="devname">no MIDI</span>
+    <div class="brand-left">
+      <button id="btn-back-landing" class="nav-back-btn" title="Return to Sequencer Models" style="display: none;">‹ Models</button>
+      <h1>FM-1 <b>PULSES</b></h1>
+      <span id="brand-mode-tag" class="brand-mode-tag" style="display: none;">Mene311</span>
+    </div>
+    <div class="brand-right">
+      <div class="themebar"><span class="swatches" id="themes"></span></div>
+      <div class="dev">
+        <span class="led" id="led"></span>
+        <span id="devname">no MIDI</span>
+      </div>
     </div>
   </header>
-  <div class="statusrow"><a class="glink" href="guide.html">guide</a><a class="glink" id="export" title="Download the current state (knobs, seed, locks) as JSON — share it, import it later, reproduce the exact bank.">export</a><a class="glink" id="import" title="Load a state JSON file exported from FM-1 Pulses.">import</a><a class="glink" id="syx" title="Download the whole 16-slot bank as a .syx file — the SysEx messages any FM-1 tool can push to the device.">sysex</a><a class="glink" id="ble" title="Connect the FM-1 over Bluetooth MIDI for cable-free playback. Freeze and device reads still need USB.">bluetooth</a><a class="glink" id="tips" title="Show or hide tooltips — turn them off if the hints cover the panel on a phone.">tips on</a><input type="file" id="importfile" accept=".json,application/json" hidden><button class="glink" id="diag" style="display:none" title="Read the FM-1's settings block, show it, and sync the Tempo knob to the device's BPM. Change one thing on the device itself, read again, and the bytes that move are that setting.">read device</button><span id="status" class="status">loading…</span></div>
 
-  <div class="layout">
-    <div class="module">
-      <div class="transport">
-        <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
-        <button id="mute" title="Mute / unmute browser audio (M) — starts muted">🔇</button>
-      </div>
-
-      <div class="presets" id="presets">
-        <button id="gen" title="Derive a fresh bank from a new seed (G)">Generate</button>
-        <button id="rand" title="Random parameters + a new seed">Randomize</button>
-        <div id="preset-slots" class="preset-slots"></div>
-        <button id="freeze" title="Write the selected slot into the FM-1 (F)">Freeze</button>
-        <button id="fill" title="Write all 16 slots into the FM-1">Send 16</button>
-        <button id="clearall" title="Erase all 16 patterns on the FM-1">Clear</button>
-      </div>
-
-      <div class="rack" id="panel"></div>
-      <div class="themebar"><span class="swatches" id="themes"></span></div>
+  <!-- LANDING INTERFACE: Model Selection -->
+  <section id="view-landing" class="view-landing" aria-label="Sequencing Models">
+    <div class="landing-hero">
+      <div class="landing-kicker">FM-1 GENERATIVE WORKSTATION</div>
+      <h2 class="landing-title">Select Sequencing Model</h2>
+      <p class="landing-subtitle">Choose an algorithmic architecture to generate 64-step phrases and freeze them into the M-VAVE FM-1's hardware sequencer memory.</p>
     </div>
 
-    <div class="display">
-      <h2>Pattern <small>slot <b id="selnum">1</b></small> <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
-      <div id="bank" class="bank"></div>
-      <div class="grid-frame">
-        <div class="grid-corner"></div>
-        <div class="col-headers" aria-hidden="true">
-          <span title="Column 1">1</span>
-          <span title="Column 2">2</span>
-          <span title="Column 3">3</span>
-          <span title="Column 4">4</span>
-          <span title="Column 5">5</span>
-          <span title="Column 6">6</span>
-          <span title="Column 7">7</span>
-          <span title="Column 8">8</span>
-        </div>
-        <div class="row-headers" aria-hidden="true">
-          <span title="Row 1 (steps 1–8)">1</span>
-          <span title="Row 2 (steps 9–16)">2</span>
-          <span title="Row 3 (steps 17–24)">3</span>
-          <span title="Row 4 (steps 25–32)">4</span>
-          <span title="Row 5 (steps 33–40)">5</span>
-          <span title="Row 6 (steps 41–48)">6</span>
-          <span title="Row 7 (steps 49–56)">7</span>
-          <span title="Row 8 (steps 57–64)">8</span>
-        </div>
-        <div id="steps" class="steps"></div>
+    <div id="models-grid" class="models-grid"></div>
+
+    <div class="landing-footer">
+      <div class="landing-firmware-note">
+        <span class="note-pill">FIRMWARE</span> SysEx Freeze requires <b>FM-1+VA / Baud Girl</b> firmware. Stock firmware supports live Web Audio &amp; MIDI audition.
       </div>
-      <canvas id="wave" class="wave" height="60"></canvas>
-      <div id="editor" class="editor">
-        <span class="elab">Step <b id="estep">—</b></span>
-        <span id="enote" class="enote">—</span>
-        <button id="edown" title="Lower this step a semitone (locks it)">−</button>
-        <button id="eup" title="Raise this step a semitone (locks it)">+</button>
-        <button id="eclear" title="Empty this step and lock it">✕</button>
-        <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
-        <button id="eclearlocks" title="Forget every locked step">clear locks</button>
-        <span id="lockcount" class="lockcount"></span>
+      <div class="landing-footer-actions">
+        <a class="glink" href="guide.html">guide</a>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- SEQUENCER WORKSPACE: Shared Statusrow & Global Settings Bar -->
+  <section id="view-workspace" class="view-workspace view-traditional" style="display: none;" aria-label="Sequencer Workspace">
+    <div class="statusrow">
+      <a class="glink glink-model" id="link-models" href="#models" title="Return to sequencer models">‹ models</a>
+      <a class="glink" href="guide.html">guide</a>
+      <a class="glink" id="export" title="Download the current state (knobs, seed, locks) as JSON — share it, import it later, reproduce the exact bank.">export</a>
+      <a class="glink" id="import" title="Load a state JSON file exported from FM-1 Pulses.">import</a>
+      <a class="glink" id="syx" title="Download the whole 16-slot bank as a .syx file — the SysEx messages any FM-1 tool can push to the device.">sysex</a>
+      <a class="glink" id="ble" title="Connect the FM-1 over Bluetooth MIDI for cable-free playback. Freeze and device reads still need USB.">bluetooth</a>
+      <a class="glink" id="tips" title="Show or hide tooltips — turn them off if the hints cover the panel on a phone.">tips on</a>
+      <input type="file" id="importfile" accept=".json,application/json" hidden>
+      <button class="glink" id="diag" style="display:none" title="Read the FM-1's settings block, show it, and sync the Tempo knob to the device's BPM. Change one thing on the device itself, read again, and the bytes that move are that setting.">read device</button>
+      <span id="status" class="status">loading…</span>
+    </div>
+
+    <!-- GLOBAL SETTINGS BAR (Full Width above all other controls) -->
+    <div class="sect global-bar" id="global-bar" aria-label="Global Settings">
+      <h3>Global</h3>
+      <div class="global-bar-body">
+        <div class="global-ops">
+          <div class="transport global-transport">
+            <button id="audition" title="Loop the selected slot (Space)">▶ Play</button>
+            <button id="mute" title="Mute / unmute browser audio (M) — starts muted">🔇</button>
+          </div>
+          <div class="presets global-presets" id="presets">
+            <div id="preset-slots" class="preset-slots"></div>
+            <button id="freeze" title="Write the pattern into the FM-1 (F)">Freeze</button>
+            <button id="clearall" title="Erase pattern on the FM-1">Clear</button>
+          </div>
+        </div>
+        <div class="global-controls" id="global-controls"></div>
+      </div>
+    </div>
+
+    <!-- NOTES CONTROLS (Full-Width Key, Scale, Quantize & Octave Spread) -->
+    <div class="sect notes-bar" id="notes-bar" aria-label="Notes Controls"></div>
+
+    <!-- RHYTHM CONTROLS (Full-Width Euclid & Rhythm Tools) -->
+    <div class="sect rhythm-bar" id="rhythm-bar" aria-label="Rhythm Controls"></div>
+
+    <!-- GROOVE ROW (Horizontally Adjacent Humanise & Velocity) -->
+    <div class="humanise-velocity-row" id="humanise-velocity-bar" aria-label="Humanise and Velocity Controls"></div>
+
+    <!-- SEQUENCE (Full-Width 16x4 Step Buttons Grid) -->
+    <div class="sect sequence-bar" id="sequence" aria-label="Sequence"></div>
+
+    <!-- MODEL 1: MENE311 SEQUENCER -->
+    <div id="model-traditional" class="model-view" style="display: none;">
+      <div class="layout">
+        <div class="module">
+          <div class="rack" id="panel"></div>
+        </div>
+
+        <div class="display">
+          <h2>Pattern <small id="bufinfo"></small> <small id="loopinfo"></small></h2>
+          <canvas id="wave" class="wave" height="60"></canvas>
+          <div id="editor" class="editor">
+            <span class="elab">Step <b id="estep">—</b></span>
+            <span id="enote" class="enote">—</span>
+            <button id="edown" title="Lower this step a semitone (locks it)">−</button>
+            <button id="eup" title="Raise this step a semitone (locks it)">+</button>
+            <button id="eclear" title="Empty this step and lock it">✕</button>
+            <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
+            <button id="eclearlocks" title="Forget every locked step">clear locks</button>
+            <span id="lockcount" class="lockcount"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODEL 2: CELLULAR AUTOMATA SEQUENCER -->
+    <div id="model-cellular" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/cellular.js -->
+    </div>
+
+    <!-- MODEL 3: TURING MACHINE SEQUENCER -->
+    <div id="model-turing" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/turing.js -->
+    </div>
+
+    <!-- MODEL 4: PARTICLES (ORCA / PLINKY COLLISION SIMULATOR) -->
+    <div id="model-particles" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/particles.js -->
+    </div>
+  </section>
 </div>
-<script type="module" src="js/rack.js?v=100"></script>
+<script type="module" src="js/rack.js?v=1"></script>
 </body>
 </html>

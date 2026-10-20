@@ -26,6 +26,7 @@ export const SCALES = {
   augmented: [0, 3, 4, 7, 8, 11],
   inSen: [0, 1, 5, 7, 10],
   hijaz: [0, 1, 4, 5, 7, 8, 10],
+  custom: [0, 3, 5, 7, 10],
 };
 
 export const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -188,7 +189,7 @@ function skew(v, bias) {
 }
 
 // ---- quantize a note value to a scale, `strength` = snap probability ----
-function quantize(note, scale, root, strength, rng) {
+export function quantize(note, scale, root, strength = 1, rng = () => 0) {
   const n = Math.round(note);
   if (rng() > strength) return n;
   // Nearest note of the scale in ANY octave: for each degree take its closest
@@ -197,7 +198,8 @@ function quantize(note, scale, root, strength, rng) {
   // nearest degree is C (0, one semitone up) dropped a full octave: 59 -> 48
   // instead of 60. Ties go to the higher note.
   let best = null, bestD = 99;
-  for (const iv of scale) {
+  const sc = (scale && scale.length > 0) ? scale : [0];
+  for (const iv of sc) {
     const cand = root + iv + 12 * Math.round((n - root - iv) / 12);
     const d = Math.abs(cand - n);
     if (d < bestD || (d === bestD && best != null && cand > best)) { bestD = d; best = cand; }
@@ -224,12 +226,14 @@ export function generate(params) {
   const gravRng = mulberry32((params.seed ^ 0x27d4eb2f) >>> 0); // separate stream: root gravity must not shift pitch draws
   const loopRng = mulberry32((params.seed ^ 0x2545f491) >>> 0); // separate stream: the loop must not shift pitch draws
   const snapRng = mulberry32((params.seed ^ 0x165667b1) >>> 0); // separate stream: grid snap must not shift pitch draws
-  const scale = SCALES[params.scale] || SCALES.pentMinor;
+  const scale = (params.scale === "custom" && params.customScale)
+    ? params.customScale
+    : (SCALES[params.scale] || SCALES.pentMinor);
   const len = clamp(params.length || 64, 1, 64);
   const amp = (params.lfoAmp ?? 50) / 100;
   const offset = (params.lfoOffset ?? 0) / 100;         // -1..1
   const center = params.root;                            // notes swing around the root
-  const span = 36;                                      // semitones of swing
+  const span = (Number(params.pitchSpan ?? 3) || 3) * 12; // semitones of swing (1-4 octaves)
   const wave = params.lfoWave || "sine";
   const isRandom = wave === "random";
   const shapeAmt = Math.min(1, Math.max(0, (params.lfoShape ?? 0) / 100));
@@ -251,17 +255,27 @@ export function generate(params) {
   // (Legacy: gateMode "euclid" = blend 100.)
   const blend = Math.min(1, Math.max(0,
     (params.gateBlend ?? (params.gateMode === "euclid" ? 100 : 0)) / 100));
-  const loopLen0 = Math.round(params.loop || 0);
-  const divSetting = params.euclidDiv;
-  const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
-    ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
-    : Math.max(2, blend > 0 && loopLen0 >= 2 ? loopLen0 : 16);
-  const N = blend > 0 ? Math.max(0, Math.min(M, Math.round(gateProb * M))) : 0;
+  const mode = params.euclidMode || "hits";
+  const rot = ((params.euclidRot ?? 0) % len + len) % len;
   let eMask = null;
   if (blend > 0) {
-    eMask = euclid(N, M);
-    const rot = ((params.euclidRot ?? 0) % M + M) % M;
-    if (rot) eMask = [...eMask.slice(rot), ...eMask.slice(0, rot)];
+    eMask = new Array(len).fill(0);
+    if (mode === "hits") {
+      // Hits mode: activates a step every n steps
+      const n = Math.max(1, Math.min(64, Math.round(Number(params.euclidHits) || 4)));
+      for (let i = 0; i < len; i++) {
+        if (((i - rot) % n + n) % n === 0) {
+          eMask[i] = 1;
+        }
+      }
+    } else {
+      // Div mode: activates a step every (sequence length)/div
+      const div = Math.max(1, Math.min(64, Math.round(Number(params.euclidDiv) || 16)));
+      const baseMask = euclid(div, len);
+      for (let i = 0; i < len; i++) {
+        eMask[i] = baseMask[(i - rot + len * 100) % len];
+      }
+    }
   }
   const loopStart = Math.max(0, Math.round(params.loopFrom ?? 1) - 1);  // 1-based in the UI, 0-based here
   const loopLen = Math.round(params.loop || 0);                 // motif length in steps (0 = off)
@@ -287,8 +301,8 @@ export function generate(params) {
     const active = i < len && (blend <= 0
       ? rng() < gateProb
       : blend >= 1
-        ? eMask[i % M] === 1
-        : (rng() < blend ? eMask[i % M] === 1 : rng() < gateProb));
+        ? eMask[i] === 1
+        : (rng() < blend ? eMask[i] === 1 : rng() < gateProb));
     gates[i] = active ? 1 : 0;
 
     // Pitch source — the LFO free-runs every step (the design: the clock
@@ -372,60 +386,10 @@ export const LFO_RATES = [1, 2, 4, 8, 16, 32, 64];
 export const SPREADS = ["constant", "bell", "uniform", "extremes"];
 
 /**
- * generateBank(base, driftPct) -> 16 patterns.
- *
- * All 16 are derived from `base.seed` (so the bank is reproducible) but the
- * character parameters *evolve* across them: slot 0 is the base, slot 15 is
- * drifted furthest along a seeded direction. Notes are quantised to the same
- * scale/root, so the bank reads as one evolving idea rather than 16 randoms.
+ * generateBank(base) -> [pattern]
+ * Generates a single pattern bank without 15 variants.
  */
-export function generateBank(base, driftPct = 50) {
-  const drift = Math.max(0, Math.min(100, driftPct)) / 100;
-  const seed = base.seed >>> 0;
-  const r = mulberry32(seed ^ 0x9e3779b9);
-  // seeded drift direction per parameter
-  const dir = {
-    gateProb: r() < 0.5 ? -1 : 1,
-    gateBlend: r() < 0.5 ? -1 : 1,
-    lfoAmp: r() < 0.5 ? -1 : 1,
-    bias: r() < 0.5 ? -1 : 1,
-    lfoOffset: r() < 0.5 ? -1 : 1,
-    lfoRate: r() < 0.5 ? -1 : 1,
-    lfoShape: r() < 0.5 ? -1 : 1,
-    spread: r() < 0.5 ? -1 : 1,
-    humanize: r() < 0.5 ? -1 : 1,
-    octave: r() < 0.5 ? -1 : 1,
-    gravity: r() < 0.5 ? -1 : 1,
-    gateQuant: r() < 0.5 ? -1 : 1,
-    euclidRot: r() < 0.5 ? -1 : 1,
-  };
-  const spreadIdx0 = Math.max(0, SPREADS.indexOf(base.spread));
-
-  const bank = [];
-  for (let i = 0; i < 16; i++) {
-    const t = (i / 15) * drift;                 // 0 .. drift
-    const p = {
-      ...base,
-      // 16 DISTINCT generations, all derived from the one seed (so the bank is
-      // reproducible). Drift is the optional evolution on top: at 0% the 16 are
-      // 16 fresh takes on the same parameters; higher, the parameters themselves
-      // move from slot 1 to slot 16.
-      seed: (seed + i * 0x9e3779b1) >>> 0,
-      gateProb: clamp(base.gateProb + dir.gateProb * t * 40, 5, 100),
-      gateBlend: clamp((base.gateBlend ?? 0) + dir.gateBlend * t * 30, 0, 100),
-      lfoAmp: clamp(base.lfoAmp + dir.lfoAmp * t * 35, 0, 100),
-      bias: clamp(base.bias + dir.bias * t * 55, -100, 100),
-      lfoOffset: clamp(base.lfoOffset + dir.lfoOffset * t * 40, -100, 100),
-      lfoRate: clamp(+(base.lfoRate * (1 + dir.lfoRate * t * 0.75)).toFixed(1), 1, 16),
-      lfoShape: clamp((base.lfoShape ?? 0) + dir.lfoShape * t * 30, 0, 100),
-      spread: SPREADS[clamp(spreadIdx0 + Math.round(dir.spread * t * 2), 0, SPREADS.length - 1)],
-      humanize: clamp((base.humanize ?? 0) + dir.humanize * t * 45, 0, 100),
-      octave: clamp((base.octave ?? 0) + dir.octave * t * 25, 0, 100),   // gentle: octave jumps get busy fast
-      gravity: clamp((base.gravity ?? 0) + dir.gravity * t * 30, 0, 100),
-      gateQuant: clamp((base.gateQuant ?? 0) + dir.gateQuant * t * 25, 0, 100),   // gentle
-      euclidRot: (base.euclidRot ?? 0) + Math.round(dir.euclidRot * t * 6),
-    };
-    bank.push(generate(p));
-  }
-  return bank;
+export function generateBank(base) {
+  return [generate(base)];
 }
+

@@ -1,6 +1,6 @@
 // scope.js — Canvas wave and trigger scope visualization.
-import { state, getBank, getSelected } from "./state.js?v=100";
-import { midiName } from "./generator.js?v=100";
+import { state, getBank, getSelected } from "./state.js";
+import { midiName } from "./generator.js";
 
 const SCOPE_PADT = 14, SCOPE_PADB = 16, SCOPE_PADX = 20;
 let scopeNow = null;
@@ -23,8 +23,15 @@ export function renderScope() {
   }
   const ctx = cv.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const styles = getComputedStyle(document.documentElement);
+  const bgColor = styles.getPropertyValue("--panel2").trim() || "#22252e";
+  const fgColor = styles.getPropertyValue("--fg").trim() || "#f3f4f6";
+  const dimColor = styles.getPropertyValue("--dim").trim() || "#9ca3af";
+  const lineColor = styles.getPropertyValue("--line").trim() || "#333846";
+  const accent = styles.getPropertyValue("--accent").trim() || "#3b82f6";
+
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0b0b0e";
+  ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, w, h);
 
   const n = 64;
@@ -43,14 +50,14 @@ export function renderScope() {
   const X = (i) => SCOPE_PADX + i / (n - 1) * (w - 2 * SCOPE_PADX);
 
   // C-octave reference lines + labels (left)
-  ctx.font = "8px 'Barlow Semi Condensed', sans-serif";
+  ctx.font = "9px system-ui, -apple-system, sans-serif";
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
   for (let c = Math.ceil(lo / 12) * 12; c <= hi; c += 12) {
-    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(SCOPE_PADX, Y(c) + 0.5); ctx.lineTo(w - 4, Y(c) + 0.5); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillStyle = dimColor;
     ctx.fillText(midiName(c), 3, Y(c));
   }
 
@@ -58,7 +65,7 @@ export function renderScope() {
   const cycles = Math.max(0.1, Math.min(16, state.lfoRate || 4));
   const isRandom = state.lfoWave === "random";
   const div = Math.max(isRandom ? 1 : 2.5, p.length / cycles);
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.strokeStyle = lineColor;
   ctx.setLineDash([2, 3]);
   for (let x = div; x < p.length; x += div) {
     ctx.beginPath(); ctx.moveTo(X(x) + 0.5, SCOPE_PADT); ctx.lineTo(X(x) + 0.5, h - SCOPE_PADB); ctx.stroke();
@@ -69,14 +76,15 @@ export function renderScope() {
   const ls = Math.max(0, Math.round(state.loopFrom ?? 1) - 1);
   const ln = Math.round(state.loop ?? 0);
   if (ln >= 2 && ls + ln <= p.length) {
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillStyle = lineColor;
+    ctx.globalAlpha = 0.35;
     ctx.fillRect(X(ls), SCOPE_PADT, X(ls + ln) - X(ls), h - SCOPE_PADT - SCOPE_PADB);
-    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = dimColor;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(ls) + 0.5, SCOPE_PADT); ctx.lineTo(X(ls) + 0.5, h - SCOPE_PADB); ctx.stroke();
   }
 
-  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8a33d";
   // Contour: full accent inside the phrase, dimmed past its length
   ctx.strokeStyle = accent;
   ctx.lineWidth = 1.5;
@@ -110,7 +118,7 @@ export function renderScope() {
 
   // Played notes: stem from the contour, dot at the quantized pitch
   for (const [i, nt] of played) {
-    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.strokeStyle = dimColor;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(X(i), Y(cont[i] ?? nt)); ctx.lineTo(X(i), Y(nt)); ctx.stroke();
     ctx.fillStyle = accent;
@@ -125,33 +133,33 @@ export function renderScope() {
     const gated = p.gates?.[i] === 1;
     const on = p.steps[i]?.notes.length;
     if (!gated && !on) continue;
-    ctx.fillStyle = on ? accent : "rgba(255,255,255,0.22)";
+    ctx.fillStyle = on ? accent : lineColor;
     ctx.fillRect(X(i) - bw / 2 + 0.5, laneY + 2, Math.max(1, bw - 1), laneH - 2);
   }
 
   // Playhead
   if (scopeNow != null) {
-    ctx.strokeStyle = "#ececf0";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = fgColor;
+    ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(X(scopeNow) + 0.5, SCOPE_PADT); ctx.lineTo(X(scopeNow) + 0.5, h - 2); ctx.stroke();
   }
   // Hover guide
   if (scopeHover != null) {
-    ctx.strokeStyle = "rgba(236,236,240,0.45)";
+    ctx.strokeStyle = dimColor;
     ctx.beginPath(); ctx.moveTo(X(scopeHover) + 0.5, SCOPE_PADT); ctx.lineTo(X(scopeHover) + 0.5, h - 2); ctx.stroke();
   }
 
   // Labels: wave · cycles · div | hover readout | lo/hi notes
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
-  ctx.fillStyle = "#9a9aa2";
-  ctx.font = "9px 'Barlow Semi Condensed', sans-serif";
+  ctx.fillStyle = dimColor;
+  ctx.font = "10px system-ui, -apple-system, sans-serif";
   ctx.fillText(`${state.lfoWave ?? "sine"} · ${cycles} cyc · div ${div.toFixed(1)}`, 4, 2);
   if (scopeHover != null) {
     const i = scopeHover;
     const gated = i < p.length && p.gates?.[i] === 1;
     const nt = i < p.length && p.steps[i]?.notes.length ? p.steps[i].notes[0].note : null;
-    ctx.fillStyle = "#ececf0";
+    ctx.fillStyle = fgColor;
     ctx.fillText(`step ${i + 1}: ${midiName(cont[i] ?? 0)}${nt != null ? " → " + midiName(nt) : gated ? " (gated, no note)" : " (rest)"}`, 150, 2);
   }
   ctx.textAlign = "right";

@@ -2,24 +2,41 @@
 import {
   state, DEFAULT, refs, R, setState, RATE_NAMES, SLOTS, status,
   doGenerate, scheduleRegen, onRegen, onTempoProbe,
-  getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend
-} from "./state.js?v=100";
-import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js?v=100";
-import { renderBank, renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=100";
-import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=100";
-import { doFreeze, doSendAll, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js?v=100";
-import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js?v=100";
-import { buildTheme } from "./themes.js?v=100";
-import { initScope, renderScope } from "./scope.js?v=100";
-import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js?v=100";
-import * as midi from "./midi.js?v=100";
-import * as audio from "./audio.js?v=100";
+  getSelected, setSelected, getBank, getPrevGateBlend, setPrevGateBlend,
+  getCurrentModelRandomizer, refreshLoopInfo
+} from "./state.js";
+
+export { refreshLoopInfo };
+import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
+import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=1";
+import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=1";
+import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
+import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
+import { buildTheme } from "./themes.js";
+import { initScope, renderScope } from "./scope.js";
+import { initModes, getActiveModel } from "./modes.js";
+import { SCALES, LFO_WAVES, midiName, classicName } from "./generator.js";
+import { createNotesSection } from "./scale.js?v=1";
+import { createHumaniseSection } from "./humanise.js?v=1";
+import { createVelocitySection } from "./velocity.js?v=1";
+import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=1";
+import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=1";
+import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=1";
+import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
+import * as midi from "./midi.js";
+import * as audio from "./audio.js";
+
+let traditionalNotesSection = null;
+let traditionalHumaniseSection = null;
+let traditionalVelocitySection = null;
 
 // Register hooks
 onRegen(() => {
-  applyLocks();
-  renderBank();
-  renderBuffer();
+  if (getActiveModel() === "traditional") {
+    applyLocks();
+    renderBuffer();
+    syncRhythmGrid();
+  }
 });
 
 onTempoProbe(() => {
@@ -56,29 +73,13 @@ export function refreshLoopRanges() {
   refreshLoopInfo();
 }
 
-export function refreshLoopInfo() {
-  const el = document.getElementById("loopinfo");
-  if (!el) return;
-  const L = Math.max(3, Math.round(state.length || 64));
-  const a = Math.round(refs.loopFrom?.value ?? 1);
-  const n = Math.round(refs.loop?.value ?? 8);
-  const reps = (L - a + 1) / n;
-  const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
-  if (state.gateBlend > 0) {
-    const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
-    const divSetting = state.euclidDiv;
-    const M = (divSetting && divSetting !== "auto" && !isNaN(Number(divSetting)))
-      ? Math.max(2, Math.min(32, Math.round(Number(divSetting))))
-      : Math.max(2, n >= 2 ? n : 16);
-    const N = Math.max(0, Math.min(M, Math.round((state.gateProb ?? 70) / 100 * M)));
-    const rot = ((state.euclidRot ?? 0) % M + M) % M;
-    const classic = classicName(N, M);
-    el.textContent = `${loopTxt} · E(${N},${M})${classic ? " (" + classic + ")" : ""}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
-  } else el.textContent = loopTxt;
-}
+
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
+  if (traditionalNotesSection) traditionalNotesSection.sync();
+  if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
+  if (traditionalVelocitySection) traditionalVelocitySection.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -86,6 +87,11 @@ export function syncRack() {
 }
 
 export function randomize() {
+  const modelRnd = getCurrentModelRandomizer();
+  if (modelRnd) {
+    modelRnd();
+    return;
+  }
   state.seed = (Math.random() * 1e9) | 0;
   Object.assign(state, {
     scale: Object.keys(SCALES)[(Math.random() * Object.keys(SCALES).length) | 0],
@@ -119,121 +125,137 @@ function sect(title, span, kids) {
   return s;
 }
 
+export function buildGlobalBar() {
+  const container = document.getElementById("global-controls");
+  if (!container) return;
+  container.innerHTML = "";
+  container.append(
+    R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
+      onDblClick: () => {
+        syncDeviceTempo().then((held) => {
+          status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
+        });
+      },
+      tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
+    R("seed", seedControl({
+      label: "Pattern",
+      value: state.seed,
+      onInput: (v) => { state.seed = v; scheduleRegen(); },
+      onRandomize: () => { randomize(); },
+      tip: "Randomise pattern and seed (R or G)"
+    })),
+    R("rate", dropdown({
+      label: "Note",
+      options: RATE_NAMES.map((t, v) => ({ v, t })),
+      value: state.rate,
+      onInput: (v) => {
+        state.rate = Number(v);
+        refreshLoopRanges();
+        scheduleRegen();
+      },
+      tip: "Step note value"
+    })),
+    R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
+      format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); syncRhythmGrid(); },
+      tip: "Pattern length in steps (1 to 64)." })),
+    R("gate", knob({ label: "Gate Len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate, size: "sm",
+      format: (v) => `${Math.round(v)}%`, onInput: setState("gate"),
+      tip: "Gate length: duration of each note as a percentage of step time." }))
+  );
+}
+
+export function buildGrooveBar() {
+  const container = document.getElementById("humanise-velocity-bar");
+  if (!container) return;
+  container.innerHTML = "";
+
+  traditionalHumaniseSection = createHumaniseSection({
+    title: "Humanise",
+    humanizeKey: "humanize",
+    swingKey: "swing",
+    span: 0,
+    onChange: () => {
+      scheduleRegen();
+    }
+  });
+
+  traditionalVelocitySection = createVelocitySection({
+    title: "Velocity",
+    span: 0,
+    onChange: () => {
+      scheduleRegen();
+    }
+  });
+
+  container.append(traditionalHumaniseSection.sectEl, traditionalVelocitySection.sectEl);
+}
+
+export function buildNotesBar() {
+  const container = document.getElementById("notes-bar");
+  if (!container) return;
+
+  traditionalNotesSection = createNotesSection({
+    container,
+    title: "Notes",
+    scaleKey: "scale",
+    customScaleKey: "customScale",
+    rootKey: "root",
+    rootNoteKey: "rootNote",
+    rootOctaveKey: "rootOctave",
+    pitchSpanKey: "pitchSpan",
+    defaultPitchSpan: 3,
+    quantKey: "quantSteps",
+    octaveKey: "octave",
+    octaveModeKey: "octaveMode",
+    defaultOctave: 4,
+    scaleLabel: "Scale",
+    isFullWidth: true,
+    badgeText: "Key & Scale",
+    onChange: () => {
+      // Mirror to ca*, turing*, and particle*
+      state.caScale = state.scale;
+      state.turingScale = state.scale;
+      state.particleScale = state.scale;
+      state.caCustomScale = state.customScale;
+      state.turingCustomScale = state.customScale;
+      state.particleCustomScale = state.customScale;
+      state.caRoot = state.root;
+      state.turingRoot = state.root;
+      state.particleRoot = state.root;
+      state.caRootNote = state.rootNote;
+      state.turingRootNote = state.rootNote;
+      state.particleRootNote = state.rootNote;
+      state.caRootOctave = state.rootOctave;
+      state.turingRootOctave = state.rootOctave;
+      state.particleRootOctave = state.rootOctave;
+      state.caPitchSpan = state.pitchSpan;
+      state.caOctaves = state.pitchSpan;
+      state.turingSpan = state.pitchSpan;
+      state.particleOctaves = state.pitchSpan;
+      if (refs.turingSpan?.setValue) refs.turingSpan.setValue(state.pitchSpan, false);
+      state.caQuantSteps = state.quantSteps;
+      state.turingQuantSteps = state.quantSteps;
+      state.particleQuantSteps = state.quantSteps;
+      state.caOctave = state.octave;
+      state.turingOctave = state.octave;
+      state.particleOctave = state.octave;
+      state.caOctaveMode = state.octaveMode;
+      state.turingOctaveMode = state.octaveMode;
+      state.particleOctaveMode = state.octaveMode;
+
+      scheduleRegen();
+    }
+  });
+}
+
 export function buildRack() {
+  buildGlobalBar();
   const panel = document.getElementById("panel");
   if (!panel) return;
+  panel.innerHTML = "";
 
   panel.append(
-    sect("Global", 6, [
-      R("tempo", knob({ label: "Tempo", min: 30, max: 300, value: state.tempo, def: DEFAULT.tempo, size: "md",
-        format: (v) => `${Math.round(v)}`, onInput: setState("tempo"),
-        onDblClick: () => {
-          syncDeviceTempo().then((held) => {
-            status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
-          });
-        },
-        tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
-      R("drift", knob({ label: "Drift", min: 0, max: 100, value: state.drift, def: DEFAULT.drift, size: "md",
-        format: (v) => `${Math.round(v)}%`, onInput: setState("drift"),
-        tip: "Bank evolution: how much parameters mutate across slots 1 to 16. 0% = all slots share identical settings; higher = parameters progressively drift across the bank." })),
-      R("seed", seedControl({ label: "Seed", value: state.seed, onInput: (v) => { state.seed = v; scheduleRegen(); }, tip: "Pattern seed (numeric or text)" })),
-      R("rate", dropdown({ label: "Note", options: RATE_NAMES.map((t, v) => ({ v, t })), value: state.rate, onInput: (v) => { state.rate = Number(v); refreshLoopRanges(); scheduleRegen(); }, tip: "Step note value" })),
-      R("length", knob({ label: "Length", min: 1, max: 64, value: state.length, def: DEFAULT.length, size: "sm",
-        format: (v) => `${Math.round(v)}`, onInput: (v) => { state.length = v; refreshLoopRanges(); scheduleRegen(); },
-        tip: "Pattern length in steps (1 to 64)." })),
-    ]),
-
-    (() => {
-      const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
-      const blank = () => span(document.createElement("div"), 2);
-
-      return sect("Rhythm", 6, [
-        span(R("gateProb", fader({ label: "Gate", min: 0, max: 100, value: state.gateProb, def: DEFAULT.gateProb,
-          format: (v) => `${Math.round(v)}%`,
-          onInput: (v) => { state.gateProb = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "random mode: chance each step fires. euclid mode: the DENSITY — Gate % becomes N hits evenly spaced over the cycle (see the loop info line)." })), 4),
-        blank(),
-
-        span(R("gateBlend", fader({ label: "Euclid", min: 0, max: 100, value: state.gateBlend, def: DEFAULT.gateBlend,
-          format: (v) => v <= 0 ? "random" : v >= 100 ? "euclid" : `${Math.round(v)}%`,
-          checkbox: {
-            value: state.gateBlend <= 0,
-            tip: "Random override: checked = random (0%); unchecked = restore Euclid %",
-            onInput: (checked) => {
-              if (checked) {
-                if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
-                state.gateBlend = 0;
-                refs.gateBlend.setValue(0);
-                refreshLoopInfo();
-                scheduleRegen();
-                status("Euclid overridden to random (0%)");
-              } else {
-                const restored = getPrevGateBlend() > 0 ? getPrevGateBlend() : 100;
-                state.gateBlend = restored;
-                refs.gateBlend.setValue(restored);
-                refreshLoopInfo();
-                scheduleRegen();
-                status(`Euclid restored to ${Math.round(restored)}%`);
-              }
-            }
-          },
-          onInput: (v) => {
-            state.gateBlend = v;
-            if (v > 0) setPrevGateBlend(v);
-            refs.gateBlend?.setCheckbox(v <= 0);
-            refreshLoopInfo();
-            scheduleRegen();
-          },
-          tip: "Gradient between random placement (0%) and even Euclidean spacing (100%). In between, each step rolls which law it follows — Gate % is the density either way." })), 4),
-        span(R("euclidDiv", dropdown({
-          label: "Division",
-          options: [
-            { v: "auto", t: "Auto" },
-            { v: "16", t: "16" },
-            { v: "12", t: "12" },
-            { v: "8", t: "8" },
-            { v: "7", t: "7" },
-            { v: "6", t: "6" },
-            { v: "5", t: "5" },
-            { v: "4", t: "4" },
-            { v: "3", t: "3" },
-          ],
-          value: state.euclidDiv || "auto",
-          onInput: (v) => { state.euclidDiv = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "Euclidean pattern cycle division (total steps per cycle)",
-          labelPos: "right"
-        })), 2),
-
-        span(R("euclidRot", fader({ label: "Rotate", min: 0, max: 15, step: 1, value: state.euclidRot, def: DEFAULT.euclidRot,
-          format: (v) => `${Math.round(v)}`,
-          onInput: (v) => { state.euclidRot = v; refreshLoopInfo(); scheduleRegen(); },
-          tip: "Rotates the Euclidean hit pattern within its cycle (wraps). Only affects the euclid side of the gradient." })), 4),
-        blank(),
-
-        span(R("gateQuant", fader({ label: "Grid snap", min: 0, max: 100, value: state.gateQuant, def: DEFAULT.gateQuant,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("gateQuant"), tip: "Grid snap: probability a note survives only if it lands on a grid line." })), 4),
-        span(R("snapGrid", dropdown({
-          label: "Snap Grid",
-          options: [2, 3, 4, 5, 6, 7, 8].map((n) => ({ v: n, t: String(n) })),
-          value: state.snapGrid,
-          onInput: (v) => { state.snapGrid = Number(v); scheduleRegen(); },
-          tip: "Grid spacing in steps for the grid snap probability",
-          labelPos: "right"
-        })), 2),
-
-        span(R("gate", fader({ label: "Gate len", min: 5, max: 100, value: state.gate, def: DEFAULT.gate,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("gate"), tip: "Gate length: duration of each note as a percentage of step time." })), 4),
-        blank(),
-
-        span(R("humanize", fader({ label: "Humanize", min: 0, max: 100, value: state.humanize, def: DEFAULT.humanize,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("humanize"), tip: "Adds subtle timing jitter to make playback feel human." })), 4),
-        blank(),
-
-        span(R("swing", fader({ label: "Swing", min: 50, max: 75, value: state.swing, def: DEFAULT.swing,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("swing"), tip: "Delays every other step. 50% is straight, 75% is triplet (2:1)." })), 4),
-        blank(),
-      ]);
-    })(),
 
     (() => {
       const span = (el, cols) => { el.style.gridColumn = `span ${cols}`; return el; };
@@ -241,19 +263,6 @@ export function buildRack() {
       const hr = () => span(document.createElement("hr"), 6);
 
       return sect("Shape", 6, [
-        span(R("root", fader({ label: "Root", min: 24, max: 84, value: state.root, def: DEFAULT.root,
-          format: (v) => midiName(v), onInput: setState("root"), tip: "Scale root note (MIDI pitch). At Amp 0 every note lands on Offset." })), 4),
-        span(R("scale", dropdown({ label: "Scale", options: Object.keys(SCALES).map((s) => ({ v: s, t: s })), value: state.scale, onInput: (v) => { state.scale = v; scheduleRegen(); }, tip: "Musical scale for pitch quantization", labelPos: "right" })), 2),
-
-        span(R("quantSteps", fader({ label: "Quantize", min: 0, max: 100, value: state.quantSteps, def: DEFAULT.quantSteps,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("quantSteps"),
-          tip: "Scale snap strength: probability notes lock to the chosen scale. 100% = strictly in-key; lower allows raw, out-of-scale chromatic pitches." })), 4),
-        blank(),
-
-        span(R("octave", fader({ label: "Octave Spread", min: 0, max: 100, value: state.octave, def: DEFAULT.octave,
-          format: (v) => `${Math.round(v)}%`, onInput: setState("octave"), tip: "Chance of shifting a note by one octave (Up, Down, or Both)." })), 4),
-        span(R("octaveMode", dropdown({ label: "Oct Spread", options: [{ v: "up", t: "Up" }, { v: "down", t: "Down" }, { v: "both", t: "Both" }], value: state.octaveMode, onInput: (v) => { state.octaveMode = v; scheduleRegen(); }, tip: "Octave spread direction: Up (+12 st), Down (-12 st), or Both (±12 st).", labelPos: "right" })), 2),
-
         span(R("gravity", fader({ label: "Root grav", min: 0, max: 100, value: state.gravity, def: DEFAULT.gravity,
           format: (v) => `${Math.round(v)}%`, onInput: setState("gravity"), tip: "Pulls pitches towards the root note." })), 4),
         blank(),
@@ -279,45 +288,6 @@ export function buildRack() {
         span(R("bias", fader({ label: "Bias", min: -100, max: 100, value: state.bias, def: DEFAULT.bias,
           format: (v) => `${Math.round(v)}`, onInput: setState("bias"), tip: "Pitch distribution bias: negative favors lower notes, positive favors higher." })), 4),
         span(R("spread", dropdown({ label: "Spread", options: ["constant", "bell", "uniform", "extremes"].map((s) => ({ v: s, t: s })), value: state.spread, onInput: (v) => { state.spread = v; scheduleRegen(); }, tip: "Pitch distribution spread", labelPos: "right" })), 2),
-
-        span(R("velocity", fader({ label: "Velocity", min: 1, max: 127, value: state.velocity, def: DEFAULT.velocity,
-          format: (v) => `${Math.round(v)}`,
-          onInput: setState("velocity"),
-          tip: "Base note velocity (1-127)."
-        })), 4),
-        span(R("randVelAmt", fader({ label: "Rnd Amt", min: 0, max: 100, value: state.randVelAmt ?? 0, def: DEFAULT.randVelAmt ?? 0,
-          format: (v) => `${Math.round(v)}%`,
-          onInput: setState("randVelAmt"),
-          tip: "Intensity of velocity randomisation.",
-          checkbox: { label: "Rnd", value: state.randVel, tip: "Enable random velocity variation", onInput: (v) => { state.randVel = v; scheduleRegen(); } }
-        })), 4),
-        span((() => {
-          const wrap = document.createElement("div");
-          wrap.className = "vel-bounds-wrap";
-          wrap.append(
-            R("velMin", knob({
-              label: "Min",
-              min: 1,
-              max: 127,
-              value: state.velMin ?? 1,
-              def: DEFAULT.velMin ?? 1,
-              size: "sm",
-              onInput: (v) => { state.velMin = Number(v); scheduleRegen(); },
-              tip: "Lower bound for velocity randomisation (1–127)"
-            })),
-            R("velMax", knob({
-              label: "Max",
-              min: 1,
-              max: 127,
-              value: state.velMax ?? 127,
-              def: DEFAULT.velMax ?? 127,
-              size: "sm",
-              onInput: (v) => { state.velMax = Number(v); scheduleRegen(); },
-              tip: "Upper bound for velocity randomisation (1–127)"
-            }))
-          );
-          return wrap;
-        })(), 2),
       ]);
     })(),
 
@@ -360,8 +330,6 @@ export function buildRack() {
 }
 
 function buildTransport() {
-  document.getElementById("gen")?.addEventListener("click", () => doGenerate(true));
-  document.getElementById("rand")?.addEventListener("click", randomize);
   document.getElementById("audition")?.addEventListener("click", toggleLive);
   buildAudioControls();
   document.getElementById("export")?.addEventListener("click", exportState);
@@ -410,7 +378,6 @@ function buildTransport() {
   }
 
   document.getElementById("freeze")?.addEventListener("click", () => doFreeze(getSelected()));
-  document.getElementById("fill")?.addEventListener("click", doSendAll);
   document.getElementById("clearall")?.addEventListener("click", doClearAll);
   document.getElementById("diag")?.addEventListener("click", dumpGset);
   renderPresets();
@@ -419,26 +386,21 @@ function buildTransport() {
 // Global keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  if (e.code === "Space") { e.preventDefault(); toggleLive(); }
+  if (e.code === "Space") { e.preventDefault(); toggleLive(); return; }
   if (e.key === "m" || e.key === "M") {
     const muteBtn = document.getElementById("mute");
     const m = !audio.isMuted();
     audio.setMuted(m);
     if (muteBtn) muteBtn.textContent = m ? "🔇" : "🔊";
     status(m ? "browser audio muted" : "browser audio on");
+    return;
   }
+  if (e.key === "r" || e.key === "R" || e.key === "g" || e.key === "G") {
+    randomize();
+    return;
+  }
+  if (getActiveModel() !== "traditional") return;
   if (e.key === "f" || e.key === "F") doFreeze(getSelected());
-  if (e.key === "g" || e.key === "G") doGenerate(true);
-  if (e.key === "ArrowRight") {
-    setSelected((getSelected() + 1) % SLOTS);
-    renderBank();
-    renderBuffer();
-  }
-  if (e.key === "ArrowLeft") {
-    setSelected((getSelected() + SLOTS - 1) % SLOTS);
-    renderBank();
-    renderBuffer();
-  }
 });
 
 // Tab visibility re-sync
@@ -475,10 +437,52 @@ window.addEventListener("resize", () => { fitSteps(); renderScope(); });
 // Application Bootstrap
 buildTheme();
 buildRack();
+buildNotesBar();
+buildGrooveBar();
 refreshLoopRanges();
 buildTransport();
 buildEditor();
 initScope();
+initRhythm(document.getElementById("rhythm-bar"), document.getElementById("sequence"));
+initCellular();
+initTuring();
+initParticles();
 doGenerate(true);
 initMidi();
+initModes({
+  onEnterModel: (modelId) => {
+    if (traditionalNotesSection) traditionalNotesSection.sync();
+    if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
+    if (traditionalVelocitySection) traditionalVelocitySection.sync();
+    if (modelId === "traditional") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      fitSteps();
+      renderScope();
+      renderBuffer();
+      syncRhythmGrid();
+    } else if (modelId === "cellular") {
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      activateCellularModel();
+    } else if (modelId === "turing") {
+      deactivateCellularModel();
+      deactivateParticlesModel();
+      activateTuringModel();
+    } else if (modelId === "particles") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      activateParticlesModel();
+    }
+  },
+  onLeaveModel: () => {
+    if (isLive()) {
+      stopLive();
+    }
+    deactivateCellularModel();
+    deactivateTuringModel();
+    deactivateParticlesModel();
+  }
+});
 setTimeout(applyTips, 0);

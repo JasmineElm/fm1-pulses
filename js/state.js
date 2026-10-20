@@ -1,9 +1,9 @@
 // state.js — Central state, parameter definitions, and shared references.
-import { generateBank } from "./generator.js?v=100";
+import { generateBank, classicName } from "./generator.js";
 
 export const RATE_NAMES = ["1/1", "1/2", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"];
 export const RATE_QUARTERS = [4, 2, 1, 2 / 3, 0.5, 1 / 3, 0.25, 1 / 6, 0.125, 1 / 12];
-export const SLOTS = 16;
+export const SLOTS = 1;
 export const PRESET_N = 5;
 export const STATE_VERSION = 1;
 
@@ -11,13 +11,70 @@ export const DEFAULT = {
   randVel: false,
   randVelAmt: 0,
   seed: (Math.random() * 1e9) | 0,
-  drift: 50,
   length: 64, rate: 6, tempo: 120, swing: 50, gate: 50,
   gateProb: 70, velocity: 100, velMin: 1, velMax: 127, humanize: 0, gateQuant: 0, snapGrid: 4,
-  gateBlend: 0, euclidRot: 0, euclidDiv: "auto",
-  scale: "pentMinor", root: 60,
+  gateBlend: 0, euclidRot: 0, euclidDiv: "16", euclidHits: 4, euclidMode: "hits",
+  scale: "pentMinor",
+  customScale: [0, 3, 5, 7, 10],
+  root: 60,
+  rootNote: 0,
+  rootOctave: 4,
+  pitchSpan: 3,
   lfoWave: "sine", lfoShape: 0, lfoAmp: 50, lfoOffset: 0, lfoRate: 4, octave: 0, octaveMode: "up", gravity: 0, unipolar: false,
   spread: "uniform", bias: 0, quantSteps: 100, dejaVu: 0, loop: 8, loopFrom: 1,
+
+  // Cellular Automata model parameters
+  caRule: 30,
+  caGenesis: "center",
+  caBoundary: "wrap",
+  caMapping: "matrix",
+  caNoteRule: "closest",
+  caScale: "pentMinor",
+  caCustomScale: [0, 3, 5, 7, 10],
+  caRoot: 48,
+  caRootNote: 0,
+  caRootOctave: 3,
+  caOctaves: 3,
+  caQuantSteps: 100,
+  caOctave: 0,
+  caOctaveMode: "up",
+  caMinVel: 30,
+  caMaxVel: 120,
+  caDensity: 85,
+  caInitDensity: 35,
+  caVelocity: 100,
+
+  // Turing Machine model parameters
+  turingLength: 16,
+  turingProb: 0,
+  turingSpan: 2,
+  turingDacBits: 8,
+  turingScale: "pentMinor",
+  turingCustomScale: [0, 3, 5, 7, 10],
+  turingRoot: 48,
+  turingRootNote: 0,
+  turingRootOctave: 3,
+  turingQuantSteps: 100,
+  turingOctave: 0,
+  turingOctaveMode: "up",
+  turingSlip: 0,
+
+  // Particle Simulator model parameters
+  particleGridSize: 16,
+  particleCollisionMode: "deflect",
+  particleChildLife: 16,
+  particleMaxCount: 20,
+  particleBoundary: "reflect",
+  particleWallNotes: false,
+  particleNoteRule: "x-pitch-y-oct",
+  particleOctaves: 3,
+  particlePolyphony: 2,
+  particleScale: "pentMinor",
+  particleCustomScale: [0, 3, 5, 7, 10],
+  particleRoot: 48,
+  particleRootNote: 0,
+  particleRootOctave: 3,
+  particleLoopMode: "loop",
 };
 
 export const state = { ...DEFAULT };
@@ -41,6 +98,30 @@ export function status(msg, cls = "") {
   if (el) { el.textContent = msg; el.className = "status " + cls; }
 }
 
+export function refreshLoopInfo() {
+  const el = document.getElementById("loopinfo");
+  if (!el) return;
+  const L = Math.max(3, Math.round(state.length || 64));
+  const a = Math.round(refs.loopFrom?.value ?? state.loopFrom ?? 1);
+  const n = Math.round(refs.loop?.value ?? state.loop ?? 8);
+  const reps = (L - a + 1) / n;
+  const loopTxt = n >= 2 && a + n - 1 <= L ? `loop ${a}–${a + n - 1} ×${reps.toFixed(1)}` : "loop off";
+  if (state.gateBlend > 0) {
+    const blend = Math.min(100, Math.max(0, state.gateBlend ?? 0)) / 100;
+    const mode = state.euclidMode || "hits";
+    const rot = ((state.euclidRot ?? 0) % L + L) % L;
+    let info = "";
+    if (mode === "hits") {
+      const hitsVal = Math.max(1, Math.round(Number(state.euclidHits) || 4));
+      info = `every ${hitsVal}st`;
+    } else {
+      const divVal = Math.max(1, Math.round(Number(state.euclidDiv) || 16));
+      info = `div ${divVal}`;
+    }
+    el.textContent = `${loopTxt} · ${info}${rot ? " rot " + rot : ""}${blend < 1 ? " @" + Math.round(blend * 100) + "%" : ""}`;
+  } else el.textContent = loopTxt;
+}
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Register a control under its state key; set(..., false) keeps it silent on sync
@@ -62,19 +143,41 @@ export function triggerRegenHooks() {
   for (const fn of onRegenCallbacks) fn();
 }
 
-export function doGenerate(newSeed = false) {
+let currentModelGenerator = null;
+export function setModelGenerator(fn) {
+  currentModelGenerator = fn;
+}
+
+let currentModelRandomizer = null;
+export function setModelRandomizer(fn) {
+  currentModelRandomizer = fn;
+}
+
+export function getCurrentModelRandomizer() {
+  return currentModelRandomizer;
+}
+
+export function doGenerate(newSeed = true) {
   if (newSeed) state.seed = (Math.random() * 1e9) | 0;
   refs.seed?.setValue(state.seed, false);
-  bank = generateBank(state, state.drift);
+  if (currentModelGenerator) {
+    bank = currentModelGenerator(state);
+  } else {
+    bank = generateBank(state);
+  }
   triggerRegenHooks();
-  status(`16 slots · seed ${state.seed >>> 0}`);
+  status(`pattern · seed ${state.seed >>> 0}`);
 }
 
 let regenTimer = null;
 export function scheduleRegen() {
   clearTimeout(regenTimer);
   regenTimer = setTimeout(() => {
-    bank = generateBank(state, state.drift);
+    if (currentModelGenerator) {
+      bank = currentModelGenerator(state);
+    } else {
+      bank = generateBank(state);
+    }
     triggerRegenHooks();
   }, 40);
   for (const fn of onTempoProbeCallbacks) fn();
