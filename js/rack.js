@@ -22,6 +22,7 @@ import { createVelocitySection } from "./velocity.js?v=1";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=1";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=1";
 import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=1";
+import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
@@ -447,6 +448,7 @@ initRhythm(document.getElementById("rhythm-bar"), document.getElementById("seque
 initCellular();
 initTuring();
 initParticles();
+initDxPatch();
 doGenerate(true);
 initMidi();
 initModes({
@@ -474,6 +476,12 @@ initModes({
       deactivateCellularModel();
       deactivateTuringModel();
       activateParticlesModel();
+    } else if (modelId === "dxpatch") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      if (isLive()) stopLive();
+      activateDxPatch();
     }
   },
   onLeaveModel: () => {
@@ -483,6 +491,7 @@ initModes({
     deactivateCellularModel();
     deactivateTuringModel();
     deactivateParticlesModel();
+    deactivateDxPatch();
   }
 });
 setTimeout(applyTips, 0);

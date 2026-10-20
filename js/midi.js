@@ -4,6 +4,7 @@
 // sequencer is playing, so we read the reply after each message and surface it.
 // We can also READ the device's memory (SysEx 0x11) to check what it stored.
 import { ysum } from "./pattern.js";
+import { encodeSingleVoiceSysex, encodeBankSysex } from "./dx7.js";
 
 let access = null;
 
@@ -271,4 +272,37 @@ export function bleSendNoteOn(note, vel, channel = 1) {
 }
 export function bleSendNoteOff(note, channel = 1) {
   return bleSend(new Uint8Array([0x80 | ((channel - 1) & 0x0F), note & 0x7F, 0]));
+}
+
+// --------------------------------------------------------------------------- //
+// DX7 Voice & Bank SysEx Transmission
+// --------------------------------------------------------------------------- //
+
+export async function sendVoicePatch(patch, channel = 0) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const sysex = encodeSingleVoiceSysex(patch, channel);
+  out.send(sysex);
+  return { portName: out.name, byteLength: sysex.length };
+}
+
+export async function sendBankPatch(patches, channel = 0, onProgress = null) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const sysex = encodeBankSysex(patches, channel);
+  const chunkSize = 128;
+  for (let offset = 0; offset < sysex.length; offset += chunkSize) {
+    const slice = sysex.subarray(offset, Math.min(offset + chunkSize, sysex.length));
+    out.send(slice);
+    if (onProgress) onProgress(Math.min(1.0, (offset + slice.length) / sysex.length));
+    if (offset + chunkSize < sysex.length) await sleep(6);
+  }
+  return { portName: out.name, byteLength: sysex.length };
+}
+
+export function playHardwareNote(note = 60, vel = 100, durationMs = 500, channel = 1) {
+  sendNoteOn(note, vel, channel);
+  setTimeout(() => {
+    sendNoteOff(note, channel);
+  }, durationMs);
 }

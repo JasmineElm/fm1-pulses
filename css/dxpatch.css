@@ -1,0 +1,567 @@
+/* css/dxpatch.css — DX Patch Generator workbench styling for FM-1 Pulses */
+
+.view-dxpatch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: landingFadeIn 0.2s ease-out;
+}
+
+.dxpatch-workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 220px;
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .dxpatch-workspace {
+    grid-template-columns: 260px 1fr;
+  }
+  .dxpatch-panel-right {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .dxpatch-workspace {
+    grid-template-columns: 1fr;
+  }
+  .dxpatch-panel-right {
+    grid-column: span 1;
+  }
+}
+
+/* Panel Containers */
+.dxpatch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dxpatch-card {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.dxpatch-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dxpatch-heading {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.dxpatch-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--fg);
+}
+
+.dxpatch-card-hint {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+/* Form Controls */
+.dxpatch-field-label {
+  display: block;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--dim);
+  margin: 6px 0 3px;
+}
+
+.dxpatch-select,
+.dxpatch-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: 11.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 5px 8px;
+  border-radius: 3px;
+  outline: none;
+}
+
+.dxpatch-select:focus,
+.dxpatch-input:focus {
+  border-color: var(--accent);
+}
+
+.dxpatch-slider-row {
+  margin: 6px 0;
+}
+
+.dxpatch-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.dxpatch-mono-val {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+
+.dxpatch-range {
+  width: 100%;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  outline: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.dxpatch-btn-block {
+  width: 100%;
+  margin: 4px 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  background: var(--panel);
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dxpatch-btn-block:hover {
+  background: var(--line);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dxpatch-btn-block.primary {
+  background: color-mix(in srgb, var(--accent) 20%, var(--panel));
+  border-color: var(--accent);
+  color: var(--fg);
+}
+.dxpatch-btn-block.primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.dxpatch-btn-block.warning {
+  background: color-mix(in srgb, #f59e0b 15%, var(--panel));
+  border-color: #f59e0b;
+}
+.dxpatch-btn-block.warning:hover {
+  background: #f59e0b;
+  color: #000;
+}
+
+.dxpatch-btn-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.dxpatch-btn-sm {
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.dxpatch-btn-sm:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dxpatch-file-drop {
+  border: 1px dashed var(--line);
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+  display: block;
+  margin-top: 6px;
+  transition: border-color 0.15s;
+}
+.dxpatch-file-drop:hover,
+.dxpatch-file-drop.dragover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Voice Header Card */
+.dxpatch-voice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.dxpatch-title-group {
+  flex: 2 1 180px;
+}
+
+.dxpatch-micro-label {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+
+.dxpatch-name-input {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.dxpatch-param-pill {
+  flex: 1 1 80px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 6px;
+}
+
+.dxpatch-pill-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dxpatch-pill-control input[type="number"] {
+  width: 38px;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font: 700 12px ui-monospace, monospace;
+  outline: none;
+}
+
+.dxpatch-pill-control .unit {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+/* Visualizer Grid */
+.dxpatch-viz-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+@media (max-width: 900px) {
+  .dxpatch-viz-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dxpatch-alg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#dxpatch-alg-canvas {
+  width: 100%;
+  height: 125px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+#dxpatch-env-canvas {
+  width: 100%;
+  height: 125px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.dxpatch-alg-meta {
+  font-size: 9.5px;
+  color: var(--dim);
+  line-height: 1.4;
+}
+
+.dxpatch-alg-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.dxpatch-badge {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.badge-carrier {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-mod {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-fb {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+/* 6-Operator Table */
+.dxpatch-ops-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dxpatch-ops-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+  font-size: 10px;
+  text-align: center;
+}
+
+.dxpatch-ops-table th {
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dxpatch-ops-table td {
+  padding: 3px 1px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+  white-space: nowrap;
+}
+
+.dxpatch-ops-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.op-num-input {
+  width: 26px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: 10px ui-monospace, monospace;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 2px;
+  outline: none;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+.op-num-input::-webkit-outer-spin-button,
+.op-num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.op-num-input:focus {
+  border-color: var(--accent);
+}
+
+.op-mode-select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: 8.5px ui-monospace, monospace;
+  padding: 1px;
+  border-radius: 2px;
+  width: 38px;
+  box-sizing: border-box;
+}
+
+.ratio-readout {
+  font-size: 9.5px;
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.op-cell-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.op-disabled td {
+  opacity: 0.35;
+}
+
+/* Piano Keyboard */
+.dxpatch-keyboard-wrap {
+  position: relative;
+  height: 80px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  user-select: none;
+  margin-top: 6px;
+}
+
+.piano-key-white {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: calc(100% / 15);
+  height: 100%;
+  background: var(--fg);
+  color: var(--bg);
+  border-right: 1px solid var(--line);
+  font-size: 8px;
+  font-weight: 700;
+  padding-bottom: 4px;
+  cursor: pointer;
+  float: left;
+  box-sizing: border-box;
+  transition: background 0.1s, color 0.1s;
+}
+.piano-key-white:hover,
+.piano-key-white.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.piano-key-black {
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: 58%;
+  background: var(--bg);
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 0 0 2px 2px;
+  font-size: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  z-index: 2;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.1s, color 0.1s;
+}
+.piano-key-black:hover,
+.piano-key-black.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 32-Voice Bank List */
+.dxpatch-bank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 2px;
+  background: var(--panel);
+}
+
+.dxpatch-bank-list .bank-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  color: var(--fg);
+}
+
+.dxpatch-bank-list .bank-slot:hover {
+  background: var(--panel2);
+}
+
+.dxpatch-bank-list .bank-slot.active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel2));
+  border-left-color: var(--accent);
+  font-weight: 700;
+}
+
+.dxpatch-bank-list .slot-idx {
+  color: var(--dim);
+  font-size: 8.5px;
+  width: 14px;
+}
+
+.dxpatch-bank-list .slot-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.5px;
+}
+
+.dxpatch-bank-list .slot-meta {
+  color: var(--dim);
+  font-size: 8px;
+}
