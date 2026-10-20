@@ -485,13 +485,17 @@ initModes({
     }
   },
   onLeaveModel: () => {
-    if (isLive()) {
-      stopLive();
+    try {
+      if (isLive()) {
+        stopLive();
+      }
+    } catch (e) {
+      console.warn("Error stopping live audio:", e);
     }
-    deactivateCellularModel();
-    deactivateTuringModel();
-    deactivateParticlesModel();
-    deactivateDxPatch();
+    try { deactivateCellularModel(); } catch (e) { console.warn("Error deactivating cellular model:", e); }
+    try { deactivateTuringModel(); } catch (e) { console.warn("Error deactivating turing model:", e); }
+    try { deactivateParticlesModel(); } catch (e) { console.warn("Error deactivating particles model:", e); }
+    try { deactivateDxPatch(); } catch (e) { console.warn("Error deactivating dxpatch model:", e); }
   }
 });
 setTimeout(applyTips, 0);
