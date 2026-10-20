@@ -464,9 +464,15 @@ function drawAlgorithmCanvas(algInfo) {
     rows[depth[op]].push(op);
   }
 
-  const pos = {};
-  const padY = 22;
+  // Adaptive box sizing and vertical padding based on tree depth
+  const boxW = 26;
+  const boxH = maxDepth >= 4 ? 14 : 18;
+  const halfW = boxW / 2;
+  const halfH = boxH / 2;
+  const padY = maxDepth >= 4 ? 14 : 20;
   const usableH = h - padY * 2;
+
+  const pos = {};
   for (let d = 0; d <= maxDepth; d++) {
     const rowOps = rows[d];
     const y = maxDepth === 0 ? h / 2 : h - padY - (d / maxDepth) * usableH;
@@ -476,27 +482,76 @@ function drawAlgorithmCanvas(algInfo) {
     });
   }
 
-  // Draw modulation connection lines
-  ctx.strokeStyle = "rgba(156, 163, 175, 0.4)";
+  // Draw modulation connection lines using right-angled connectors
+  ctx.strokeStyle = "rgba(156, 163, 175, 0.65)";
   ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
   for (const [modStr, targets] of Object.entries(algInfo.connections)) {
-    const from = pos[Number(modStr)];
+    const fromOp = Number(modStr);
+    const from = pos[fromOp];
+    if (!from || !targets || !targets.length) continue;
+
+    const fromBottom = from.y + halfH;
+
     for (const t of targets) {
       const to = pos[t];
+      if (!to) continue;
+      const toTop = to.y - halfH;
+
       ctx.beginPath();
-      ctx.moveTo(from.x, from.y + 9);
-      ctx.lineTo(to.x, to.y - 9);
+      if (Math.abs(from.x - to.x) < 2) {
+        // Direct vertical connector
+        ctx.moveTo(from.x, fromBottom);
+        ctx.lineTo(to.x, toTop);
+      } else {
+        // Right-angled orthogonal connector: drop to midpoint, traverse horizontally, drop to target top
+        const midY = fromBottom + (toTop - fromBottom) * 0.5;
+        ctx.moveTo(from.x, fromBottom);
+        ctx.lineTo(from.x, midY);
+        ctx.lineTo(to.x, midY);
+        ctx.lineTo(to.x, toTop);
+      }
+      ctx.stroke();
+
+      // Downward arrowhead at target entry
+      const arrowH = 3.5;
+      const arrowW = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(to.x - arrowW, toTop - arrowH);
+      ctx.lineTo(to.x, toTop);
+      ctx.lineTo(to.x + arrowW, toTop - arrowH);
       ctx.stroke();
     }
   }
 
-  // Draw feedback loop
+  // Draw feedback loop using right-angled rectangular loop
   const fbPos = pos[algInfo.feedback_op];
   if (fbPos) {
-    ctx.strokeStyle = "rgba(168, 85, 247, 0.85)";
+    ctx.strokeStyle = "rgba(168, 85, 247, 0.95)";
     ctx.lineWidth = 1.6;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    const xR = fbPos.x + halfW;
+    const yT = fbPos.y - halfH;
+    const loopRight = Math.min(w - 6, xR + 7);
+    const loopTop = Math.max(4, yT - 7);
+
     ctx.beginPath();
-    ctx.arc(fbPos.x + 13, fbPos.y - 6, 8, 0, Math.PI * 2);
+    ctx.moveTo(xR, fbPos.y);
+    ctx.lineTo(loopRight, fbPos.y);
+    ctx.lineTo(loopRight, loopTop);
+    ctx.lineTo(fbPos.x, loopTop);
+    ctx.lineTo(fbPos.x, yT);
+    ctx.stroke();
+
+    // Downward arrowhead at feedback entry
+    ctx.beginPath();
+    ctx.moveTo(fbPos.x - 2.5, yT - 3.5);
+    ctx.lineTo(fbPos.x, yT);
+    ctx.lineTo(fbPos.x + 2.5, yT - 3.5);
     ctx.stroke();
   }
 
@@ -506,17 +561,17 @@ function drawAlgorithmCanvas(algInfo) {
     const { x, y } = pos[op];
     const isCarr = carrierSet.has(op);
 
-    ctx.fillStyle = isCarr ? "rgba(34, 197, 94, 0.2)" : "rgba(245, 158, 11, 0.2)";
+    ctx.fillStyle = isCarr ? "rgba(34, 197, 94, 0.22)" : "rgba(245, 158, 11, 0.22)";
     ctx.strokeStyle = isCarr ? "#22c55e" : "#f59e0b";
     ctx.lineWidth = 1.8;
 
     ctx.beginPath();
-    ctx.roundRect(x - 13, y - 9, 26, 18, 4);
+    ctx.roundRect(x - halfW, y - halfH, boxW, boxH, 3);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = isCarr ? "#86efac" : "#fde68a";
-    ctx.font = "bold 10px monospace";
+    ctx.font = `bold ${boxH < 16 ? 9 : 10}px monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(`OP${op}`, x, y);
