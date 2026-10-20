@@ -1,90 +1,96 @@
 # FM-1 Pulses
 
-Browser-based generative MIDI sequencer for the **M-VAVE FM-1** (6-op FM synth).
-Vanilla JS + Web MIDI API + PWA. No server, no build step, no dependencies.
+Browser-based generative MIDI workstation for the **M-VAVE FM-1** (6-operator FM synthesizer). Built with vanilla JavaScript, Web MIDI, Web Audio, and PWA standards. Zero dependencies, no build steps, and no server required.
 
-**▶ Live:** https://mene311.github.io/fm1-pulses/
+**▶ Live App:** https://mene311.github.io/fm1-pulses/
 
-**Firmware:** the freeze path (pattern write, SysEx `0x20`) exists only on the
-**FM-1+VA / Baud Girl** firmware — stock firmware has no pattern-write SysEx.
-On any firmware the app still works as a live MIDI broadcaster (▶ Play and
-morph in real time).
+---
 
-**Signal chain:** Clock → Gate Probability → S&H → LFO → Distribution → Quantizer → MIDI out → Buffer (Loop + Deja Vu).
+## Overview
 
-## Quick start
+FM-1 Pulses generates evolving 64-step musical phrases and freezes them directly into the hardware sequencer memory of the M-VAVE FM-1 via MIDI SysEx. Once frozen, the FM-1 plays standalone without a computer. The workstation also functions as a live generative MIDI performance broadcaster, complete with a built-in browser FM synthesizer for cable-free auditioning.
 
-It is a **sequence generator**: shape the randomness, generate a 64-step phrase,
-and **freeze** it into one of the FM-1's 16 sequencer patterns. Once frozen the
-FM-1 plays it standalone — the browser is not needed.
+### Sequencer Models
+
+FM-1 Pulses includes four distinct algorithmic sequencing engines accessible from the model selection hub:
+
+- **Mene311 (Stochastic)**: An analog-inspired generative signal chain combining Sample & Hold, continuous LFO waveshaping, Gaussian distribution weighting, scale quantization, and a looping Deja-Vu buffer.
+- **Turing Machine**: A shift-register melody generator inspired by the Music Thing Modular Turing Machine. Circulating bit registers mutate probabilistically, moving between locked repetitive loops and gradual melodic drift.
+- **Cellular Automata**: An emergent step generator powered by one-dimensional elementary cellular automata (Wolfram Rules 30, 90, 110, and 150), producing organic, evolving fractal patterns across generations.
+- **Particles**: A 2D kinetic collision engine inspired by Orca and Plinky. Autonomous directional playheads traverse an interactive surface, rebounding off boundaries and deflector nodes to trigger musical notes on collisions.
+
+---
+
+## Shared Architecture
+
+All sequencer models operate within a unified modular workstation environment:
+
+- **64-Step Sequence Grid**: An interactive 16×4 step grid with individual step locking, micro-adjustments, active playhead tracking, and manual gate toggling.
+- **Harmonics & Scale Quantizer**: 20 scale presets plus a chromatic custom scale editor, root note selection, scale snap quantization, and directional octave spread.
+- **Rhythm & Euclidean Engine**: Algorithmic gate generator featuring classic world rhythm presets (Tresillo, Cinquillo, Clave, Bossa Nova, etc.), variable Euclidean density, grid snap, and rotation.
+- **Groove & Dynamics**: Micro-timing humanize jitter, velocity randomization, and a swing engine with hardware-compatible presets (Straight, Light, MPC, Hard, Triplet).
+- **Dual Auditioning**: Real-time MIDI transmission alongside a built-in multi-voice Web Audio synthesizer with selectable timbres (Electric Piano, Bell, Bass, Organ, Square).
+- **Hardware Integration**: Bidirectional USB MIDI communication, automatic hardware BPM sync, and Bluetooth (BLE) wireless MIDI support.
+- **Presets & Storage**: Five quick-recall browser storage slots, reproducible JSON state export/import, and raw `.syx` SysEx file export.
+- **Skeuomorphic Interface**: Eurorack-inspired design with color themes decoded directly from the FM-1 firmware's `BGTHEME` table.
+
+---
+
+## Quick Start
+
+Web MIDI requires a secure origin (`https://` or `localhost`):
 
 ```bash
-python3 -m http.server 8080   # Web MIDI needs a secure context (https or localhost)
+python3 -m http.server 8080
 ```
 
-1. Connect the FM-1 via USB and allow the MIDI permission prompt.
-2. Pick **FM-1** in the device dropdown → status turns green.
-3. Set your parameters → **Generate ⟳** → **16 distinct sequencers** appear, one
-   per FM-1 slot. All 16 are **derived from the one Seed** (16 fresh takes on the
-   same parameters, so the bank is reproducible), and you tap a slot to view it.
-4. **Drift** is the evolution on top: at **0%** the 16 share the parameters and
-   differ only by generation; raise it and the parameters themselves move across
-   the bank (slot 1 → slot 16) — more/less amplitude, bias, density, LFO speed…
-5. Click a slot in the bank to see its 64-step grid → **Freeze → FM-1** (or `F`)
-   writes just that one, or **Send all 16** writes the whole bank. **Clear all 16**
-   writes empty patterns over the whole bank, wiping the device's sequencer (it asks
-   first, and leaves the browser bank alone).
+1. Open `http://localhost:8080` in Chrome, Edge, or any Web MIDI-enabled browser.
+2. Connect the FM-1 via USB and grant MIDI access when prompted.
+3. Select an engine from the **Sequencing Models** hub.
+4. Tweak parameters or press **Randomise** (or `R` / `G`) to roll a new pattern.
+5. Click **▶ Play** (or `Space`) to audition live through the browser synth and FM-1.
+6. Click **Freeze** (or `F`) to write the active 64-step pattern into the FM-1's sequencer.
 
-`←` / `→` move between slots. **Randomize** rolls a new seed + parameters;
-**Generate** re-derives the bank from the current seed.
-
-> ### ⚠ Caveat: the FM-1's own sequencer must be **stopped**
+> ### ⚠ Firmware & Hardware Caveats
 >
-> The firmware **refuses** a pattern write while its sequencer is playing:
-> SysEx `0x20` comes back `status 3` — *"the Sequencer is playing; stop it and
-> send again"*. So before freezing, turn **SEQ off** (or STOP) on the device.
-> The app reads the reply and shows this if a freeze is refused.
-> (`status 1` = value out of range, `2` = damaged in transit.)
+> - **Firmware Requirement**: Pattern write (`SysEx 0x20`) is implemented in the **FM-1+VA / Baud Girl** custom firmware. Stock firmware does not support pattern writes over SysEx, but functions with live MIDI auditioning.
+> - **Sequencer Must Be Stopped**: The FM-1 refuses SysEx writes while its internal sequencer is actively running. Turn **SEQ off** on the device before freezing.
+> - **Bluetooth MIDI**: BLE supports wireless live performance playback. Device reads and pattern freezing require a wired USB connection.
 
-Auditioning is the **▶ Play** button: it **loops** the selected slot, and keeps
-looping. It plays through a **small built-in FM synth in the browser** *and* sends
-MIDI to the FM-1 — so you hear it even with no device attached (the **🔊** button
-mutes the browser side only). Clicking a bank slot previews that slot once.
-Because the sliders re-derive the bank
-in real time, you can **morph the sound while it plays** — change Scale, Gate,
-Bias, Drift… and the loop follows on the next step. That makes it a live
-generative broadcaster: plug in the FM-1, hit Play, and tweak. Press **■ Stop**
-(or Space) to end. This path is unaffected by the freeze caveat.
+---
 
-## Docs
-
-- `DESIGN.md` — full design: modules, signal chain, defaults, UI layout.
-- `GOTCHAS.md` — known pitfalls (MIDI timing, BLE latency, tab throttling) and mitigations.
-
-## Scale presets
-
-`presets/scales.json` holds the 20 scale presets. Schema:
-
-```json
-{ "id": "dorian", "name": "Dorian", "intervals": [0, 2, 3, 5, 7, 9, 10] }
-```
-
-`intervals` are semitone offsets from the root note (C = 0). The `custom` entry has
-empty `intervals` — the user fills it via the chromatic toggle grid (persisted to localStorage).
-
-## Structure
+## Project Structure
 
 ```
-index.html, manifest.json, sw.js, css/style.css
-js/pattern.js    — the SysEx 0x20 encoder (byte-verified vs Virtual-FM-1's codec)
-js/generator.js  — LFO → distribution → quantizer → gate → grid snap → Loop
-js/midi.js       — Web MIDI: find FM-1, send pattern (reads the reply), notes
-js/app.js        — UI wiring: controls, step grid, theme menu, freeze/audition
-presets/scales.json
+├── index.html          # Main application markup & model hub
+├── guide.html          # Comprehensive interactive user guide
+├── manifest.json       # PWA manifest
+├── sw.js               # Service worker for offline use
+├── css/
+│   ├── style.css       # Core layout & base styling
+│   └── rack.css        # Skeuomorphic Eurorack styling & themes
+├── js/
+│   ├── rack.js         # Master UI coordinator & lifecycle wiring
+│   ├── modes.js        # Sequencer model manager & landing view
+│   ├── generator.js    # Mene311 stochastic generation engine
+│   ├── turing.js       # Turing Machine shift-register model
+│   ├── cellular.js     # Cellular Automata Wolfram rule engine
+│   ├── particles.js    # 2D kinetic particle collision engine
+│   ├── rhythm.js       # 64-step grid & Euclidean rhythm generator
+│   ├── scale.js        # Scale quantizer & pitch controls
+│   ├── humanise.js     # Micro-timing jitter & swing engine
+│   ├── velocity.js     # Velocity dynamics & range controls
+│   ├── pattern.js      # FM-1 SysEx 0x20 pattern encoder/decoder
+│   ├── device.js       # Hardware communication & tempo sync
+│   ├── midi.js         # Web MIDI & Web Bluetooth BLE interface
+│   ├── audio.js        # Internal Web Audio audition synthesizer
+│   └── storage.js      # Preset slots, JSON & SysEx file export
+└── presets/
+    └── scales.json     # Scale interval definitions
 ```
 
-## Status
+---
 
-**Working** — generate a 16-slot bank → freeze → the FM-1 plays it standalone.
-Live-MIDI audition works too. Themes are the FM-1's own seven (decoded from its
-firmware's `BGTHEME` table).
+## Documentation
+
+For a full breakdown of every parameter, knob behavior, and shortcut, consult the in-app **[User Guide](guide.html)** (`guide.html`) or access it directly via the top navigation bar.
