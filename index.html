@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=4">
-<link rel="stylesheet" href="css/dxpatch.css?v=6">
+<link rel="stylesheet" href="css/dxpatch.css?v=7">
 </head>
 <body>
 <div class="case">
@@ -374,12 +374,17 @@
           <div class="dxpatch-card">
             <div class="dxpatch-card-header">
               <span class="dxpatch-card-title">Operator Envelopes (R1–R4 / L1–L4)</span>
-              <span class="dxpatch-card-hint">
-                <span style="color:#22c55e;">● Carrier</span> &nbsp;
-                <span style="color:#f59e0b;">● Modulator</span>
-              </span>
+              <div class="dxpatch-env-op-selectors" id="dxpatch-env-op-selectors" role="group" aria-label="Select Operator Envelope">
+                <button type="button" class="dxpatch-op-sel-btn" data-op="all" title="Show all operator envelopes">ALL</button>
+                <button type="button" class="dxpatch-op-sel-btn active" data-op="1" title="Select OP1 envelope (drag breakpoints to edit)">OP1</button>
+                <button type="button" class="dxpatch-op-sel-btn" data-op="2" title="Select OP2 envelope (drag breakpoints to edit)">OP2</button>
+                <button type="button" class="dxpatch-op-sel-btn" data-op="3" title="Select OP3 envelope (drag breakpoints to edit)">OP3</button>
+                <button type="button" class="dxpatch-op-sel-btn" data-op="4" title="Select OP4 envelope (drag breakpoints to edit)">OP4</button>
+                <button type="button" class="dxpatch-op-sel-btn" data-op="5" title="Select OP5 envelope (drag breakpoints to edit)">OP5</button>
+                <button type="button" class="dxpatch-op-sel-btn" data-op="6" title="Select OP6 envelope (drag breakpoints to edit)">OP6</button>
+              </div>
             </div>
-            <canvas id="dxpatch-env-canvas" width="460" height="125"></canvas>
+            <canvas id="dxpatch-env-canvas" width="460" height="125" title="Click an envelope to select. Drag breakpoints to edit Rate &amp; Level live."></canvas>
           </div>
         </div>
 
@@ -453,6 +458,6 @@
     </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=8"></script>
+<script type="module" src="js/rack.js?v=9"></script>
 </body>
 </html>

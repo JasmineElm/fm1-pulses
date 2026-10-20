@@ -80,6 +80,14 @@ let active = false;
 let bank = new DX7Bank();
 let currentSlot = 1;
 let currentPatch = null;
+let currentAlgInfo = null;
+let selectedEnvOp = 1;
+let hoveredBreakpoint = null;
+let isDraggingBreakpoint = false;
+let draggedBreakpoint = null;
+let lastDrawnPoints = {};
+let envelopeCurves = {};
+let algNodePositions = {};
 let audioPlayer = null;
 let autoSendOnGenerate = true;
 let midiChannel = 0;
@@ -313,6 +321,11 @@ export function initDxPatch() {
   // Keyboard shortcut listener
   window.addEventListener("keydown", handleKeyDown);
 
+  // Operator Envelope & Algorithm canvas interactions
+  initEnvSelectors();
+  initEnvelopeCanvasInteraction();
+  initAlgCanvasInteraction();
+
   // Seed bank and generate initial patch
   populateInitialBank();
   generatePatch();
@@ -505,6 +518,7 @@ function refreshPatchUI() {
   if (lfoPmd) lfoPmd.value = String(patch.lfo.pitch_mod_depth);
 
   const algInfo = getAlgorithm(patch.algorithm);
+  currentAlgInfo = algInfo;
 
   const algDesc = document.getElementById("dxpatch-alg-desc");
   if (algDesc) algDesc.textContent = algInfo.description;
@@ -518,6 +532,7 @@ function refreshPatchUI() {
       algInfo.modulators.length > 0 ? algInfo.modulators.map((m) => `OP${m}`).join(", ") : "None (Pure Additive)";
   }
 
+  updateEnvSelectorButtons(algInfo);
   drawAlgorithmCanvas(algInfo);
   renderOperatorsTable(patch, algInfo);
   drawEnvelopeCanvas(patch, algInfo);
@@ -565,6 +580,7 @@ function drawAlgorithmCanvas(algInfo) {
       pos[op] = { x, y };
     });
   }
+  algNodePositions = pos;
 
   // Draw modulation connection lines using right-angled connectors
   ctx.strokeStyle = "rgba(156, 163, 175, 0.65)";
@@ -644,15 +660,24 @@ function drawAlgorithmCanvas(algInfo) {
   for (let op = 1; op <= 6; op++) {
     const { x, y } = pos[op];
     const isCarr = carrierSet.has(op);
+    const isSelected = selectedEnvOp === op;
 
     ctx.fillStyle = isCarr ? "rgba(34, 197, 94, 0.22)" : "rgba(245, 158, 11, 0.22)";
-    ctx.strokeStyle = isCarr ? "#22c55e" : "#f59e0b";
-    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = isSelected ? (isCarr ? "#86efac" : "#fde68a") : (isCarr ? "#22c55e" : "#f59e0b");
+    ctx.lineWidth = isSelected ? 2.4 : 1.8;
 
     ctx.beginPath();
     ctx.roundRect(x - halfW, y - halfH, boxW, boxH, 3);
     ctx.fill();
     ctx.stroke();
+
+    if (isSelected) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - halfW - 2, y - halfH - 2, boxW + 4, boxH + 4);
+      ctx.restore();
+    }
 
     ctx.fillStyle = isCarr ? "#86efac" : "#fde68a";
     ctx.font = `bold ${boxH < 16 ? 9 : 10}px monospace`;
@@ -671,8 +696,14 @@ function renderOperatorsTable(patch, algInfo) {
   for (let opNum = 6; opNum >= 1; opNum--) {
     const op = patch.op(opNum);
     const isCarr = carrierSet.has(opNum);
+    const isSelected = selectedEnvOp === opNum;
     const tr = document.createElement("tr");
+    tr.dataset.op = String(opNum);
     if (!op.enabled) tr.classList.add("op-disabled");
+    if (isSelected) {
+      tr.classList.add("op-selected");
+      tr.classList.add(isCarr ? "role-carrier" : "role-mod");
+    }
 
     const ratioStr =
       op.osc_mode === 0
@@ -701,6 +732,14 @@ function renderOperatorsTable(patch, algInfo) {
       </td>
       ${numInputsHtml}
     `;
+
+    tr.addEventListener("click", (e) => {
+      if (e.target.dataset.field === "enabled") return;
+      if (selectedEnvOp !== opNum) {
+        setEnvSelectedOp(opNum);
+      }
+    });
+
     tbody.appendChild(tr);
   }
 
@@ -719,60 +758,496 @@ function drawEnvelopeCanvas(patch, algInfo) {
   const canvas = document.getElementById("dxpatch-env-canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+
+  // Keep internal bitmap matched with container width for maximum sharpness
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width > 0 && Math.abs(canvas.width - rect.width) > 1) {
+    canvas.width = Math.round(rect.width);
+  }
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  // Background grid lines
-  ctx.strokeStyle = "rgba(156, 163, 175, 0.1)";
-  ctx.lineWidth = 1;
-  for (let y = 25; y < h; y += 30) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-
-  const carrierSet = new Set(algInfo.carriers);
-  const padX = 14;
-  const padY = 12;
+  const padX = 16;
+  const padY = 14;
   const plotW = w - padX * 2;
   const plotH = h - padY * 2;
 
-  for (let opNum = 6; opNum >= 1; opNum--) {
+  // Background grid lines (25%, 50%, 75% level lines)
+  ctx.strokeStyle = "rgba(156, 163, 175, 0.1)";
+  ctx.lineWidth = 1;
+  for (let l = 1; l <= 3; l++) {
+    const y = h - padY - (l / 4) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(w - padX, y);
+    ctx.stroke();
+  }
+
+  // Bottom baseline (Level 0)
+  ctx.strokeStyle = "rgba(156, 163, 175, 0.24)";
+  ctx.beginPath();
+  ctx.moveTo(padX, h - padY);
+  ctx.lineTo(w - padX, h - padY);
+  ctx.stroke();
+
+  const carrierSet = new Set(algInfo.carriers);
+  const minSeg = 10;
+  const maxSeg = plotW * 0.24;
+  const segW = (rate) => minSeg + (1 - clamp(rate, 0, 99) / 99) * (maxSeg - minSeg);
+  const yVal = (lvl) => h - padY - (clamp(lvl, 0, 99) / 99.0) * plotH;
+
+  envelopeCurves = {};
+  lastDrawnPoints = {};
+
+  // Compute curve points for all operators
+  for (let opNum = 1; opNum <= 6; opNum++) {
     const op = patch.op(opNum);
-    if (!op.enabled) continue;
-
-    const isCarr = carrierSet.has(opNum);
-    const segW = (rate) => Math.max(12, ((100 - rate) / 100) * (plotW * 0.27));
-
     const x0 = padX;
-    const x1 = x0 + segW(op.eg_rate_1);
-    const x2 = x1 + segW(op.eg_rate_2);
-    const x3 = x2 + segW(op.eg_rate_3);
-    const x4 = Math.min(w - padX, x3 + segW(op.eg_rate_4));
-
-    const yVal = (lvl) => h - padY - (lvl / 99.0) * plotH;
     const y0 = yVal(0);
+    const x1 = x0 + segW(op.eg_rate_1);
     const y1 = yVal(op.eg_level_1);
+    const x2 = x1 + segW(op.eg_rate_2);
     const y2 = yVal(op.eg_level_2);
+    const x3 = x2 + segW(op.eg_rate_3);
     const y3 = yVal(op.eg_level_3);
+    const x4 = Math.min(w - padX, x3 + segW(op.eg_rate_4));
     const y4 = yVal(op.eg_level_4);
 
-    ctx.strokeStyle = isCarr ? "#22c55e" : "#f59e0b";
-    ctx.lineWidth = 1.8;
+    envelopeCurves[opNum] = [
+      { x: x0, y: y0 },
+      { x: x1, y: y1 },
+      { x: x2, y: y2 },
+      { x: x3, y: y3 },
+      { x: x4, y: y4 },
+    ];
+  }
+
+  if (selectedEnvOp === "all") {
+    // Mode ALL: render all enabled envelopes equally
+    for (let opNum = 6; opNum >= 1; opNum--) {
+      const op = patch.op(opNum);
+      if (!op.enabled) continue;
+      const pts = envelopeCurves[opNum];
+      const isCarr = carrierSet.has(opNum);
+
+      ctx.strokeStyle = isCarr ? "#22c55e" : "#f59e0b";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i <= 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+
+      ctx.fillStyle = isCarr ? "#86efac" : "#fde68a";
+      ctx.font = "9px monospace";
+      ctx.fillText(`OP${opNum}`, pts[1].x + 2, pts[1].y - 3);
+    }
+
+    drawCanvasHud(ctx, w, padY, "ALL ENVELOPES • Click an OP button or curve to select & edit");
+  } else {
+    // Mode Single OP selected
+    const activeOpNum = Number(selectedEnvOp);
+    const activeOp = patch.op(activeOpNum);
+    const activeIsCarr = carrierSet.has(activeOpNum);
+
+    // 1. Darken / dim other envelopes in the background
+    for (let opNum = 6; opNum >= 1; opNum--) {
+      if (opNum === activeOpNum) continue;
+      const op = patch.op(opNum);
+      if (!op.enabled) continue;
+      const pts = envelopeCurves[opNum];
+      const isCarr = carrierSet.has(opNum);
+
+      ctx.strokeStyle = isCarr ? "rgba(34, 197, 94, 0.18)" : "rgba(245, 158, 11, 0.18)";
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i <= 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+
+      ctx.fillStyle = isCarr ? "rgba(134, 239, 172, 0.28)" : "rgba(253, 230, 138, 0.28)";
+      ctx.font = "8.5px monospace";
+      ctx.fillText(`OP${opNum}`, pts[1].x + 2, pts[1].y - 2);
+    }
+
+    // 2. Highlight selected envelope on top
+    const pts = envelopeCurves[activeOpNum];
+    lastDrawnPoints = pts;
+
+    const strokeColor = activeIsCarr ? "#22c55e" : "#f59e0b";
+    const fillColor = activeIsCarr ? "rgba(34, 197, 94, 0.08)" : "rgba(245, 158, 11, 0.08)";
+
+    // Flat semi-transparent fill under curve
     ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.lineTo(x3, y3);
-    ctx.lineTo(x4, y4);
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i <= 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[4].x, h - padY);
+    ctx.lineTo(pts[0].x, h - padY);
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+
+    // Bold envelope stroke
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i <= 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.4;
     ctx.stroke();
 
-    ctx.fillStyle = isCarr ? "#86efac" : "#fde68a";
-    ctx.font = "9px monospace";
-    ctx.fillText(`OP${opNum}`, x1 + 2, y1 - 3);
+    // Start anchor dot (P0)
+    ctx.fillStyle = strokeColor;
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Breakpoint handles (P1..P4)
+    const activePtIdx =
+      isDraggingBreakpoint && draggedBreakpoint
+        ? draggedBreakpoint.index
+        : hoveredBreakpoint?.index ?? null;
+
+    for (let i = 1; i <= 4; i++) {
+      const pt = pts[i];
+      const isPointActive = activePtIdx === i;
+
+      // Vertical guide line when active
+      if (isPointActive) {
+        ctx.save();
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(pt.x, h - padY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Outer glow halo
+        ctx.fillStyle = activeIsCarr ? "rgba(34, 197, 94, 0.28)" : "rgba(245, 158, 11, 0.28)";
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Handle circle
+      const r = isPointActive ? 6.5 : 5.0;
+      ctx.fillStyle = "#111827";
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Inner dot
+      ctx.fillStyle = isPointActive ? "#ffffff" : strokeColor;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Breakpoint label: P1..P4
+      ctx.fillStyle = isPointActive ? "#ffffff" : activeIsCarr ? "#86efac" : "#fde68a";
+      ctx.font = `bold ${isPointActive ? 9.5 : 8.5}px monospace`;
+      const labelY = pt.y > h / 2 ? pt.y - 9 : pt.y + 14;
+      ctx.fillText(`P${i}`, pt.x - 5, labelY);
+    }
+
+    // Top-right status HUD
+    let hudText = "";
+    if (activePtIdx) {
+      const rVal = activeOp[`eg_rate_${activePtIdx}`];
+      const lVal = activeOp[`eg_level_${activePtIdx}`];
+      hudText = `OP${activeOpNum} • P${activePtIdx}: Rate R${activePtIdx}=${rVal}  Level L${activePtIdx}=${lVal}`;
+    } else {
+      hudText = `OP${activeOpNum} [${activeIsCarr ? "CARRIER" : "MOD"}] • R: ${activeOp.eg_rate_1}, ${activeOp.eg_rate_2}, ${activeOp.eg_rate_3}, ${activeOp.eg_rate_4} • Drag points`;
+    }
+    drawCanvasHud(ctx, w, padY, hudText, strokeColor);
   }
+}
+
+function drawCanvasHud(ctx, w, padY, text, accentColor = null) {
+  ctx.save();
+  ctx.font = "9px var(--font-mono, monospace)";
+  const metrics = ctx.measureText(text);
+  const badgeW = metrics.width + 14;
+  const badgeH = 18;
+  const badgeX = w - badgeW - 12;
+  const badgeY = 6;
+
+  ctx.fillStyle = "rgba(17, 24, 39, 0.88)";
+  ctx.strokeStyle = accentColor ? colorMixRgba(accentColor, 0.5) : "rgba(156, 163, 175, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = accentColor || "#f1f5f9";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, badgeX + 7, badgeY + badgeH / 2);
+  ctx.restore();
+}
+
+export function setEnvSelectedOp(op) {
+  selectedEnvOp = op === "all" ? "all" : Number(op);
+
+  const buttons = document.querySelectorAll("#dxpatch-env-op-selectors .dxpatch-op-sel-btn");
+  buttons.forEach((b) => {
+    const isTarget = String(b.dataset.op) === String(selectedEnvOp);
+    b.classList.toggle("active", isTarget);
+    b.setAttribute("aria-pressed", isTarget ? "true" : "false");
+  });
+
+  document.querySelectorAll("#dxpatch-ops-tbody tr").forEach((tr) => {
+    tr.classList.toggle("op-selected", String(tr.dataset.op) === String(selectedEnvOp));
+  });
+
+  if (currentPatch && currentAlgInfo) {
+    drawAlgorithmCanvas(currentAlgInfo);
+    drawEnvelopeCanvas(currentPatch, currentAlgInfo);
+  }
+}
+
+function updateEnvSelectorButtons(algInfo) {
+  const carrierSet = new Set(algInfo.carriers);
+  const patch = currentPatch;
+  for (let opNum = 1; opNum <= 6; opNum++) {
+    const btn = document.querySelector(`#dxpatch-env-op-selectors [data-op="${opNum}"]`);
+    if (!btn) continue;
+    const isCarr = carrierSet.has(opNum);
+    btn.classList.toggle("btn-carrier", isCarr);
+    btn.classList.toggle("btn-mod", !isCarr);
+    if (patch) {
+      const op = patch.op(opNum);
+      btn.classList.toggle("btn-disabled", !op.enabled);
+    }
+    const isTarget = String(opNum) === String(selectedEnvOp);
+    btn.classList.toggle("active", isTarget);
+    btn.setAttribute("aria-pressed", isTarget ? "true" : "false");
+  }
+  const allBtn = document.querySelector('#dxpatch-env-op-selectors [data-op="all"]');
+  if (allBtn) {
+    const isTarget = selectedEnvOp === "all";
+    allBtn.classList.toggle("active", isTarget);
+    allBtn.setAttribute("aria-pressed", isTarget ? "true" : "false");
+  }
+}
+
+function initEnvSelectors() {
+  const group = document.getElementById("dxpatch-env-op-selectors");
+  if (!group) return;
+  group.addEventListener("click", (e) => {
+    const btn = e.target.closest(".dxpatch-op-sel-btn");
+    if (!btn) return;
+    const opVal = btn.dataset.op;
+    if (opVal === "all") {
+      setEnvSelectedOp("all");
+    } else {
+      const opNum = Number(opVal);
+      if (selectedEnvOp === opNum) {
+        setEnvSelectedOp("all");
+      } else {
+        setEnvSelectedOp(opNum);
+      }
+    }
+  });
+}
+
+function initAlgCanvasInteraction() {
+  const algCanvas = document.getElementById("dxpatch-alg-canvas");
+  if (!algCanvas) return;
+  algCanvas.style.cursor = "pointer";
+  algCanvas.addEventListener("click", (e) => {
+    const rect = algCanvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (algCanvas.width / rect.width);
+    const my = (e.clientY - rect.top) * (algCanvas.height / rect.height);
+    for (let op = 1; op <= 6; op++) {
+      const p = algNodePositions[op];
+      if (p && Math.abs(mx - p.x) <= 16 && Math.abs(my - p.y) <= 12) {
+        setEnvSelectedOp(op);
+        break;
+      }
+    }
+  });
+}
+
+function initEnvelopeCanvasInteraction() {
+  const canvas = document.getElementById("dxpatch-env-canvas");
+  if (!canvas) return;
+
+  const getCanvasPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!currentPatch || !currentAlgInfo) return;
+    const pos = getCanvasPos(e);
+
+    // 1. If single OP is selected, check if user clicked on one of its 4 breakpoints
+    if (selectedEnvOp !== "all" && lastDrawnPoints) {
+      for (let i = 1; i <= 4; i++) {
+        const pt = lastDrawnPoints[i];
+        if (pt && Math.hypot(pos.x - pt.x, pos.y - pt.y) <= 14) {
+          isDraggingBreakpoint = true;
+          draggedBreakpoint = { opNum: Number(selectedEnvOp), index: i };
+          canvas.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          drawEnvelopeCanvas(currentPatch, currentAlgInfo);
+          return;
+        }
+      }
+    }
+
+    // 2. Check if user clicked near any operator curve to select that operator
+    if (envelopeCurves) {
+      let closestOp = null;
+      let closestDist = Infinity;
+      for (const [opStr, pts] of Object.entries(envelopeCurves)) {
+        const opNum = Number(opStr);
+        for (let s = 0; s < pts.length - 1; s++) {
+          const d = distToSegment(pos.x, pos.y, pts[s].x, pts[s].y, pts[s + 1].x, pts[s + 1].y);
+          if (d < closestDist) {
+            closestDist = d;
+            closestOp = opNum;
+          }
+        }
+      }
+      if (closestDist <= 12 && closestOp !== null) {
+        setEnvSelectedOp(closestOp);
+        e.preventDefault();
+      }
+    }
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!currentPatch || !currentAlgInfo) return;
+    const pos = getCanvasPos(e);
+    const w = canvas.width;
+    const h = canvas.height;
+    const padX = 16;
+    const padY = 14;
+    const plotW = w - padX * 2;
+    const plotH = h - padY * 2;
+    const minSeg = 10;
+    const maxSeg = plotW * 0.24;
+
+    if (isDraggingBreakpoint && draggedBreakpoint) {
+      const { opNum, index: i } = draggedBreakpoint;
+      const op = currentPatch.op(opNum);
+
+      // Level calculation (vertical)
+      const lvl = clamp(Math.round(((h - padY - pos.y) / plotH) * 99), 0, 99);
+      op[`eg_level_${i}`] = lvl;
+
+      // Rate calculation (horizontal)
+      const prevX = i === 1 ? padX : lastDrawnPoints[i - 1].x;
+      const dx = pos.x - prevX;
+      const clampedDx = clamp(dx, minSeg, maxSeg);
+      const t = (clampedDx - minSeg) / (maxSeg - minSeg);
+      const rate = clamp(Math.round(99 * (1 - t)), 0, 99);
+      op[`eg_rate_${i}`] = rate;
+
+      // Live sync to table inputs
+      const rInput = document.querySelector(`.op-num-input[data-op="${opNum}"][data-field="eg_rate_${i}"]`);
+      const lInput = document.querySelector(`.op-num-input[data-op="${opNum}"][data-field="eg_level_${i}"]`);
+      if (rInput) {
+        rInput.value = String(rate);
+        rInput.classList.add("cell-editing");
+      }
+      if (lInput) {
+        lInput.value = String(lvl);
+        lInput.classList.add("cell-editing");
+      }
+
+      drawEnvelopeCanvas(currentPatch, currentAlgInfo);
+      return;
+    }
+
+    // Hover detection
+    let hovered = null;
+    if (selectedEnvOp !== "all" && lastDrawnPoints) {
+      for (let i = 1; i <= 4; i++) {
+        const pt = lastDrawnPoints[i];
+        if (pt && Math.hypot(pos.x - pt.x, pos.y - pt.y) <= 14) {
+          hovered = { opNum: Number(selectedEnvOp), index: i };
+          break;
+        }
+      }
+    }
+
+    if (hovered) {
+      canvas.style.cursor = "grab";
+    } else {
+      let nearCurve = false;
+      if (envelopeCurves) {
+        for (const pts of Object.values(envelopeCurves)) {
+          for (let s = 0; s < pts.length - 1; s++) {
+            if (distToSegment(pos.x, pos.y, pts[s].x, pts[s].y, pts[s + 1].x, pts[s + 1].y) <= 8) {
+              nearCurve = true;
+              break;
+            }
+          }
+          if (nearCurve) break;
+        }
+      }
+      canvas.style.cursor = nearCurve ? "pointer" : "default";
+    }
+
+    if (hoveredBreakpoint?.index !== hovered?.index) {
+      hoveredBreakpoint = hovered;
+      drawEnvelopeCanvas(currentPatch, currentAlgInfo);
+    }
+  });
+
+  const finishDrag = (e) => {
+    if (isDraggingBreakpoint) {
+      isDraggingBreakpoint = false;
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+      document.querySelectorAll(".op-num-input.cell-editing").forEach((el) => {
+        el.classList.remove("cell-editing");
+      });
+      const opNum = draggedBreakpoint ? draggedBreakpoint.opNum : selectedEnvOp;
+      draggedBreakpoint = null;
+      onPatchEdited(`OP${opNum} Envelope Drag`);
+      drawEnvelopeCanvas(currentPatch, currentAlgInfo);
+    }
+  };
+
+  canvas.addEventListener("pointerup", finishDrag);
+  canvas.addEventListener("pointercancel", finishDrag);
+}
+
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
+}
+
+function colorMixRgba(hexOrColor, alpha) {
+  if (hexOrColor.startsWith("#")) {
+    let hex = hexOrColor.slice(1);
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return hexOrColor;
 }
 
 function buildPianoKeyboard() {
