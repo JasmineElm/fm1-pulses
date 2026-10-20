@@ -7,8 +7,8 @@
 <title>FM-1 Pulses</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
-<link rel="stylesheet" href="css/rack.css?v=2">
-<link rel="stylesheet" href="css/dxpatch.css?v=4">
+<link rel="stylesheet" href="css/rack.css?v=3">
+<link rel="stylesheet" href="css/dxpatch.css?v=5">
 </head>
 <body>
 <div class="case">
@@ -114,9 +114,11 @@
           <canvas id="wave" class="wave" height="60"></canvas>
           <div id="editor" class="editor">
             <span class="elab">Step <b id="estep">—</b></span>
-            <span id="enote" class="enote">—</span>
-            <button id="edown" title="Lower this step a semitone (locks it)">−</button>
-            <button id="eup" title="Raise this step a semitone (locks it)">+</button>
+            <div class="stepper editor-stepper" title="Step Pitch (Semitones)">
+              <button type="button" id="edown" class="stepper-btn dxpatch-stepper-btn" title="Lower this step a semitone (locks it)">‹</button>
+              <span id="enote" class="enote">—</span>
+              <button type="button" id="eup" class="stepper-btn dxpatch-stepper-btn" title="Raise this step a semitone (locks it)">›</button>
+            </div>
             <button id="eclear" title="Empty this step and lock it">✕</button>
             <button id="elock" class="elock" title="Locked steps survive regeneration">🔓</button>
             <button id="eclearlocks" title="Forget every locked step">clear locks</button>
@@ -461,6 +463,6 @@
     </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=6"></script>
+<script type="module" src="js/rack.js?v=7"></script>
 </body>
 </html>

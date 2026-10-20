@@ -412,10 +412,172 @@ body {
 .sw-body:focus-within { border-color: var(--accent); }
 .sw-arrow {
   font: inherit; font-size: 11px; line-height: 1; color: var(--dim); background: none;
-  border: 0; padding: 5px 4px 6px; cursor: pointer;
+  border: 0; padding: 5px 4px 6px; cursor: pointer; user-select: none;
+  transition: all 0.12s;
 }
-.sw-arrow:hover { color: var(--fg); background: var(--line); }
+.sw-arrow:hover { color: var(--accent); background: var(--line); }
+.sw-arrow:active { background: var(--accent); color: #fff; }
 .sw-arrow:focus-visible { outline: 2px solid var(--accent); }
+
+/* ---- generic stepper controls (shared across tools & sequencers) ---- */
+.stepper,
+.dxpatch-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel2);
+  overflow: hidden;
+  transition: border-color 0.12s;
+}
+
+.stepper:focus-within,
+.dxpatch-stepper:focus-within {
+  border-color: var(--accent);
+}
+
+.stepper-btn,
+.dxpatch-stepper-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font: 700 13px/1 var(--font-mono, monospace);
+  padding: 3px 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s;
+}
+
+.stepper-btn:hover,
+.dxpatch-stepper-btn:hover {
+  background: var(--line);
+  color: var(--accent);
+}
+
+.stepper-btn:active,
+.dxpatch-stepper-btn:active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.stepper-btn:focus-visible,
+.dxpatch-stepper-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.stepper input[type="number"],
+.stepper .stepper-input,
+.dxpatch-stepper input[type="number"],
+.dxpatch-stepper .dxpatch-stepper-input,
+.dxpatch-stepper .dxpatch-alg-input {
+  width: 28px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--accent);
+  font: 700 12px var(--font-mono, monospace);
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 0;
+  outline: none;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.stepper input[type="number"]::-webkit-outer-spin-button,
+.stepper input[type="number"]::-webkit-inner-spin-button,
+.stepper .stepper-input::-webkit-outer-spin-button,
+.stepper .stepper-input::-webkit-inner-spin-button,
+.dxpatch-stepper input[type="number"]::-webkit-outer-spin-button,
+.dxpatch-stepper input[type="number"]::-webkit-inner-spin-button,
+.dxpatch-stepper .dxpatch-stepper-input::-webkit-outer-spin-button,
+.dxpatch-stepper .dxpatch-stepper-input::-webkit-inner-spin-button,
+.dxpatch-stepper .dxpatch-alg-input::-webkit-outer-spin-button,
+.dxpatch-stepper .dxpatch-alg-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepper input[type="number"]:focus,
+.stepper .stepper-input:focus,
+.dxpatch-stepper input[type="number"]:focus,
+.dxpatch-stepper .dxpatch-stepper-input:focus,
+.dxpatch-stepper .dxpatch-alg-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stepper-select,
+.dxpatch-stepper-select {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--fg);
+  font: 600 10px/1.2 var(--font-system, sans-serif);
+  padding: 2px 4px;
+  outline: none;
+  cursor: pointer;
+  max-width: 82px;
+}
+
+.stepper-select option,
+.dxpatch-stepper-select option {
+  background: var(--panel);
+  color: var(--fg);
+}
+
+.editor-stepper {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.editor-stepper .enote {
+  display: inline-block;
+  padding: 2px 8px;
+  min-width: 44px;
+  text-align: center;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--accent);
+  font: 700 12px var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.rhythm-stepper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rhythm-stepper .rhythm-num-input {
+  border-top: none;
+  border-bottom: none;
+  border-radius: 0;
+  width: 28px;
+  height: 22px;
+}
+
+.rhythm-stepper .rhythm-select-sm {
+  border-top: none;
+  border-bottom: none;
+  border-radius: 0;
+  height: 22px;
+}
+
+kbd {
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--dim);
+  line-height: 1.2;
+}
 
 /* ---- toggle & button wrapper ---- */
 .ctrl-wrap {
