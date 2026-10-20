@@ -466,7 +466,11 @@ function playSingleNote(midiNote) {
   const shouldPlayHW = auditionMode === "hardware" || auditionMode === "both" || (auditionMode === "auto" && midi.findFm1());
 
   if (shouldPlayBrowser && audioPlayer && currentPatch) {
-    audioPlayer.playNote(currentPatch, midiNote, 100, 0.6);
+    if (typeof audioPlayer.playPatchNote === "function") {
+      audioPlayer.playPatchNote(currentPatch, midiNote, 100, 0.6);
+    } else if (typeof audioPlayer.playNote === "function") {
+      audioPlayer.playNote(currentPatch, midiNote, 100, 0.6);
+    }
   }
   if (shouldPlayHW && midi.findFm1()) {
     midi.playHardwareNote(midiNote, 100, 500, midiChannel + 1);
