@@ -244,7 +244,14 @@ export function activateDxPatch() {
 
 export function deactivateDxPatch() {
   active = false;
-  if (audioPlayer) audioPlayer.stopAllNotes();
+  try {
+    if (audioPlayer) {
+      if (typeof audioPlayer.stop === "function") audioPlayer.stop();
+      else if (typeof audioPlayer.stopAllNotes === "function") audioPlayer.stopAllNotes();
+    }
+  } catch (e) {
+    console.warn("Error stopping audio in deactivateDxPatch:", e);
+  }
 }
 
 function handleKeyDown(e) {

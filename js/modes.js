@@ -175,7 +175,11 @@ export function renderToolsGrid(container) {
 
 export function showLanding(updateHash = true) {
   if (callbacks.onLeaveModel && activeModelId) {
-    callbacks.onLeaveModel(activeModelId);
+    try {
+      callbacks.onLeaveModel(activeModelId);
+    } catch (err) {
+      console.warn("Error in onLeaveModel:", err);
+    }
   }
   activeModelId = null;
 
@@ -226,6 +230,7 @@ export function showModel(id, updateHash = true) {
     if (viewDxpatch) viewDxpatch.style.display = "block";
     if (btnBack) {
       btnBack.textContent = "‹ Tools";
+      btnBack.title = "Return to Tools & Models";
       btnBack.style.display = "inline-flex";
     }
     if (modeTag) {
@@ -241,6 +246,7 @@ export function showModel(id, updateHash = true) {
     if (modelParticles) modelParticles.style.display = id === "particles" ? "block" : "none";
     if (btnBack) {
       btnBack.textContent = "‹ Models";
+      btnBack.title = "Return to Sequencer Models";
       btnBack.style.display = "inline-flex";
     }
     if (modeTag) {
@@ -272,24 +278,31 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   if (toolsGrid) renderToolsGrid(toolsGrid);
 
   // Return to landing page buttons
+  const returnToLanding = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    showLanding();
+  };
+
   const btnBack = document.getElementById("btn-back-landing");
-  btnBack?.addEventListener("click", () => showLanding());
+  btnBack?.addEventListener("click", returnToLanding);
+
+  document.querySelectorAll(".nav-back-btn").forEach((btn) => {
+    btn.addEventListener("click", returnToLanding);
+  });
 
   const linkModels = document.getElementById("link-models");
-  linkModels?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showLanding();
-  });
+  linkModels?.addEventListener("click", returnToLanding);
 
   const linkDxModels = document.getElementById("dxpatch-link-models");
-  linkDxModels?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showLanding();
-  });
+  linkDxModels?.addEventListener("click", returnToLanding);
 
   // Handle URL hash changes
   window.addEventListener("hashchange", () => {
-    const h = window.location.hash.toLowerCase();
+    const rawHash = (window.location.hash || "").toLowerCase();
+    const h = rawHash.split("?")[0];
     if (h === "#traditional" || h === "#mene311") {
       if (activeModelId !== "traditional") showModel("traditional", false);
     } else if (h === "#cellular") {
@@ -306,7 +319,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   });
 
   // Initial view selection
-  const initialHash = window.location.hash.toLowerCase();
+  const rawInitial = (window.location.hash || "").toLowerCase();
+  const initialHash = rawInitial.split("?")[0];
   if (initialHash === "#traditional" || initialHash === "#mene311") {
     showModel("traditional", false);
   } else if (initialHash === "#cellular") {

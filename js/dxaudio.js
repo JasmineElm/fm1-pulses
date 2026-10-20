@@ -179,6 +179,10 @@ export class WebAudioPlayer {
     }
   }
 
+  stopAllNotes() {
+    this.stop();
+  }
+
   playFloat32(samples, sampleRate = DX7SynthEngine.DEFAULT_SAMPLE_RATE) {
     this.stop();
     const ctx = this._getContext();
