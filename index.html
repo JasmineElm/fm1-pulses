@@ -387,24 +387,24 @@
             <table class="dxpatch-ops-table">
               <thead>
                 <tr>
-                  <th>OP</th>
-                  <th>ROLE</th>
-                  <th>LEVEL</th>
-                  <th>MODE</th>
-                  <th>COARSE</th>
-                  <th>FINE</th>
-                  <th>RATIO/HZ</th>
-                  <th>DETUNE</th>
-                  <th>VEL</th>
-                  <th>RS</th>
-                  <th>R1</th>
-                  <th>R2</th>
-                  <th>R3</th>
-                  <th>R4</th>
-                  <th>L1</th>
-                  <th>L2</th>
-                  <th>L3</th>
-                  <th>L4</th>
+                  <th title="Operator number (OP1–OP6) & enable/mute toggle">OP</th>
+                  <th title="FM routing role: Carrier (audible output) or Modulator (modulates other operators)">ROLE</th>
+                  <th title="Output level (0–99): Carrier loudness or Modulator modulation index">LEVEL</th>
+                  <th title="Oscillator mode: Frequency Ratio (tracks keyboard) or Fixed Frequency (Hz)">MODE</th>
+                  <th title="Frequency coarse multiplier: 0–31 (Ratio mode) or 10^N (Fixed mode)">COARSE</th>
+                  <th title="Frequency fine fraction (0–99): micro-tuning added to coarse value">FINE</th>
+                  <th title="Effective frequency: harmonic multiple ratio or absolute frequency in Hz">RATIO/HZ</th>
+                  <th title="Detune offset (0–14): microtonal pitch offset (-7 to +7, 7 = center)">DETUNE</th>
+                  <th title="Velocity sensitivity (0–7): responsiveness of level to key velocity">VEL</th>
+                  <th title="Keyboard rate scaling (0–7): speeds up envelope at higher pitches">RS</th>
+                  <th title="Envelope Rate 1 (0–99): attack speed (99 = fastest / instantaneous)">R1</th>
+                  <th title="Envelope Rate 2 (0–99): initial decay speed toward Level 2">R2</th>
+                  <th title="Envelope Rate 3 (0–99): secondary decay speed toward Level 3">R3</th>
+                  <th title="Envelope Rate 4 (0–99): release speed after key-off toward Level 4">R4</th>
+                  <th title="Envelope Level 1 (0–99): attack peak level">L1</th>
+                  <th title="Envelope Level 2 (0–99): decay level after Rate 1">L2</th>
+                  <th title="Envelope Level 3 (0–99): sustain level held during note gate">L3</th>
+                  <th title="Envelope Level 4 (0–99): release rest level after note off">L4</th>
                 </tr>
               </thead>
               <tbody id="dxpatch-ops-tbody"></tbody>

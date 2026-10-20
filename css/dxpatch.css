@@ -452,6 +452,14 @@
   border-bottom: 1px solid var(--line);
   font-weight: 700;
   white-space: nowrap;
+  cursor: help;
+  user-select: none;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.dxpatch-ops-table th:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--line) 40%, var(--panel));
 }
 
 .dxpatch-ops-table td {
