@@ -758,13 +758,13 @@ body {
 .display .enote { color: var(--fg); }
 
 @media (min-width: 600px) {
-  .case { max-width: 1080px; }
+  .case { max-width: 95%; }
 }
 
 /* ---- landscape: module left, pattern display right ---- */
 @media (min-aspect-ratio: 1/1) {
   body { padding: 10px; }
-  .case { max-width: 1080px; }
+  .case { max-width: 95%; }
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
