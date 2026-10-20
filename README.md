@@ -21,6 +21,12 @@ FM-1 Pulses includes four distinct algorithmic sequencing engines accessible fro
 
 ---
 
+## Tools
+
+- **DX Patch Generator**: Algorithmic sound designer and SysEx patch manager for Yamaha DX7 and FM-1 hardware. Generates organic FM patches across 11 sonic categories using seedable macro controls, mutates existing voices with controlled drift, renders interactive envelope and algorithm topologies, auditions via a built-in 6-operator FM Web Audio engine, and transmits voices/banks directly to hardware over USB MIDI or standard `.syx` files.
+
+---
+
 ## Shared Architecture
 
 All sequencer models operate within a unified modular workstation environment:
@@ -46,7 +52,7 @@ python3 -m http.server 8080
 
 1. Open `http://localhost:8080` in Chrome, Edge, or any Web MIDI-enabled browser.
 2. Connect the FM-1 via USB and grant MIDI access when prompted.
-3. Select an engine from the **Sequencing Models** hub.
+3. Select an engine from the **Sequencing Models** hub or open the **DX Patch Generator** under **Tools**.
 4. Tweak parameters or press **Randomise** (or `R` / `G`) to roll a new pattern.
 5. Click **▶ Play** (or `Space`) to audition live through the browser synth and FM-1.
 6. Click **Freeze** (or `F`) to write the active 64-step pattern into the FM-1's sequencer.
@@ -62,16 +68,21 @@ python3 -m http.server 8080
 ## Project Structure
 
 ```
-├── index.html          # Main application markup & model hub
+├── index.html          # Main application markup & hub
 ├── guide.html          # Comprehensive interactive user guide
 ├── manifest.json       # PWA manifest
 ├── sw.js               # Service worker for offline use
 ├── css/
 │   ├── style.css       # Core layout & base styling
-│   └── rack.css        # Skeuomorphic Eurorack styling & themes
+│   ├── rack.css        # Skeuomorphic Eurorack styling & themes
+│   └── dxpatch.css     # DX Patch Generator modular panel styling
 ├── js/
 │   ├── rack.js         # Master UI coordinator & lifecycle wiring
-│   ├── modes.js        # Sequencer model manager & landing view
+│   ├── modes.js        # Sequencer model & tools manager, landing view
+│   ├── dx7.js          # DX7 domain model, 32 algorithms & SysEx codecs
+│   ├── dxgenerator.js  # FM patch generator & mutator algorithms
+│   ├── dxaudio.js      # 6-operator FM Web Audio synthesis engine
+│   ├── dxpatch.js      # DX Patch Generator UI & interactive matrix
 │   ├── generator.js    # Mene311 stochastic generation engine
 │   ├── turing.js       # Turing Machine shift-register model
 │   ├── cellular.js     # Cellular Automata Wolfram rule engine

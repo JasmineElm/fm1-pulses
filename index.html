@@ -8,6 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=1">
+<link rel="stylesheet" href="css/dxpatch.css?v=1">
 </head>
 <body>
 <div class="case">
@@ -35,6 +36,15 @@
     </div>
 
     <div id="models-grid" class="models-grid"></div>
+
+    <!-- TOOLS SECTION -->
+    <div class="landing-hero landing-tools-hero" style="margin-top: 18px;">
+      <div class="landing-kicker">DEVICE WORKBENCH</div>
+      <h2 class="landing-title">Tools</h2>
+      <p class="landing-subtitle">Sound design utilities and patch tools for the M-VAVE FM-1 &amp; Yamaha DX-compatible synths.</p>
+    </div>
+
+    <div id="tools-grid" class="models-grid tools-grid"></div>
 
     <div class="landing-footer">
       <div class="landing-firmware-note">
@@ -129,6 +139,314 @@
     <!-- MODEL 4: PARTICLES (ORCA / PLINKY COLLISION SIMULATOR) -->
     <div id="model-particles" class="model-view" style="display: none;">
       <!-- Populated dynamically by js/particles.js -->
+    </div>
+  </section>
+
+  <!-- TOOL: DX PATCH GENERATOR WORKBENCH -->
+  <section id="view-dxpatch" class="view-workspace view-dxpatch" style="display: none;" aria-label="DX Patch Generator">
+    <div class="statusrow">
+      <a class="glink glink-model" id="dxpatch-link-models" href="#models" title="Return to models and tools">‹ tools</a>
+      <a class="glink" href="guide.html">guide</a>
+      <a class="glink" id="dxpatch-dl-voice" title="Download current voice as 163-byte VCED SysEx file">save voice (.syx)</a>
+      <a class="glink" id="dxpatch-dl-bank" title="Download 32-voice cartridge bank as 4104-byte VMEM SysEx file">save bank (.syx)</a>
+      <label class="glink" title="Open .syx file (Voice or Bank)" style="cursor: pointer;">
+        open .syx
+        <input type="file" id="dxpatch-file-input" accept=".syx,application/octet-stream" hidden>
+      </label>
+      <span id="dxpatch-status" class="status">ready</span>
+    </div>
+
+    <div class="dxpatch-workspace">
+      <!-- Left Column: Generator Controls -->
+      <aside class="dxpatch-panel dxpatch-panel-left">
+        <div class="dxpatch-card">
+          <h3 class="dxpatch-heading">Sound Generator</h3>
+
+          <label class="dxpatch-field-label" for="dxpatch-category-select">Category Template</label>
+          <select id="dxpatch-category-select" class="dxpatch-select">
+            <option value="keys">🎹 Keys / Electric Piano</option>
+            <option value="bass">🎸 Bass (Slap / Sub / Acid)</option>
+            <option value="pad">🌊 Lush Pad / Strings</option>
+            <option value="percussive">🥁 FM Drum / Percussive</option>
+            <option value="lead">⚡ Lead Synth</option>
+            <option value="bell">🔔 Crystal Bell / Mallet</option>
+            <option value="brass">🎺 Brass / Horns</option>
+            <option value="pluck">🪕 Pluck / Koto / Guitar</option>
+            <option value="fx">🛸 Sci-Fi / FX</option>
+            <option value="constrained">📐 Constrained Random</option>
+            <option value="random">🎲 Pure Stochastic (Wild)</option>
+          </select>
+
+          <label class="dxpatch-field-label" for="dxpatch-profile-select">Sonic Profile Layer</label>
+          <select id="dxpatch-profile-select" class="dxpatch-select">
+            <option value="none">Neutral (Standard)</option>
+            <option value="warm">Warm &amp; Analog (-EXP rolloff)</option>
+            <option value="atonal">Atonal &amp; Metallic (Fixed Hz)</option>
+            <option value="crisp">Crisp &amp; Glassy (+LIN sparkle)</option>
+            <option value="gritty">Gritty &amp; Driven (High FB)</option>
+            <option value="ethereal">Ethereal &amp; Ambient (Slow swell)</option>
+          </select>
+
+          <label class="dxpatch-field-label" for="dxpatch-force-alg-select">Algorithm Constraint</label>
+          <select id="dxpatch-force-alg-select" class="dxpatch-select">
+            <option value="">Auto (Category Default)</option>
+          </select>
+        </div>
+
+        <div class="dxpatch-card">
+          <h3 class="dxpatch-heading">Timbral Macros</h3>
+
+          <div class="dxpatch-slider-row">
+            <div class="dxpatch-slider-header">
+              <span>Brightness</span>
+              <span id="dxpatch-val-brightness" class="dxpatch-mono-val">0.60</span>
+            </div>
+            <input type="range" id="dxpatch-slider-brightness" class="dxpatch-range" min="0" max="1" step="0.05" value="0.6" />
+          </div>
+
+          <div class="dxpatch-slider-row">
+            <div class="dxpatch-slider-header">
+              <span>Dissonance</span>
+              <span id="dxpatch-val-dissonance" class="dxpatch-mono-val">0.00</span>
+            </div>
+            <input type="range" id="dxpatch-slider-dissonance" class="dxpatch-range" min="0" max="1" step="0.05" value="0.0" />
+          </div>
+
+          <div class="dxpatch-slider-row">
+            <div class="dxpatch-slider-header">
+              <span>Env Speed</span>
+              <span id="dxpatch-val-env-speed" class="dxpatch-mono-val">0.50</span>
+            </div>
+            <input type="range" id="dxpatch-slider-env-speed" class="dxpatch-range" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+
+          <div class="dxpatch-slider-row">
+            <div class="dxpatch-slider-header">
+              <span>Detune</span>
+              <span id="dxpatch-val-detune" class="dxpatch-mono-val">0.30</span>
+            </div>
+            <input type="range" id="dxpatch-slider-detune" class="dxpatch-range" min="0" max="1" step="0.05" value="0.3" />
+          </div>
+
+          <div class="dxpatch-slider-row">
+            <div class="dxpatch-slider-header">
+              <span>Mutation Rate</span>
+              <span id="dxpatch-val-mutation" class="dxpatch-mono-val">0.20</span>
+            </div>
+            <input type="range" id="dxpatch-slider-mutation" class="dxpatch-range" min="0.05" max="1" step="0.05" value="0.2" />
+          </div>
+
+          <label class="dxpatch-field-label" for="dxpatch-seed-input">Seed (optional)</label>
+          <input type="number" id="dxpatch-seed-input" class="dxpatch-input" placeholder="Random" />
+        </div>
+
+        <div class="dxpatch-card">
+          <button id="dxpatch-btn-generate" class="dxpatch-btn-block primary" title="Generate new patch (Space)">
+            <span>🎲 Generate Patch</span> <kbd>Space</kbd>
+          </button>
+          <button id="dxpatch-btn-mutate" class="dxpatch-btn-block warning" title="Mutate current voice (M)">
+            <span>🧬 Mutate Voice</span> <kbd>M</kbd>
+          </button>
+          <button id="dxpatch-btn-add-bank" class="dxpatch-btn-block" title="Store voice into active bank slot (B)">
+            <span>📥 Save to Bank Slot</span> <kbd>B</kbd>
+          </button>
+        </div>
+
+        <div class="dxpatch-card">
+          <h3 class="dxpatch-heading">Hardware &amp; SysEx</h3>
+          <div class="dxpatch-btn-grid-2">
+            <button id="dxpatch-btn-send-patch" class="dxpatch-btn-sm" title="Send 163-byte VCED SysEx to FM-1">📤 Send Voice (163B)</button>
+            <button id="dxpatch-btn-send-bank" class="dxpatch-btn-sm" title="Send 4104-byte VMEM SysEx to FM-1">📦 Send Bank (4104B)</button>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:10px; color:var(--dim);">
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;" title="Automatically send 163B VCED SysEx on generate/mutate">
+              <input type="checkbox" id="dxpatch-chk-auto-send" checked />
+              <span>Auto-Send SysEx</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:4px;">
+              <span>Ch:</span>
+              <select id="dxpatch-midi-channel-select" class="dxpatch-select" style="width: auto; padding: 1px 4px;">
+                <option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option>
+                <option value="4">5</option><option value="5">6</option><option value="6">7</option><option value="7">8</option>
+                <option value="8">9</option><option value="9">10</option><option value="10">11</option><option value="11">12</option>
+                <option value="12">13</option><option value="13">14</option><option value="14">15</option><option value="15">16</option>
+              </select>
+            </label>
+          </div>
+
+          <div style="margin-top:6px;">
+            <label class="dxpatch-field-label" for="dxpatch-audition-mode-select">Audition Audio</label>
+            <select id="dxpatch-audition-mode-select" class="dxpatch-select">
+              <option value="auto">Auto (FM-1 if connected, else Browser)</option>
+              <option value="browser">Browser FM Synth Only</option>
+              <option value="hardware">M-VAVE FM-1 Hardware Only</option>
+              <option value="both">Both (Browser + FM-1)</option>
+            </select>
+          </div>
+
+          <div class="dxpatch-btn-grid-2" style="margin-top:8px;">
+            <button id="dxpatch-btn-dl-voice" class="dxpatch-btn-sm" title="Download 163-byte single voice SysEx">💾 Voice .syx</button>
+            <button id="dxpatch-btn-dl-patch-bank" class="dxpatch-btn-sm" title="Download 4104-byte cartridge with this voice in Slot 1">💾 Cart .syx</button>
+          </div>
+          <div class="dxpatch-file-drop" id="dxpatch-drop-area">
+            <span>📂 Drop or click to load <code>.syx</code></span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Column: Voice Inspector & 6-Op Matrix -->
+      <main class="dxpatch-panel dxpatch-panel-center">
+        <!-- Voice Header Card -->
+        <div class="dxpatch-voice-header">
+          <div class="dxpatch-title-group">
+            <span class="dxpatch-micro-label">VOICE NAME (10 CHARS)</span>
+            <input type="text" id="dxpatch-name-input" class="dxpatch-name-input" maxlength="10" value="INIT VOICE" spellcheck="false" />
+          </div>
+
+          <div class="dxpatch-param-pill">
+            <span class="dxpatch-micro-label">ALGORITHM</span>
+            <div class="dxpatch-pill-control">
+              <input type="number" id="dxpatch-alg-input" min="1" max="32" value="1" />
+              <span class="unit">/ 32</span>
+            </div>
+          </div>
+
+          <div class="dxpatch-param-pill">
+            <span class="dxpatch-micro-label">FEEDBACK</span>
+            <div class="dxpatch-pill-control">
+              <input type="number" id="dxpatch-fb-input" min="0" max="7" value="0" />
+              <span class="unit">/ 7</span>
+            </div>
+          </div>
+
+          <div class="dxpatch-param-pill">
+            <span class="dxpatch-micro-label">TRANSPOSE</span>
+            <div class="dxpatch-pill-control">
+              <input type="number" id="dxpatch-transpose-input" min="0" max="48" value="24" />
+              <span id="dxpatch-transpose-note" class="unit">C3</span>
+            </div>
+          </div>
+
+          <div class="dxpatch-param-pill">
+            <span class="dxpatch-micro-label">LFO WAVE</span>
+            <select id="dxpatch-lfo-wave" class="dxpatch-select" style="padding: 1px 4px; font-size: 10px;">
+              <option value="0">Triangle</option>
+              <option value="1">Saw Down</option>
+              <option value="2">Saw Up</option>
+              <option value="3">Square</option>
+              <option value="4">Sine</option>
+              <option value="5">S&amp;H</option>
+            </select>
+          </div>
+
+          <div class="dxpatch-param-pill">
+            <span class="dxpatch-micro-label">LFO SPD / PMD</span>
+            <div class="dxpatch-pill-control">
+              <input type="number" id="dxpatch-lfo-speed" min="0" max="99" value="35" title="Speed (0-99)" style="width:26px;" />
+              <input type="number" id="dxpatch-lfo-pmd" min="0" max="99" value="0" title="Pitch Mod Depth (0-99)" style="width:26px;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Visualizer Grid -->
+        <div class="dxpatch-viz-grid">
+          <div class="dxpatch-card">
+            <div class="dxpatch-card-header">
+              <span id="dxpatch-alg-card-title" class="dxpatch-card-title">Algorithm 1</span>
+              <span id="dxpatch-alg-fb-badge" class="dxpatch-badge badge-fb">FB: OP6</span>
+            </div>
+            <div class="dxpatch-alg-body">
+              <canvas id="dxpatch-alg-canvas" width="220" height="125"></canvas>
+              <div class="dxpatch-alg-meta">
+                <span id="dxpatch-alg-desc"></span>
+                <div class="dxpatch-alg-roles">
+                  <div><span class="dxpatch-badge badge-carrier">Carriers</span> <span id="dxpatch-alg-carriers-list" class="dxpatch-mono-val"></span></div>
+                  <div><span class="dxpatch-badge badge-mod">Modulators</span> <span id="dxpatch-alg-mods-list" class="dxpatch-mono-val"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dxpatch-card">
+            <div class="dxpatch-card-header">
+              <span class="dxpatch-card-title">Operator Envelopes (R1–R4 / L1–L4)</span>
+              <span class="dxpatch-card-hint">
+                <span style="color:#22c55e;">● Carrier</span> &nbsp;
+                <span style="color:#f59e0b;">● Modulator</span>
+              </span>
+            </div>
+            <canvas id="dxpatch-env-canvas" width="460" height="125"></canvas>
+          </div>
+        </div>
+
+        <!-- 6-Operator Parameter Matrix Table -->
+        <div class="dxpatch-card">
+          <div class="dxpatch-card-header">
+            <span class="dxpatch-card-title">6-Operator FM Matrix</span>
+            <span class="dxpatch-card-hint">Click / drag numbers to edit live (OP6 → OP1)</span>
+          </div>
+          <div class="dxpatch-ops-wrap">
+            <table class="dxpatch-ops-table">
+              <thead>
+                <tr>
+                  <th>OP</th>
+                  <th>ROLE</th>
+                  <th>LEVEL</th>
+                  <th>MODE</th>
+                  <th>COARSE</th>
+                  <th>FINE</th>
+                  <th>RATIO/HZ</th>
+                  <th>DETUNE</th>
+                  <th>VEL</th>
+                  <th>RS</th>
+                  <th>R1</th>
+                  <th>R2</th>
+                  <th>R3</th>
+                  <th>R4</th>
+                  <th>L1</th>
+                  <th>L2</th>
+                  <th>L3</th>
+                  <th>L4</th>
+                </tr>
+              </thead>
+              <tbody id="dxpatch-ops-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Audition Keyboard -->
+        <div class="dxpatch-card">
+          <div class="dxpatch-card-header">
+            <span class="dxpatch-card-title">Interactive Audition Keyboard</span>
+            <span class="dxpatch-card-hint">Click keys or use keys A–K (W E T Y U for sharps)</span>
+          </div>
+          <div id="dxpatch-piano-keyboard" class="dxpatch-keyboard-wrap"></div>
+        </div>
+      </main>
+
+      <!-- Right Column: 32-Voice Bank Manager -->
+      <aside class="dxpatch-panel dxpatch-panel-right">
+        <div class="dxpatch-card">
+          <div class="dxpatch-card-header">
+            <h3 class="dxpatch-heading" style="margin:0;">32-Voice Bank</h3>
+            <span id="dxpatch-bank-slot-indicator" class="dxpatch-badge badge-carrier">Slot 01</span>
+          </div>
+          <div class="dxpatch-btn-grid-2">
+            <button id="dxpatch-btn-fill-bank" class="dxpatch-btn-sm" title="Generate 32 voices of current category">⚡ Fill 32</button>
+            <button id="dxpatch-btn-fill-mixed-bank" class="dxpatch-btn-sm" title="Generate 32 mixed-category voices">🌈 Mixed 32</button>
+          </div>
+          <button id="dxpatch-btn-export-bank" class="dxpatch-btn-block primary" style="margin-top:6px; font-size:10px;">
+            <span>📦 Download Bank (.syx)</span>
+          </button>
+          <div id="dxpatch-bank-list" class="dxpatch-bank-list" style="margin-top:8px;"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div style="font-size:10px; color:var(--dim); padding:4px 2px; display:flex; justify-content:space-between;">
+      <span id="dxpatch-status-message">Ready. Click keys to audition, or press Space to generate.</span>
+      <span><kbd>Space</kbd> Generate &nbsp; <kbd>M</kbd> Mutate &nbsp; <kbd>B</kbd> To Bank</span>
     </div>
   </section>
 </div>

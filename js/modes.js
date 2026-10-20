@@ -60,6 +60,23 @@ export const MODELS = [
   }
 ];
 
+export const TOOLS = [
+  {
+    id: "dxpatch",
+    name: "DX Patch Generator",
+    kicker: "6-Op FM Voice Synthesis · 32-Voice Bank · SysEx I/O",
+    available: true,
+    desc: "Algorithmic patch generator and sound design workbench for Yamaha DX7 and M-VAVE FM-1. Features 11 category recipes, 6 sonic profiles, timbral macros, 6-operator matrix editing, real-time FM audio preview, and 32-voice cartridge bank export.",
+    tags: ["6-Op FM", "32 Algorithms", "Voice (163B)", "Bank (4104B)", "SysEx Transmit", "Real-Time Audio"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h12M6 16h4m4 0h4" />
+      <circle cx="8" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="16" cy="12" r="1.5" fill="currentColor" />
+    </svg>`
+  }
+];
+
 let activeModelId = null;
 let callbacks = { onEnterModel: null, onLeaveModel: null };
 
@@ -112,6 +129,50 @@ export function renderModelsGrid(container) {
   }
 }
 
+export function renderToolsGrid(container) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  for (const t of TOOLS) {
+    const card = document.createElement("div");
+    card.className = "model-card is-active";
+    card.dataset.toolId = t.id;
+
+    card.innerHTML = `
+      <div class="model-card-top">
+        <div class="model-icon-wrap" aria-hidden="true">${t.icon}</div>
+        <div class="model-header-text">
+          <div class="model-title-row">
+            <h3 class="model-title">${t.name}</h3>
+          </div>
+          <div class="model-kicker">${t.kicker}</div>
+        </div>
+      </div>
+      <div class="model-card-body">
+        <p class="model-desc">${t.desc}</p>
+        <div class="model-tags">
+          ${t.tags.map((tag) => `<span class="model-tag">${tag}</span>`).join("")}
+        </div>
+      </div>
+      <div class="model-card-footer">
+        <button class="model-launch-btn primary" data-launch="${t.id}" title="Launch ${t.name}">
+          Launch ${t.name} <span>→</span>
+        </button>
+      </div>
+    `;
+
+    card.querySelector(`[data-launch="${t.id}"]`)?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showModel(t.id);
+    });
+    card.addEventListener("click", () => {
+      showModel(t.id);
+    });
+
+    container.appendChild(card);
+  }
+}
+
 export function showLanding(updateHash = true) {
   if (callbacks.onLeaveModel && activeModelId) {
     callbacks.onLeaveModel(activeModelId);
@@ -120,6 +181,7 @@ export function showLanding(updateHash = true) {
 
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const viewDxpatch = document.getElementById("view-dxpatch");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
@@ -129,6 +191,7 @@ export function showLanding(updateHash = true) {
 
   if (viewLanding) viewLanding.style.display = "block";
   if (viewWorkspace) viewWorkspace.style.display = "none";
+  if (viewDxpatch) viewDxpatch.style.display = "none";
   if (modelTraditional) modelTraditional.style.display = "none";
   if (modelCellular) modelCellular.style.display = "none";
   if (modelTuring) modelTuring.style.display = "none";
@@ -142,10 +205,11 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "traditional" && id !== "cellular" && id !== "turing" && id !== "particles") return;
+  if (id !== "traditional" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "dxpatch") return;
 
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const viewDxpatch = document.getElementById("view-dxpatch");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
@@ -156,18 +220,36 @@ export function showModel(id, updateHash = true) {
   activeModelId = id;
 
   if (viewLanding) viewLanding.style.display = "none";
-  if (viewWorkspace) viewWorkspace.style.display = "block";
-  if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
-  if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
-  if (modelTuring) modelTuring.style.display = id === "turing" ? "block" : "none";
-  if (modelParticles) modelParticles.style.display = id === "particles" ? "block" : "none";
-  if (btnBack) btnBack.style.display = "inline-flex";
-  if (modeTag) {
-    if (id === "traditional") modeTag.textContent = "Mene311";
-    else if (id === "cellular") modeTag.textContent = "Cellular Automata";
-    else if (id === "turing") modeTag.textContent = "Turing Machine";
-    else if (id === "particles") modeTag.textContent = "Particles";
-    modeTag.style.display = "inline-block";
+
+  if (id === "dxpatch") {
+    if (viewWorkspace) viewWorkspace.style.display = "none";
+    if (viewDxpatch) viewDxpatch.style.display = "block";
+    if (btnBack) {
+      btnBack.textContent = "‹ Tools";
+      btnBack.style.display = "inline-flex";
+    }
+    if (modeTag) {
+      modeTag.textContent = "DX Patch Generator";
+      modeTag.style.display = "inline-block";
+    }
+  } else {
+    if (viewDxpatch) viewDxpatch.style.display = "none";
+    if (viewWorkspace) viewWorkspace.style.display = "block";
+    if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
+    if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
+    if (modelTuring) modelTuring.style.display = id === "turing" ? "block" : "none";
+    if (modelParticles) modelParticles.style.display = id === "particles" ? "block" : "none";
+    if (btnBack) {
+      btnBack.textContent = "‹ Models";
+      btnBack.style.display = "inline-flex";
+    }
+    if (modeTag) {
+      if (id === "traditional") modeTag.textContent = "Mene311";
+      else if (id === "cellular") modeTag.textContent = "Cellular Automata";
+      else if (id === "turing") modeTag.textContent = "Turing Machine";
+      else if (id === "particles") modeTag.textContent = "Particles";
+      modeTag.style.display = "inline-block";
+    }
   }
 
   if (updateHash && window.location.hash !== `#${id}`) {
@@ -186,12 +268,21 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   const grid = document.getElementById("models-grid");
   if (grid) renderModelsGrid(grid);
 
+  const toolsGrid = document.getElementById("tools-grid");
+  if (toolsGrid) renderToolsGrid(toolsGrid);
+
   // Return to landing page buttons
   const btnBack = document.getElementById("btn-back-landing");
   btnBack?.addEventListener("click", () => showLanding());
 
   const linkModels = document.getElementById("link-models");
   linkModels?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showLanding();
+  });
+
+  const linkDxModels = document.getElementById("dxpatch-link-models");
+  linkDxModels?.addEventListener("click", (e) => {
     e.preventDefault();
     showLanding();
   });
@@ -207,6 +298,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
       if (activeModelId !== "turing") showModel("turing", false);
     } else if (h === "#particles") {
       if (activeModelId !== "particles") showModel("particles", false);
+    } else if (h === "#dxpatch" || h === "#dxpatchgen" || h === "#patch-generator") {
+      if (activeModelId !== "dxpatch") showModel("dxpatch", false);
     } else {
       if (activeModelId !== null) showLanding(false);
     }
@@ -222,6 +315,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
     showModel("turing", false);
   } else if (initialHash === "#particles") {
     showModel("particles", false);
+  } else if (initialHash === "#dxpatch" || initialHash === "#dxpatchgen" || initialHash === "#patch-generator") {
+    showModel("dxpatch", false);
   } else {
     showLanding(false);
   }
