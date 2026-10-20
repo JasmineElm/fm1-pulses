@@ -403,11 +403,6 @@ function refreshPatchUI() {
   if (lfoPmd) lfoPmd.value = String(patch.lfo.pitch_mod_depth);
 
   const algInfo = getAlgorithm(patch.algorithm);
-  const algTitle = document.getElementById("dxpatch-alg-card-title");
-  if (algTitle) algTitle.textContent = `Algorithm ${patch.algorithm} / 32`;
-
-  const algFb = document.getElementById("dxpatch-alg-fb-badge");
-  if (algFb) algFb.textContent = `FB: OP${algInfo.feedback_op} (Lvl ${patch.feedback})`;
 
   const algDesc = document.getElementById("dxpatch-alg-desc");
   if (algDesc) algDesc.textContent = algInfo.description;
@@ -766,6 +761,4 @@ async function sendFullBankToHardware() {
 function setStatus(msg) {
   const el = document.getElementById("dxpatch-status-message");
   if (el) el.textContent = msg;
-  const topStatus = document.getElementById("dxpatch-status");
-  if (topStatus) topStatus.textContent = msg;
 }
