@@ -96,11 +96,6 @@
   gap: 5px;
 }
 
-.dxpatch-card-hint {
-  font-size: 9.5px;
-  color: var(--dim);
-}
-
 /* Form Controls */
 .dxpatch-field-label,
 .dxpatch-micro-label {
@@ -499,20 +494,8 @@
   outline-offset: -1px;
 }
 
-.dxpatch-alg-meta {
-  font-size: 9.5px;
-  color: var(--dim);
-  line-height: 1.4;
-}
-
-.dxpatch-alg-roles {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
-}
-
-.dxpatch-badge {
+.dxpatch-badge,
+.badge {
   display: inline-block;
   font-family: var(--font-mono, monospace);
   font-size: 8.5px;
@@ -520,6 +503,19 @@
   letter-spacing: 0.5px;
   padding: 2px 5px;
   border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.dxpatch-ops-table .dxpatch-badge,
+.dxpatch-ops-table .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .badge-carrier {
@@ -532,6 +528,18 @@
   background: rgba(245, 158, 11, 0.2);
   color: #fde68a;
   border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+[data-theme="light"] .badge-carrier {
+  background: rgba(22, 163, 74, 0.15);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.35);
+}
+
+[data-theme="light"] .badge-mod {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.35);
 }
 
 .badge-fb {
