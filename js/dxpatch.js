@@ -520,18 +520,6 @@ function refreshPatchUI() {
   const algInfo = getAlgorithm(patch.algorithm);
   currentAlgInfo = algInfo;
 
-  const algDesc = document.getElementById("dxpatch-alg-desc");
-  if (algDesc) algDesc.textContent = algInfo.description;
-
-  const algCarriers = document.getElementById("dxpatch-alg-carriers-list");
-  if (algCarriers) algCarriers.textContent = algInfo.carriers.map((c) => `OP${c}`).join(", ");
-
-  const algMods = document.getElementById("dxpatch-alg-mods-list");
-  if (algMods) {
-    algMods.textContent =
-      algInfo.modulators.length > 0 ? algInfo.modulators.map((m) => `OP${m}`).join(", ") : "None (Pure Additive)";
-  }
-
   updateEnvSelectorButtons(algInfo);
   drawAlgorithmCanvas(algInfo);
   renderOperatorsTable(patch, algInfo);
@@ -541,6 +529,9 @@ function refreshPatchUI() {
 function drawAlgorithmCanvas(algInfo) {
   const canvas = document.getElementById("dxpatch-alg-canvas");
   if (!canvas) return;
+  const carrierStr = algInfo.carriers.map((c) => `OP${c}`).join(", ");
+  const modStr = algInfo.modulators.length > 0 ? algInfo.modulators.map((m) => `OP${m}`).join(", ") : "None";
+  canvas.title = `Algorithm ${algInfo.id}: ${algInfo.description} (Carriers: ${carrierStr} · Modulators: ${modStr}) — Click an operator to select`;
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
@@ -722,7 +713,7 @@ function renderOperatorsTable(patch, algInfo) {
           <span>OP${opNum}</span>
         </label>
       </td>
-      <td><span class="badge ${isCarr ? "badge-carrier" : "badge-mod"}">${isCarr ? "CARRIER" : "MOD"}</span></td>
+      <td><span class="dxpatch-badge ${isCarr ? "badge-carrier" : "badge-mod"}" title="${isCarr ? "Carrier (Audible Output)" : "Modulator"}">${isCarr ? "C" : "M"}</span></td>
       <td><input type="number" class="op-num-input" data-op="${opNum}" data-field="output_level" min="0" max="99" value="${op.output_level}" /></td>
       <td>
         <select class="op-mode-select" data-op="${opNum}" data-field="osc_mode" title="Oscillator Mode: Ratio (RAT) or Fixed Hz (FIX)">

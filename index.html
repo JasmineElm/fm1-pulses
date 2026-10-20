@@ -8,7 +8,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=4">
-<link rel="stylesheet" href="css/dxpatch.css?v=8">
+<link rel="stylesheet" href="css/dxpatch.css?v=9">
 </head>
 <body>
 <div class="case">
@@ -361,13 +361,6 @@
             </div>
             <div class="dxpatch-alg-body">
               <canvas id="dxpatch-alg-canvas" width="220" height="125"></canvas>
-              <div class="dxpatch-alg-meta">
-                <span id="dxpatch-alg-desc"></span>
-                <div class="dxpatch-alg-roles">
-                  <div><span class="dxpatch-badge badge-carrier">Carriers</span> <span id="dxpatch-alg-carriers-list" class="dxpatch-mono-val"></span></div>
-                  <div><span class="dxpatch-badge badge-mod">Modulators</span> <span id="dxpatch-alg-mods-list" class="dxpatch-mono-val"></span></div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -392,7 +385,6 @@
         <div class="dxpatch-card">
           <div class="dxpatch-card-header">
             <span class="dxpatch-card-title">6-Operator FM Matrix</span>
-            <span class="dxpatch-card-hint">Click / drag numbers to edit live (OP6 → OP1)</span>
           </div>
           <div class="dxpatch-ops-wrap">
             <table class="dxpatch-ops-table">
@@ -426,8 +418,7 @@
         <!-- Audition Keyboard -->
         <div class="dxpatch-card">
           <div class="dxpatch-card-header">
-            <span class="dxpatch-card-title">Interactive Audition Keyboard</span>
-            <span class="dxpatch-card-hint">Click keys or use keys A–K (W E T Y U for sharps)</span>
+            <span class="dxpatch-card-title" title="Click keys or use keys A–K (W E T Y U for sharps)">Interactive Audition Keyboard</span>
           </div>
           <div id="dxpatch-piano-keyboard" class="dxpatch-keyboard-wrap"></div>
         </div>
