@@ -74,6 +74,19 @@ export const TOOLS = [
       <circle cx="8" cy="12" r="1.5" fill="currentColor" />
       <circle cx="16" cy="12" r="1.5" fill="currentColor" />
     </svg>`
+  },
+  {
+    id: "va",
+    name: "Virtual Analogue (VA)",
+    kicker: "Subtractive VA Synthesis · 16-Preset Pack · FM-1+VA",
+    available: true,
+    desc: "Algorithmic Virtual Analog sound design workbench for BaudGirl FM-1+VA firmware. Features 9 category recipes, 6 sonic profiles, timbral macros, interactive oscillator/filter/ADSR surfaces, real-time MIDI CC streaming, 7-unit effects chain, and 16-preset VA pack management (slots 113–128).",
+    tags: ["Virtual Analog", "BaudGirl FM-1+VA", "231B Presets", "16-Preset Pack", "Real-Time CCs", "Web Audio VA"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12h2l3-7 4 14 3-7h2l3-7 4 14 3-7h2" />
+      <circle cx="9" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="16" cy="12" r="1.5" fill="currentColor" />
+    </svg>`
   }
 ];
 
@@ -186,6 +199,7 @@ export function showLanding(updateHash = true) {
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
   const viewDxpatch = document.getElementById("view-dxpatch");
+  const viewVa = document.getElementById("view-va");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
@@ -196,6 +210,7 @@ export function showLanding(updateHash = true) {
   if (viewLanding) viewLanding.style.display = "block";
   if (viewWorkspace) viewWorkspace.style.display = "none";
   if (viewDxpatch) viewDxpatch.style.display = "none";
+  if (viewVa) viewVa.style.display = "none";
   if (modelTraditional) modelTraditional.style.display = "none";
   if (modelCellular) modelCellular.style.display = "none";
   if (modelTuring) modelTuring.style.display = "none";
@@ -209,11 +224,12 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "traditional" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "dxpatch") return;
+  if (id !== "traditional" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "dxpatch" && id !== "va") return;
 
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
   const viewDxpatch = document.getElementById("view-dxpatch");
+  const viewVa = document.getElementById("view-va");
   const modelTraditional = document.getElementById("model-traditional");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
@@ -227,6 +243,7 @@ export function showModel(id, updateHash = true) {
 
   if (id === "dxpatch") {
     if (viewWorkspace) viewWorkspace.style.display = "none";
+    if (viewVa) viewVa.style.display = "none";
     if (viewDxpatch) viewDxpatch.style.display = "block";
     if (btnBack) {
       btnBack.textContent = "‹ Tools";
@@ -237,8 +254,22 @@ export function showModel(id, updateHash = true) {
       modeTag.textContent = "DX Patch Generator";
       modeTag.style.display = "inline-block";
     }
+  } else if (id === "va") {
+    if (viewWorkspace) viewWorkspace.style.display = "none";
+    if (viewDxpatch) viewDxpatch.style.display = "none";
+    if (viewVa) viewVa.style.display = "block";
+    if (btnBack) {
+      btnBack.textContent = "‹ Tools";
+      btnBack.title = "Return to Tools & Models";
+      btnBack.style.display = "inline-flex";
+    }
+    if (modeTag) {
+      modeTag.textContent = "FM-1+VA";
+      modeTag.style.display = "inline-block";
+    }
   } else {
     if (viewDxpatch) viewDxpatch.style.display = "none";
+    if (viewVa) viewVa.style.display = "none";
     if (viewWorkspace) viewWorkspace.style.display = "block";
     if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
     if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
@@ -299,6 +330,9 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   const linkDxModels = document.getElementById("dxpatch-link-models");
   linkDxModels?.addEventListener("click", returnToLanding);
 
+  const linkVaModels = document.getElementById("va-link-models");
+  linkVaModels?.addEventListener("click", returnToLanding);
+
   // Handle URL hash changes
   window.addEventListener("hashchange", () => {
     const rawHash = (window.location.hash || "").toLowerCase();
@@ -313,6 +347,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
       if (activeModelId !== "particles") showModel("particles", false);
     } else if (h === "#dxpatch" || h === "#dxpatchgen" || h === "#patch-generator") {
       if (activeModelId !== "dxpatch") showModel("dxpatch", false);
+    } else if (h === "#va" || h === "#vapatch" || h === "#fm1va" || h === "#va-patch") {
+      if (activeModelId !== "va") showModel("va", false);
     } else {
       if (activeModelId !== null) showLanding(false);
     }
@@ -331,6 +367,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
     showModel("particles", false);
   } else if (initialHash === "#dxpatch" || initialHash === "#dxpatchgen" || initialHash === "#patch-generator") {
     showModel("dxpatch", false);
+  } else if (initialHash === "#va" || initialHash === "#vapatch" || initialHash === "#fm1va" || initialHash === "#va-patch") {
+    showModel("va", false);
   } else {
     showLanding(false);
   }

@@ -306,3 +306,43 @@ export function playHardwareNote(note = 60, vel = 100, durationMs = 500, channel
     sendNoteOff(note, channel);
   }, durationMs);
 }
+
+// --------------------------------------------------------------------------- //
+// BaudGirl FM-1+VA Virtual Analog Preset & CC Transmission
+// --------------------------------------------------------------------------- //
+
+export async function sendVALiveCCs(patch, channel = 0, fxChannel = 1) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const { encodeVALiveCCs } = await import("./va.js");
+  const ccs = encodeVALiveCCs(patch, channel, fxChannel);
+  for (const [status, num, val] of ccs) {
+    out.send([status, num, val]);
+  }
+  return { portName: out.name, ccCount: ccs.length };
+}
+
+export async function sendVAPresetPatch(patch, targetSlot = 112) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const { encodeVAPresetSysex } = await import("./va.js");
+  const sysex = encodeVAPresetSysex(patch, targetSlot);
+  out.send(sysex);
+  return { portName: out.name, byteLength: sysex.length, slot: targetSlot + 1 };
+}
+
+export async function sendVABankPatch(pack, startSlot = 112, onProgress = null) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const { encodeVABankSysex } = await import("./va.js");
+  const sysex = encodeVABankSysex(pack, startSlot);
+  const chunkSize = 231;
+  for (let offset = 0; offset < sysex.length; offset += chunkSize) {
+    const slice = sysex.subarray(offset, Math.min(offset + chunkSize, sysex.length));
+    out.send(slice);
+    if (onProgress) onProgress(Math.min(1.0, (offset + slice.length) / sysex.length));
+    if (offset + chunkSize < sysex.length) await sleep(12);
+  }
+  return { portName: out.name, byteLength: sysex.length, count: pack.length };
+}
+

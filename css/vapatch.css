@@ -1,0 +1,692 @@
+/* css/vapatch.css — BaudGirl FM-1+VA Virtual Analog workbench styling for FM-1 Pulses */
+
+.view-va {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: landingFadeIn 0.2s ease-out;
+}
+
+.va-workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 220px;
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .va-workspace {
+    grid-template-columns: 260px 1fr;
+  }
+  .va-panel-right {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .va-workspace {
+    grid-template-columns: 1fr;
+  }
+  .va-panel-right {
+    grid-column: span 1;
+  }
+}
+
+/* Panel Containers */
+.va-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  min-width: 0;
+}
+
+.va-card {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.va-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.va-heading {
+  margin: 0 0 8px 0;
+  padding: 0 0 4px 0;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.2;
+}
+
+.va-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--fg);
+}
+
+/* Form Controls */
+.va-field-label {
+  display: block;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--dim);
+  margin: 6px 0 3px 0;
+  font-weight: 600;
+}
+
+.va-select,
+.va-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+
+.va-select:focus,
+.va-input:focus {
+  border-color: var(--line-focus);
+}
+
+/* Sliders */
+.va-slider-row {
+  margin: 6px 0;
+}
+
+.va-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--dim);
+  margin-bottom: 2px;
+}
+
+.va-mono-val {
+  font-family: var(--font-mono, monospace);
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.va-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  outline: none;
+}
+
+.va-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent);
+  cursor: pointer;
+  border: 1px solid var(--line-focus);
+}
+
+.va-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent);
+  cursor: pointer;
+  border: 1px solid var(--line-focus);
+}
+
+/* Buttons */
+.va-btn-block {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  font-family: inherit;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.va-btn-block:hover {
+  background: var(--panel2);
+  border-color: var(--line-focus);
+}
+
+.va-btn-block.primary {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.va-btn-block.primary:hover {
+  filter: brightness(1.1);
+}
+
+.va-btn-block.warning {
+  background: #f59e0b;
+  color: #111215;
+  border-color: #d97706;
+}
+
+.va-btn-block.warning:hover {
+  filter: brightness(1.1);
+}
+
+.va-btn-block kbd {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-family: var(--font-mono, monospace);
+  color: inherit;
+}
+
+.va-btn-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.va-btn-sm {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+
+.va-btn-sm:hover:not(:disabled) {
+  border-color: var(--line-focus);
+}
+
+.va-btn-sm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.va-file-drop {
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--dim);
+  cursor: pointer;
+  margin-top: 6px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.va-file-drop:hover,
+.va-file-drop.dragover {
+  border-color: var(--accent);
+  background: var(--panel);
+}
+
+/* Voice Header Card */
+.va-voice-header {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.va-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+}
+
+.va-micro-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.va-name-input {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  width: 110px;
+  text-transform: uppercase;
+}
+
+.va-param-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+/* Segmented Buttons */
+.va-seg-group {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.va-seg-btn {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
+}
+
+.va-seg-btn:hover {
+  color: var(--fg);
+  border-color: var(--line-focus);
+}
+
+.va-seg-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+/* Stepper Controls */
+.va-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.va-stepper-btn {
+  background: var(--panel2);
+  border: none;
+  color: var(--fg);
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  min-width: 18px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.va-stepper-btn:hover {
+  background: var(--line-focus);
+}
+
+.va-stepper-input {
+  width: 28px;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.va-stepper-input::-webkit-outer-spin-button,
+.va-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Visualizer Grid (3 Cards) */
+.va-viz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .va-viz-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.va-canvas-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.va-canvas-body canvas {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  max-width: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+/* Scrubbable Parameter Grid */
+.va-param-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.va-scrub-cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: ns-resize;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.va-scrub-cell:hover {
+  border-color: var(--accent);
+}
+
+.va-scrub-cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.va-scrub-key {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--dim);
+}
+
+.va-scrub-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.va-scrub-bar {
+  height: 3px;
+  background: var(--panel2);
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+
+.va-scrub-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.05s linear;
+}
+
+.va-scrub-fill.amber {
+  background: #f59e0b;
+}
+
+.va-scrub-fill.purple {
+  background: #a855f7;
+}
+
+/* 7-Unit Effects Chain */
+.va-fx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.va-fx-unit {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0.65;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.va-fx-unit.fx-active {
+  opacity: 1;
+  border-color: var(--line-focus);
+}
+
+.va-fx-toggle-btn {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--fg);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.va-fx-unit.fx-active .va-fx-toggle-btn {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.va-fx-type-btn {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--dim);
+  cursor: pointer;
+  text-align: center;
+}
+
+.va-fx-type-btn:hover {
+  color: var(--fg);
+}
+
+/* Audition Piano Keyboard */
+.va-keyboard-wrap {
+  position: relative;
+  height: 60px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  user-select: none;
+}
+
+.va-piano-key-white {
+  flex: 1;
+  background: #ffffff !important;
+  color: #111215 !important;
+  border-right: 1px solid #d1d5db;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  user-select: none;
+}
+
+.va-piano-key-white:last-child {
+  border-right: none;
+}
+
+.va-piano-key-white.active,
+.va-piano-key-white:active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.va-piano-key-black {
+  position: absolute;
+  top: 0;
+  width: 4.8%;
+  height: 60%;
+  background: #111215 !important;
+  color: #9ca3af !important;
+  border: 1px solid #333846;
+  border-top: none;
+  z-index: 2;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  font-size: 7.5px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  border-radius: 0 0 2px 2px;
+}
+
+.va-piano-key-black.active,
+.va-piano-key-black:active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+/* 16-Preset Pack List */
+.va-bank-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.va-bank-cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.va-bank-cell:hover {
+  background: var(--panel2);
+  border-color: var(--line-focus);
+}
+
+.va-bank-cell.active {
+  border-color: var(--accent);
+  background: var(--panel2);
+}
+
+.va-bank-cell-num {
+  font-family: var(--font-mono, monospace);
+  color: var(--dim);
+  font-weight: 700;
+  min-width: 22px;
+}
+
+.va-bank-cell-name {
+  font-family: var(--font-mono, monospace);
+  color: var(--fg);
+  font-weight: 700;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.va-bank-cell-tag {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--dim);
+  border: 1px solid var(--line);
+}
+
+.va-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #ffffff;
+}

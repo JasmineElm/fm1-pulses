@@ -8,7 +8,8 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=4">
-<link rel="stylesheet" href="css/dxpatch.css?v=9">
+<link rel="stylesheet" href="css/dxpatch.css?v=10">
+<link rel="stylesheet" href="css/vapatch.css?v=1">
 </head>
 <body>
 <div class="case">
@@ -155,6 +156,7 @@
         open .syx
         <input type="file" id="dxpatch-file-input" accept=".syx,application/octet-stream" hidden>
       </label>
+      <a class="glink" href="#va" id="dxpatch-link-va" title="Switch to Virtual Analogue Generator (FM-1+VA)">virtual analogue (va) ›</a>
     </div>
 
     <div class="dxpatch-workspace">
@@ -448,7 +450,293 @@
       <span><kbd>Space</kbd> Generate &nbsp; <kbd>M</kbd> Mutate &nbsp; <kbd>B</kbd> To Bank</span>
     </div>
   </section>
+
+  <!-- TOOL: VA PATCH GENERATOR WORKBENCH -->
+  <section id="view-va" class="view-workspace view-va" style="display: none;" aria-label="Virtual Analogue Patch Generator">
+    <div class="statusrow">
+      <a class="glink glink-model" id="va-link-models" href="#models" title="Return to models and tools">‹ tools</a>
+      <a class="glink" href="guide.html">guide</a>
+      <a class="glink" id="va-top-dl-preset" title="Download current preset as 231-byte BaudGirl v4 SysEx file">save preset (.syx)</a>
+      <a class="glink" id="va-top-dl-pack" title="Download 16-preset pack as BaudGirl SysEx file">save pack (.syx)</a>
+      <label class="glink" title="Open .syx file (Preset or Pack)" style="cursor: pointer;">
+        open .syx
+        <input type="file" id="va-top-file-input" accept=".syx,application/octet-stream" hidden>
+      </label>
+      <a class="glink" href="#dxpatch" id="va-link-dxpatch" title="Switch to DX Patch Generator (FM-1 6-Op FM)">‹ dx patch (fm)</a>
+    </div>
+
+    <div class="va-workspace">
+      <!-- Left Column: Generator Controls & Hardware -->
+      <aside class="va-panel va-panel-left">
+        <div class="va-card">
+          <h3 class="va-heading">Sound Generator</h3>
+
+          <label class="va-field-label" for="va-category-select">Category Template</label>
+          <select id="va-category-select" class="va-select">
+            <option value="supersaw">⚡ Trance Supersaw Lead</option>
+            <option value="acid">🧪 Acid 303 Squelch Bass</option>
+            <option value="reese">🔊 Reese / Neuro Sub Bass</option>
+            <option value="pad">🌊 Warm Analog Drift Pad</option>
+            <option value="pluck">🪕 Poly Pluck / Arp</option>
+            <option value="pwm">🎻 Hollow PWM Strings</option>
+            <option value="brass">🎺 Vintage CS / OB Brass</option>
+            <option value="chip">👾 Bitcrushed Pulse Lead</option>
+            <option value="fx">🛸 Modulated Noise / FX</option>
+          </select>
+
+          <label class="va-field-label" for="va-profile-select">Sonic Profile Layer</label>
+          <select id="va-profile-select" class="va-select">
+            <option value="none">Neutral (Standard)</option>
+            <option value="warm">Warm &amp; Subby</option>
+            <option value="bright">Bright &amp; Open</option>
+            <option value="aggressive">Aggressive &amp; Driven</option>
+            <option value="wide">Wide Unison</option>
+            <option value="lofi">Lo-Fi Drifty</option>
+          </select>
+        </div>
+
+        <div class="va-card">
+          <h3 class="va-heading">Timbral Macros</h3>
+
+          <div class="va-slider-row" title="Filter Cutoff Bias">
+            <div class="va-slider-header">
+              <span>Cutoff</span>
+              <span id="va-val-cutoff" class="va-mono-val">0.60</span>
+            </div>
+            <input type="range" id="va-slider-cutoff" class="va-range" min="0" max="1" step="0.05" value="0.6" />
+          </div>
+
+          <div class="va-slider-row" title="Unison Supersaw &amp; Detune Spread">
+            <div class="va-slider-header">
+              <span>Unison</span>
+              <span id="va-val-unison" class="va-mono-val">0.50</span>
+            </div>
+            <input type="range" id="va-slider-unison" class="va-range" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+
+          <div class="va-slider-row" title="Envelope Speed">
+            <div class="va-slider-header">
+              <span>Env Speed</span>
+              <span id="va-val-speed" class="va-mono-val">0.50</span>
+            </div>
+            <input type="range" id="va-slider-speed" class="va-range" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+
+          <div class="va-slider-row" title="Effects Chain Density">
+            <div class="va-slider-header">
+              <span>FX Density</span>
+              <span id="va-val-fx" class="va-mono-val">0.50</span>
+            </div>
+            <input type="range" id="va-slider-fx" class="va-range" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+
+          <div class="va-slider-row" title="Mutation Rate">
+            <div class="va-slider-header">
+              <span>Mutation Rate</span>
+              <span id="va-val-mutation" class="va-mono-val">0.20</span>
+            </div>
+            <input type="range" id="va-slider-mutation" class="va-range" min="0.05" max="1" step="0.05" value="0.2" />
+          </div>
+        </div>
+
+        <div class="va-card">
+          <button id="va-btn-generate" class="va-btn-block primary" title="Generate VA preset (Space)">
+            <span>🎲 Generate Preset</span> <kbd>Space</kbd>
+          </button>
+          <button id="va-btn-mutate" class="va-btn-block warning" title="Mutate current preset (M)">
+            <span>🧬 Mutate Preset</span> <kbd>M</kbd>
+          </button>
+          <button id="va-btn-add-bank" class="va-btn-block" title="Store preset into active pack slot (B)">
+            <span>📥 Save to Pack Slot</span> <kbd>B</kbd>
+          </button>
+        </div>
+
+        <div class="va-card">
+          <h3 class="va-heading">Hardware &amp; SysEx</h3>
+          <div class="va-btn-grid-2">
+            <button id="va-btn-send-cc" class="va-btn-sm" title="Beam real-time MIDI CCs to M-VAVE FM-1 (no flash wear)">📡 Beam CCs</button>
+            <button id="va-btn-send-v4" class="va-btn-sm" title="Write 231-byte BaudGirl v4 SysEx to Target Slot">💾 Write 231B</button>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:10px; color:var(--dim);">
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;" title="Automatically stream real-time MIDI CCs on generate/edit">
+              <input type="checkbox" id="va-chk-auto-cc" checked />
+              <span>Auto-CC</span>
+            </label>
+            <div class="va-stepper" title="Target FM-1 Preset Number (1-128, VA Pack defaults to 113-128)">
+              <button type="button" id="va-slot-prev" class="va-stepper-btn" title="Previous Slot">‹</button>
+              <input type="number" id="va-target-slot" min="1" max="128" value="113" class="va-stepper-input" title="Slot (1–128)" />
+              <button type="button" id="va-slot-next" class="va-stepper-btn" title="Next Slot">›</button>
+            </div>
+            <label style="display:flex; align-items:center; gap:4px;">
+              <span>Ch:</span>
+              <select id="va-midi-channel-select" class="va-select" style="width: auto; padding: 1px 4px; margin-bottom: 0;">
+                <option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option>
+                <option value="4">5</option><option value="5">6</option><option value="6">7</option><option value="7">8</option>
+                <option value="8">9</option><option value="9">10</option><option value="10">11</option><option value="11">12</option>
+                <option value="12">13</option><option value="13">14</option><option value="14">15</option><option value="15">16</option>
+              </select>
+            </label>
+          </div>
+
+          <div style="margin-top:6px;">
+            <label class="va-field-label" for="va-audition-mode-select">Audition Audio</label>
+            <select id="va-audition-mode-select" class="va-select">
+              <option value="auto">Auto (FM-1 if connected, else Browser)</option>
+              <option value="browser">Browser VA Synth Only</option>
+              <option value="hardware">M-VAVE FM-1 Hardware Only</option>
+              <option value="both">Both (Browser + FM-1)</option>
+            </select>
+          </div>
+
+          <div class="va-btn-grid-2" style="margin-top:8px;">
+            <button id="va-btn-dl-preset" class="va-btn-sm" title="Download 231-byte single preset .syx">💾 Preset 231B</button>
+            <button id="va-btn-dl-pack" class="va-btn-sm" title="Download 16-preset pack .syx (compatible with BaudGirl Device Manager)">💾 Pack 16 .syx</button>
+          </div>
+          <div class="va-file-drop" id="va-drop-area">
+            <span>📂 Drop or click to load <code>.syx</code></span>
+            <input type="file" id="va-panel-file-input" accept=".syx,application/octet-stream" hidden />
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Column: Voice Inspector & Interactive VA Surfaces -->
+      <div class="va-panel va-panel-center">
+        <!-- Voice Header Card -->
+        <div class="va-voice-header">
+          <div class="va-title-group">
+            <span class="va-micro-label">PRESET NAME (10 CHARS)</span>
+            <input type="text" id="va-name-input" class="va-name-input" maxlength="10" value="INIT VA" spellcheck="false" />
+          </div>
+
+          <div class="va-param-pill" title="Oscillator Waveform">
+            <span class="va-micro-label">WAVE</span>
+            <div class="va-seg-group" id="va-wave-group">
+              <button type="button" class="va-seg-btn" data-wave="0">SIN</button>
+              <button type="button" class="va-seg-btn active" data-wave="1">SAW</button>
+              <button type="button" class="va-seg-btn" data-wave="2">TRI</button>
+              <button type="button" class="va-seg-btn" data-wave="3">SQR</button>
+            </div>
+          </div>
+
+          <div class="va-param-pill" title="Filter Mode">
+            <span class="va-micro-label">FILTER</span>
+            <div class="va-seg-group" id="va-filter-group">
+              <button type="button" class="va-seg-btn active" data-ftype="0">LP12</button>
+              <button type="button" class="va-seg-btn" data-ftype="1">LP24</button>
+              <button type="button" class="va-seg-btn" data-ftype="2">BP</button>
+              <button type="button" class="va-seg-btn" data-ftype="3">HP</button>
+            </div>
+          </div>
+
+          <div class="va-param-pill" title="Filter Key Tracking">
+            <span class="va-micro-label">KEY TRK</span>
+            <div class="va-seg-group" id="va-keytrk-group">
+              <button type="button" class="va-seg-btn" data-ktrk="0">0%</button>
+              <button type="button" class="va-seg-btn" data-ktrk="1">33%</button>
+              <button type="button" class="va-seg-btn active" data-ktrk="2">67%</button>
+              <button type="button" class="va-seg-btn" data-ktrk="3">100%</button>
+            </div>
+          </div>
+
+          <div class="va-param-pill" title="Polyphonic / Monophonic Glide Mode">
+            <span class="va-micro-label">VOICE</span>
+            <div class="va-seg-group" id="va-mono-group">
+              <button type="button" class="va-seg-btn active" data-mono="0">POLY</button>
+              <button type="button" class="va-seg-btn" data-mono="1">MONO</button>
+            </div>
+          </div>
+
+          <div class="va-param-pill" title="Transpose (0–48 semitones, 24 = C3)">
+            <span class="va-micro-label">TRANSPOSE</span>
+            <div class="va-stepper">
+              <button type="button" id="va-transpose-prev" class="va-stepper-btn" title="Decrease Transpose">‹</button>
+              <input type="number" id="va-transpose-input" min="0" max="48" value="24" class="va-stepper-input" title="Transpose (0–48)" />
+              <button type="button" id="va-transpose-next" class="va-stepper-btn" title="Increase Transpose">›</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Interactive Visualizers Grid -->
+        <div class="va-viz-grid">
+          <div class="va-card">
+            <div class="va-card-header">
+              <span class="va-card-title">Oscillator</span>
+            </div>
+            <div class="va-canvas-body">
+              <canvas id="va-osc-canvas" width="240" height="120" title="Click to cycle Waveform; drag X for Detune/PWM, drag Y for Super unison"></canvas>
+            </div>
+          </div>
+
+          <div class="va-card">
+            <div class="va-card-header">
+              <span class="va-card-title">Filter Response</span>
+            </div>
+            <div class="va-canvas-body">
+              <canvas id="va-filter-canvas" width="280" height="120" title="Drag X for Cutoff, drag Y for Resonance, scroll wheel for Filter Env"></canvas>
+            </div>
+          </div>
+
+          <div class="va-card">
+            <div class="va-card-header">
+              <span class="va-card-title">Amp ADSR</span>
+            </div>
+            <div class="va-canvas-body">
+              <canvas id="va-env-canvas" width="240" height="120" title="Drag Attack, Decay, Sustain, and Release nodes directly"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scrubbable Parameter Grid -->
+        <div class="va-card">
+          <div class="va-card-header">
+            <span class="va-card-title">Synth Parameters (Drag or Scroll on Any Cell)</span>
+          </div>
+          <div id="va-scrub-grid" class="va-param-strip"></div>
+        </div>
+
+        <!-- 7-Unit Effects Chain -->
+        <div class="va-card">
+          <div class="va-card-header">
+            <span class="va-card-title">7-Unit Effects Chain</span>
+          </div>
+          <div id="va-fx-grid" class="va-fx-grid"></div>
+        </div>
+
+        <!-- Audition Keyboard -->
+        <div class="va-card">
+          <div class="va-card-header">
+            <span class="va-card-title" title="Click keys or use keys A–K (W E T Y U for sharps)">Interactive Audition Keyboard</span>
+          </div>
+          <div id="va-piano-keyboard" class="va-keyboard-wrap"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: 16-Preset VA Pack Manager (Slots 113–128) -->
+      <aside class="va-panel va-panel-right">
+        <div class="va-card">
+          <div class="va-card-header">
+            <h3 class="va-heading" style="margin:0;">16-Preset VA Pack</h3>
+            <span id="va-bank-slot-indicator" class="va-badge">Slot 113</span>
+          </div>
+          <div class="va-btn-grid-2">
+            <button id="va-btn-fill-pack" class="va-btn-sm" title="Generate 16 VA presets of current category">⚡ Gen 16</button>
+            <button id="va-btn-fill-mixed" class="va-btn-sm" title="Generate 16 mixed-category VA presets">🌈 Mixed 16</button>
+          </div>
+          <button id="va-btn-export-pack" class="va-btn-block primary" style="margin-top:6px; font-size:10px;">
+            <span>📦 Download Pack (.syx)</span>
+          </button>
+          <div id="va-bank-list" class="va-bank-list" style="margin-top:8px;"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div style="font-size:10px; color:var(--dim); padding:4px 2px; display:flex; justify-content:space-between;">
+      <span id="va-status-message">Ready. Drag on Oscillator, Filter, or ADSR canvases, or press Space to generate.</span>
+      <span><kbd>Space</kbd> Generate &nbsp; <kbd>M</kbd> Mutate &nbsp; <kbd>B</kbd> To Pack &nbsp; <kbd>E</kbd> Export Pack</span>
+    </div>
+  </section>
 </div>
-<script type="module" src="js/rack.js?v=9"></script>
+<script type="module" src="js/rack.js?v=10"></script>
 </body>
 </html>

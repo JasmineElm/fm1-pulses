@@ -23,6 +23,7 @@ import { initCellular, activateCellularModel, deactivateCellularModel } from "./
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=1";
 import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=1";
 import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js";
+import { initVaPatch, activateVaPatch, deactivateVaPatch } from "./vapatch.js";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
@@ -449,6 +450,7 @@ initCellular();
 initTuring();
 initParticles();
 initDxPatch();
+initVaPatch();
 doGenerate(true);
 initMidi();
 initModes({
@@ -460,6 +462,8 @@ initModes({
       deactivateCellularModel();
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivateDxPatch();
+      deactivateVaPatch();
       fitSteps();
       renderScope();
       renderBuffer();
@@ -467,21 +471,35 @@ initModes({
     } else if (modelId === "cellular") {
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivateDxPatch();
+      deactivateVaPatch();
       activateCellularModel();
     } else if (modelId === "turing") {
       deactivateCellularModel();
       deactivateParticlesModel();
+      deactivateDxPatch();
+      deactivateVaPatch();
       activateTuringModel();
     } else if (modelId === "particles") {
       deactivateCellularModel();
       deactivateTuringModel();
+      deactivateDxPatch();
+      deactivateVaPatch();
       activateParticlesModel();
     } else if (modelId === "dxpatch") {
       deactivateCellularModel();
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivateVaPatch();
       if (isLive()) stopLive();
       activateDxPatch();
+    } else if (modelId === "va") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivateDxPatch();
+      if (isLive()) stopLive();
+      activateVaPatch();
     }
   },
   onLeaveModel: () => {
@@ -496,6 +514,7 @@ initModes({
     try { deactivateTuringModel(); } catch (e) { console.warn("Error deactivating turing model:", e); }
     try { deactivateParticlesModel(); } catch (e) { console.warn("Error deactivating particles model:", e); }
     try { deactivateDxPatch(); } catch (e) { console.warn("Error deactivating dxpatch model:", e); }
+    try { deactivateVaPatch(); } catch (e) { console.warn("Error deactivating va model:", e); }
   }
 });
 setTimeout(applyTips, 0);
