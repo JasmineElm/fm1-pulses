@@ -670,9 +670,9 @@
   align-items: center;
   width: calc(100% / 15);
   height: 100%;
-  background: var(--fg);
-  color: var(--bg);
-  border-right: 1px solid var(--line);
+  background: #ffffff;
+  color: #111827;
+  border-right: 1px solid #d1d5db;
   font-size: 8px;
   font-weight: 700;
   padding-bottom: 4px;
@@ -681,10 +681,13 @@
   box-sizing: border-box;
   transition: background 0.1s, color 0.1s;
 }
+.piano-key-white:last-child {
+  border-right: none;
+}
 .piano-key-white:hover,
 .piano-key-white.active {
   background: var(--accent);
-  color: #fff;
+  color: #ffffff;
 }
 
 .piano-key-black {
@@ -692,9 +695,9 @@
   top: 0;
   width: 22px;
   height: 58%;
-  background: var(--bg);
-  color: var(--dim);
-  border: 1px solid var(--line);
+  background: #111215;
+  color: #9ca3af;
+  border: 1px solid #000000;
   border-radius: 0 0 2px 2px;
   font-size: 8px;
   display: flex;
@@ -709,7 +712,7 @@
 .piano-key-black:hover,
 .piano-key-black.active {
   background: var(--accent);
-  color: #fff;
+  color: #ffffff;
 }
 
 /* 32-Voice Bank List */
