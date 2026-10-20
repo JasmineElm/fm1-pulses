@@ -72,6 +72,43 @@
   color: var(--fg);
 }
 
+.dxpatch-alg-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dxpatch-alg-title-wrap .unit {
+  font-size: 10px;
+  color: var(--dim);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dxpatch-alg-input {
+  width: 34px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  font: 700 12px ui-monospace, monospace;
+  text-align: center;
+  padding: 1px 2px;
+  border-radius: 3px;
+  outline: none;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.dxpatch-alg-input::-webkit-outer-spin-button,
+.dxpatch-alg-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.dxpatch-alg-input:focus {
+  border-color: var(--accent);
+}
+
 .dxpatch-card-hint {
   font-size: 9px;
   color: var(--dim);

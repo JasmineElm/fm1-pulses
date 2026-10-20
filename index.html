@@ -153,7 +153,6 @@
         open .syx
         <input type="file" id="dxpatch-file-input" accept=".syx,application/octet-stream" hidden>
       </label>
-      <span id="dxpatch-status" class="status">ready</span>
     </div>
 
     <div class="dxpatch-workspace">
@@ -305,14 +304,6 @@
           </div>
 
           <div class="dxpatch-param-pill">
-            <span class="dxpatch-micro-label">ALGORITHM</span>
-            <div class="dxpatch-pill-control">
-              <input type="number" id="dxpatch-alg-input" min="1" max="32" value="1" />
-              <span class="unit">/ 32</span>
-            </div>
-          </div>
-
-          <div class="dxpatch-param-pill">
             <span class="dxpatch-micro-label">FEEDBACK</span>
             <div class="dxpatch-pill-control">
               <input type="number" id="dxpatch-fb-input" min="0" max="7" value="0" />
@@ -353,8 +344,11 @@
         <div class="dxpatch-viz-grid">
           <div class="dxpatch-card">
             <div class="dxpatch-card-header">
-              <span id="dxpatch-alg-card-title" class="dxpatch-card-title">Algorithm 1</span>
-              <span id="dxpatch-alg-fb-badge" class="dxpatch-badge badge-fb">FB: OP6</span>
+              <span id="dxpatch-alg-card-title" class="dxpatch-card-title dxpatch-alg-title-wrap">
+                <span>Algorithm</span>
+                <input type="number" id="dxpatch-alg-input" min="1" max="32" value="1" class="dxpatch-alg-input" title="Algorithm (1–32)" />
+                <span class="unit">/ 32</span>
+              </span>
             </div>
             <div class="dxpatch-alg-body">
               <canvas id="dxpatch-alg-canvas" width="220" height="125"></canvas>
