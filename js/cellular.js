@@ -13,6 +13,7 @@ import { isLive, setModelStepHandler } from "./player.js?v=1";
 import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=1";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
+import { registerModel } from "./snapshot.js";
 export { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS };
 
 // Grid sizes supported
@@ -1559,3 +1560,43 @@ export function deactivateCellularModel() {
   setModelGenerator(null);
   setModelRandomizer(null);
 }
+
+// ---- Session snapshot (see snapshot.js) ----
+const liveCells = (g) => { const o = []; for (let i = 0; i < g.length; i++) if (g[i] > 0) o.push(i); return o; };
+const fromCells = (idx, size) => {
+  const g = new Uint8Array(size * size);
+  if (Array.isArray(idx)) for (const i of idx) if (Number.isInteger(i) && i >= 0 && i < g.length) g[i] = 1;
+  return g;
+};
+
+registerModel({
+  id: "cellular",
+  version: 1,
+  migrations: {},
+  capture() {
+    return {
+      gridSize, loopMode, boundaryMode, generation,
+      seedCells: liveCells(seedGrid),
+      currentCells: liveCells(currentGrid),
+    };
+  },
+  restore(h) {
+    if (!h) return;
+    const size = GRID_SIZES.includes(h.gridSize) ? h.gridSize : DEFAULT_GRID_SIZE;
+    gridSize = size;
+    seedGrid = fromCells(h.seedCells, size);
+    currentGrid = fromCells(h.currentCells ?? h.seedCells, size);
+    nextGrid = new Uint8Array(size * size);
+    generation = Number.isInteger(h.generation) && h.generation >= 0 ? h.generation : 0;
+    loopMode = h.loopMode === "free" ? "free" : "loop";
+    boundaryMode = h.boundaryMode === "wall" ? "wall" : "wrap";
+    prevCell = null;
+    lastTriggeredNote = null;
+    countPopulation();
+    refs.caGridSize?.setValue?.(String(size), false);
+    refs.caBoundaryMode?.setValue?.(boundaryMode, false);
+    refs.caLoopMode?.setValue?.(loopMode, false);
+    const badge = document.getElementById("ca-badge-dim");
+    if (badge) badge.textContent = `${size}×${size}`;
+  },
+});

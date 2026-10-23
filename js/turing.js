@@ -14,6 +14,7 @@ import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
 import { quantize, midiName, SCALES } from "./generator.js";
 import { onBufferRender } from "./grid.js";
+import { registerModel } from "./snapshot.js";
 
 // Length options supported by Turing Machine
 export const TURING_LENGTHS = [8, 16, 24, 32, 48, 64];
@@ -656,6 +657,36 @@ export function deactivateTuringModel() {
   setModelGenerator(null);
   setModelRandomizer(null);
 }
+
+// ---- Session snapshot (see snapshot.js) ----
+// Hidden state not covered by `state`: the shift register and the gate pattern.
+registerModel({
+  id: "turing",
+  version: 1,
+  migrations: {},
+  capture() {
+    const steps = getBank()[0]?.steps || [];
+    const gates = [];
+    for (let i = 0; i < 64; i++) gates.push(steps[i]?.notes?.length ? 1 : 0);
+    return { bits: turingBits.map((b) => (b ? 1 : 0)), gates };
+  },
+  restore(h) {
+    if (Array.isArray(h?.bits)) {
+      for (let i = 0; i < 64; i++) turingBits[i] = h.bits[i] ? 1 : 0;
+    }
+    if (Array.isArray(h?.gates) && h.gates.length === 64) {
+      // generateTuringBank() reads the existing bank as the rhythm, so seed it first.
+      const rate = state.rate !== undefined ? state.rate : 6;
+      setBank([{
+        length: 64, rate,
+        steps: h.gates.map((g) => {
+          const n = { note: 60, vel: state.velocity || 100 };
+          return { notes: g ? [{ ...n }] : [], _savedNote: { ...n }, rate };
+        }),
+      }]);
+    }
+  },
+});
 
 // Sync DAC contour when rhythm grid gates change
 onBufferRender(() => {

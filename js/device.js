@@ -1,11 +1,9 @@
-// device.js — FM-1 hardware device communication, SysEx writes, and tempo sync.
-import { state, refs, getBank, getSelected, RATE_NAMES, SLOTS, status } from "./state.js";
+// device.js — FM-1 hardware connection status and tempo sync (real-time control only).
+import { state, refs, getSelected, status } from "./state.js";
 import * as midi from "./midi.js";
-import { encodeWrite, emptyPattern } from "./pattern.js";
 
 const GSET_ADDR = 0x01C0E840 + 5816;
 const GSET_LEN = 137;
-let busy = false;
 
 let tempoProbeTimer = null;
 let tempoProbeBusy = false;
@@ -24,27 +22,6 @@ export function scheduleTempoProbe() {
   }, 1200);
 }
 
-export async function readBack(pat) {
-  const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
-  if (data.length < 68 + 2 * pat) throw new Error(`short read (${data.length} bytes)`);
-  return { tempo: data[66 + 2 * pat] | (data[67 + 2 * pat] << 7), data };
-}
-
-export async function dumpGset() {
-  try {
-    status("reading the device's settings block…");
-    const data = await midi.readMemory(GSET_ADDR, GSET_LEN);
-    await syncDeviceTempo(data);
-    const rows = [];
-    for (let i = 0; i < data.length; i += 16) {
-      rows.push(String(i).padStart(3, "0") + ": " +
-        Array.from(data.slice(i, i + 16)).map((b) => b.toString(16).padStart(2, "0")).join(" "));
-    }
-    alert(`FM-1 global settings, ${data.length} bytes\n\n${rows.join("\n")}`);
-    status(`read ${data.length} bytes · Tempo synced to the device's BPM`, "ok");
-  } catch (e) { status("read failed: " + (e.message || e), "err"); }
-}
-
 export async function syncDeviceTempo(data = null, retries = 2) {
   try {
     if (!data) data = await midi.readMemory(GSET_ADDR, GSET_LEN);
@@ -60,57 +37,6 @@ export async function syncDeviceTempo(data = null, retries = 2) {
     if (retries > 0) return syncDeviceTempo(null, retries - 1);
     return null;
   }
-}
-
-export function syncHeader() {
-  const bank = getBank();
-  for (const p of bank) {
-    if (!p) continue;
-    p.tempo = state.tempo; p.rate = state.rate; p.gate = state.gate; p.swing = state.swing;
-    p.length = Math.max(1, Math.min(64, state.length));
-    for (const st of p.steps) st.rate = state.rate;
-  }
-}
-
-export async function doFreeze(slotIndex = 0) {
-  const bank = getBank();
-  const pat = bank[slotIndex] || bank[0];
-  if (!pat) return;
-  syncHeader();
-  try {
-    status(`freezing pattern · ${Math.round(state.tempo)} bpm · ${RATE_NAMES[state.rate]}…`);
-    await midi.sendPattern(encodeWrite(pat, slotIndex, true), "pattern");
-    try {
-      const { tempo: held, data } = await readBack(slotIndex);
-      const want = Math.round(state.tempo);
-      if (held !== want) {
-        await syncDeviceTempo(data);
-        status(`pattern frozen ✓ · FM-1 holds ${held} bpm (sent ${want}) — tempo is device-global on this firmware, so Tempo now shows the device's BPM`, "err");
-      } else {
-        status(`pattern frozen ✓ · sent ${want} bpm, device holds ${held} bpm`, "ok");
-      }
-    } catch (e) {
-      await syncDeviceTempo();
-      status(`pattern frozen ✓ (read-back: ${e.message || e})`, "ok");
-    }
-  } catch (e) { status(String(e.message || e), "err"); }
-}
-
-export async function doClearAll() {
-  const bank = getBank();
-  if (busy || !bank.length) return;
-  if (!confirm("Erase pattern on the FM-1?\n\nThis overwrites it with an empty pattern. The browser pattern is not affected.")) return;
-  busy = true;
-  try {
-    const blank = emptyPattern(64, state.rate, state.tempo, state.gate, state.swing);
-    for (let i = 0; i < SLOTS; i++) {
-      status("clearing pattern…");
-      await midi.sendPattern(encodeWrite(blank, i, true), "pattern");
-    }
-    const held = await syncDeviceTempo();
-    status(`pattern cleared ✓${held ? ` · device holds ${held} bpm` : ""}`, "ok");
-  } catch (e) { status(String(e.message || e), "err"); }
-  finally { busy = false; }
 }
 
 export async function initMidi() {

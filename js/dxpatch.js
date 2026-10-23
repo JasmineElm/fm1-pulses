@@ -1385,3 +1385,21 @@ function setStatus(msg) {
   const el = document.getElementById("dxpatch-status-message");
   if (el) el.textContent = msg;
 }
+
+export function loadExternalDxPatch(patch, bankPatches = null, slot1to32 = 1) {
+  initDxPatch();
+  if (Array.isArray(bankPatches) && bankPatches.length === 32) {
+    bank = new DX7Bank(bankPatches);
+  }
+  currentSlot = clamp(slot1to32, 1, 32);
+  if (patch) {
+    currentPatch = patch.copy();
+    bank.setPatch(currentSlot, currentPatch);
+  } else {
+    currentPatch = bank.getPatch(currentSlot).copy();
+  }
+  refreshPatchUI();
+  renderBankList();
+  setStatus(`Opened '${currentPatch.name.trim()}' from Librarian (Slot ${String(currentSlot).padStart(2, "0")})`);
+}
+

@@ -17,6 +17,7 @@ import { knob, dropdown, actionBtn, toggleBtn } from "./controls.js";
 import { isLive, setModelStepHandler } from "./player.js?v=1";
 import { syncRhythmGrid, randomizeRhythm, onRhythmUserEdit } from "./rhythm.js?v=1";
 import { getActiveModel } from "./modes.js";
+import { registerModel } from "./snapshot.js";
 
 export const GRID_SIZES = [
   { v: "8", t: "8 × 8" },
@@ -1888,3 +1889,46 @@ export function deactivateParticlesModel() {
   setModelGenerator(null);
   setModelRandomizer(null);
 }
+
+// ---- Session snapshot (see snapshot.js) ----
+registerModel({
+  id: "particles",
+  version: 1,
+  migrations: {},
+  capture() {
+    // Obstacles as sparse [index, type] pairs; particles are plain JSON objects.
+    const obs = [];
+    for (let i = 0; i < seedObstacles.length; i++) if (seedObstacles[i]) obs.push([i, seedObstacles[i]]);
+    return {
+      gridSize: gridW,
+      loopMode,
+      particles: cloneParticles(seedParticles),
+      obstacles: obs,
+    };
+  },
+  restore(h) {
+    if (!h) return;
+    const size = GRID_SIZES.some((g) => String(g.v ?? g) === String(h.gridSize)) ? Number(h.gridSize) : 16;
+    gridW = size; gridH = size;
+    state.particleGridSize = size;
+    loopMode = h.loopMode === "free" ? "free" : "loop";
+    state.particleLoopMode = loopMode;
+    totalFreeSteps = 0;
+    lastLiveStep = -1;
+    const obs = new Uint8Array(size * size);
+    for (const pair of Array.isArray(h.obstacles) ? h.obstacles : []) {
+      const [i, t] = pair || [];
+      if (Number.isInteger(i) && i >= 0 && i < obs.length && [1, 2, 3].includes(t)) obs[i] = t;
+    }
+    seedParticles = cloneParticles(Array.isArray(h.particles) ? h.particles : [])
+      .filter((p) => Number.isInteger(p.x) && Number.isInteger(p.y) && p.x >= 0 && p.x < size && p.y >= 0 && p.y < size);
+    nextParticleId = seedParticles.reduce((m, p) => Math.max(m, (p.id || 0) + 1), 1);
+    seedObstacles = obs;
+    flippedDeflectors.clear();
+    restoreFromSeed();
+    invalidateNoteLUT();
+    refs.particleLoopMode?.setValue?.(loopMode, false);
+    // Collisions drive the rhythm again until the user overrides it (same as activation).
+    particleRhythmOverridden = false;
+  },
+});

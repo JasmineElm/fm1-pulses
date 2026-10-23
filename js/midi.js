@@ -27,7 +27,7 @@ export function onStateChange(cb) {
   if (access) access.onstatechange = cb;
 }
 
-const NAME_RE = /fm-?1|mvave|m-vave|4c4a/i;
+const NAME_RE = /fm-?1|mvave|m-vave|4c4a|felucca/i;
 
 export function findFm1() {
   if (!access) return null;
@@ -345,4 +345,155 @@ export async function sendVABankPatch(pack, startSlot = 112, onProgress = null) 
   }
   return { portName: out.name, byteLength: sysex.length, count: pack.length };
 }
+
+// --------------------------------------------------------------------------- //
+// FM-1 Hardware Preset Pull (SysEx 0x10) & Pattern Pull (SysEx 0x11)
+// --------------------------------------------------------------------------- //
+
+/**
+ * Reads a single stored preset (slot 0..127) from the FM-1 via SysEx 0x10.
+ * Reply kind 0x50 carries 128-byte DX7 VMEM voice + 59-byte settings record (187 bytes).
+ */
+export async function readPreset(slot, retries = 3) {
+  const out = findFm1();
+  if (!out) throw new Error("FM-1 not found — connect via USB and allow MIDI access");
+  const input = findFm1Input();
+  if (!input) throw new Error("FM-1 MIDI input is unavailable — cannot read preset back");
+
+  const s = Math.max(0, Math.min(127, slot | 0));
+  const body = [0x10, s & 0x7F];
+  const req = new Uint8Array([0xF0, 0x43, 0x00, 0x7D, ...body, ysum(body), 0xF7]);
+
+  let lastErr = null;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      out.send(req);
+      const rep = await waitReply(input, 1800);
+      if (!rep) throw new Error(`no reply from FM-1 for preset slot ${s + 1}`);
+      const d = decodeReply(rep);
+      if (!d) throw new Error(`could not decode preset reply for slot ${s + 1}`);
+      if (d.status !== 0) {
+        throw new Error(`FM-1 refused preset read (status ${d.status}: ${STATUS_TEXT[d.status] || "unknown"})`);
+      }
+      if (d.data.length < 128) {
+        throw new Error(`short preset reply (${d.data.length} bytes, expected >= 128)`);
+      }
+      const voice = Uint8Array.from(d.data.slice(0, 128));
+      const hasRecord = d.data.length >= 187;
+      const record = hasRecord ? Uint8Array.from(d.data.slice(128, 187)) : null;
+      return { slot: s, voice, record, hasRecord };
+    } catch (err) {
+      lastErr = err;
+      if (attempt + 1 < retries) await sleep(80);
+    }
+  }
+  throw lastErr || new Error(`Failed to read preset slot ${s + 1}`);
+}
+
+/**
+ * Reads multiple preset slots from the FM-1 with progress and cancellation support.
+ */
+export async function readPresetsRange(slots, onProgress = null, shouldCancel = null) {
+  const results = [];
+  for (let i = 0; i < slots.length; i++) {
+    if (shouldCancel && shouldCancel()) break;
+    const slot = slots[i];
+    const preset = await readPreset(slot, 3);
+    results.push(preset);
+    if (onProgress) onProgress(i + 1, slots.length, preset);
+    if (i + 1 < slots.length) await sleep(18);
+  }
+  return results;
+}
+
+/**
+ * Reads memory with automatic retry (handles the FM-1's first-read 0-byte USB session quirk).
+ */
+export async function readMemoryWithRetry(addr, len, retries = 3) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const data = await readMemory(addr, len);
+      if (!data || data.length === 0) throw new Error("empty memory read (0 bytes)");
+      return data;
+    } catch (err) {
+      lastErr = err;
+      if (attempt + 1 < retries) await sleep(70);
+    }
+  }
+  throw lastErr || new Error("Memory read failed");
+}
+
+/**
+ * Reads a single sequencer pattern (pat 0..15) from FM-1 RAM via SysEx 0x11.
+ */
+export async function readDevicePattern(pat, cachedGset = null) {
+  const { STEPS_RAM, EXT_RAM, GSET_RAM, GSET_LEN, decodePatternFromRam } = await import("./pattern.js");
+  const pIdx = Math.max(0, Math.min(15, pat | 0));
+
+  const gset = cachedGset || (await readMemoryWithRetry(GSET_RAM, GSET_LEN, 3));
+  const patLen = gset.length > 98 + pIdx ? Math.max(1, Math.min(64, gset[98 + pIdx] || 16)) : 16;
+
+  const stepsBytes = [];
+  // Steps 1..16 (512 bytes = 2 x 256B reads at STEPS_RAM + pat * 512)
+  for (let blk = 0; blk < 2; blk++) {
+    const chunk = await readMemoryWithRetry(STEPS_RAM + pIdx * 512 + blk * 256, 256, 3);
+    stepsBytes.push(...chunk);
+    await sleep(15);
+  }
+
+  // Steps 17..64 (up to 1536 bytes = 6 x 256B reads at EXT_RAM + pat * 1536)
+  if (patLen > 16) {
+    const extBlocksNeeded = Math.min(6, Math.ceil((patLen - 16) / 8));
+    for (let blk = 0; blk < extBlocksNeeded; blk++) {
+      try {
+        const chunk = await readMemoryWithRetry(EXT_RAM + pIdx * 1536 + blk * 256, 256, 2);
+        stepsBytes.push(...chunk);
+        await sleep(15);
+      } catch {
+        // Firmware < 082 only has 16 steps; stop reading extended steps gracefully
+        break;
+      }
+    }
+  }
+
+  const pattern = decodePatternFromRam(Uint8Array.from(stepsBytes), Uint8Array.from(gset), pIdx);
+  return { pattern, gset };
+}
+
+/**
+ * Reads multiple sequencer patterns (0..15) from FM-1 RAM, sharing a single GSET read.
+ */
+export async function readDevicePatterns(patIndices, onProgress = null, shouldCancel = null) {
+  const { GSET_RAM, GSET_LEN } = await import("./pattern.js");
+  const gset = await readMemoryWithRetry(GSET_RAM, GSET_LEN, 3);
+  const results = [];
+  for (let i = 0; i < patIndices.length; i++) {
+    if (shouldCancel && shouldCancel()) break;
+    const pat = patIndices[i];
+    const { pattern } = await readDevicePattern(pat, gset);
+    results.push({ slot: pat, pattern });
+    if (onProgress) onProgress(i + 1, patIndices.length, pat, pattern);
+    if (i + 1 < patIndices.length) await sleep(20);
+  }
+  return { patterns: results, gset };
+}
+
+/**
+ * Sends raw 231-byte BaudGirl v4 Exact preset SysEx message(s) (0x04) to the FM-1.
+ */
+export async function sendExactPresetSysex(sysexBytes, onProgress = null) {
+  const out = findFm1() || (access && access.outputs.size ? Array.from(access.outputs.values())[0] : null);
+  if (!out) throw new Error("FM-1 not connected — plug it in via USB and allow MIDI access");
+  const data = sysexBytes instanceof Uint8Array ? sysexBytes : new Uint8Array(sysexBytes);
+  const chunkSize = 231;
+  for (let offset = 0; offset < data.length; offset += chunkSize) {
+    const slice = data.subarray(offset, Math.min(offset + chunkSize, data.length));
+    out.send(slice);
+    if (onProgress) onProgress(Math.min(1.0, (offset + slice.length) / data.length));
+    if (offset + chunkSize < data.length) await sleep(120);
+  }
+  return { portName: out.name, byteLength: data.length };
+}
+
 

@@ -72,7 +72,7 @@ function getDefaultNoteForStep(stepIndex) {
  */
 export function syncRhythmGrid() {
   const bank = getBank();
-  const p = bank[0];
+  const p = bank?.[0];
   if (!p || !p.steps) return;
 
   const seqLen = Math.max(1, Math.min(64, state.length || 64));
@@ -98,7 +98,7 @@ export function syncRhythmGrid() {
     if (hasNotes) {
       const n0 = st.notes[0];
       const vel = Math.max(1, Math.min(127, n0.vel ?? 100));
-      // Opacity scales continuously from 0.25 (vel 1) to 1.0 (vel 127), exactly matching traditional grid
+      // Opacity scales continuously from 0.25 (vel 1) to 1.0 (vel 127), exactly matching Mene311 grid
       const alpha = 0.25 + 0.75 * (vel / 127);
       const velPct = Math.round((vel / 127) * 100);
 

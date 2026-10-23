@@ -206,6 +206,60 @@ body {
   content: ""; width: 6px; height: 6px; border-radius: 50%;
   background: var(--accent);
 }
+.landing-hero-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.landing-hero-header .landing-title {
+  margin: 0;
+}
+.landing-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing-load-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: var(--panel2);
+  border: 1px solid var(--line-focus);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.landing-load-btn:hover {
+  background: var(--panel);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.landing-load-btn:active {
+  transform: translateY(0);
+}
+.landing-load-btn .load-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+.landing-load-link {
+  cursor: pointer;
+}
+.view-landing.drag-hover {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
 .landing-title {
   font-size: 20px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; margin: 0 0 6px; color: var(--fg);
@@ -366,7 +420,7 @@ body {
 }
 .landing-footer-actions .glink:hover { color: var(--accent); }
 
-.view-traditional {
+.view-mene311 {
   width: 100%; min-width: 0;
   display: block;
 }
@@ -1353,19 +1407,22 @@ kbd {
   color: var(--dim);
 }
 
-.turing-bit-grid {
+.turing-bit-grid,
+.rungler-bit-grid {
   display: grid;
   grid-template-columns: repeat(16, 1fr);
   gap: 4px;
 }
 
 @media (max-width: 860px) {
-  .turing-bit-grid {
+  .turing-bit-grid,
+  .rungler-bit-grid {
     grid-template-columns: repeat(8, 1fr);
   }
 }
 
-.turing-bit-btn {
+.turing-bit-btn,
+.rungler-bit-btn {
   font: inherit;
   display: flex;
   flex-direction: column;
@@ -1383,34 +1440,51 @@ kbd {
   position: relative;
 }
 
-.turing-bit-btn:hover {
+.turing-bit-btn:hover,
+.rungler-bit-btn:hover {
   border-color: var(--fg);
   color: var(--fg);
 }
 
-.turing-bit-btn.is-one {
+.turing-bit-btn.is-one,
+.rungler-bit-btn.is-one {
   background: var(--accent);
   border-color: var(--accent);
   color: #ffffff;
 }
 
-.turing-bit-btn.is-zero {
+.turing-bit-btn.is-zero,
+.rungler-bit-btn.is-zero {
   background: var(--panel);
   border-color: var(--line);
   color: var(--dim);
 }
 
-.turing-bit-btn.in-dac {
+.turing-bit-btn.in-dac,
+.rungler-bit-btn.in-dac {
   box-shadow: inset 0 0 0 2px var(--accent2, #f59e0b);
 }
 
-.turing-bit-btn.now {
+.turing-bit-btn.now,
+.rungler-bit-btn.now {
   outline: 2px solid var(--fg);
   outline-offset: 1px;
   z-index: 2;
 }
 
-.turing-bit-num {
+.rungler-bit-btn.is-tap::after {
+  content: "TAP";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 6px;
+  font-weight: 700;
+  color: var(--accent2, #f59e0b);
+  letter-spacing: -0.2px;
+}
+
+.turing-bit-num,
+.rungler-bit-num {
   font-size: 7.5px;
   font-weight: 600;
   opacity: 0.75;
@@ -1418,7 +1492,8 @@ kbd {
   margin-bottom: 2px;
 }
 
-.turing-bit-val {
+.turing-bit-val,
+.rungler-bit-val {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
   font-weight: 700;
@@ -1949,7 +2024,7 @@ kbd {
   border-top: 2px solid color-mix(in srgb, var(--accent) 70%, var(--line));
 }
 
-/* Active Gate State - in the style of the traditional sequencer grid */
+/* Active Gate State - in the style of the Mene311 sequencer grid */
 .rhythm-step-btn.is-active {
   background: var(--accent);
   border-color: var(--accent);
@@ -2401,5 +2476,65 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+/* ==========================================================================
+   DOUBLE PENDULUM MODEL STYLES
+   ========================================================================== */
+.pendulum-layout {
+  gap: 16px;
+}
 
+.pendulum-canvas {
+  cursor: crosshair;
+}
+
+.pendulum-canvas:active {
+  cursor: grabbing;
+}
+
+.pendulum-sector-matrix {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.pendulum-sector-btn {
+  font-family: inherit;
+  font-size: 8px;
+  padding: 4px 1px;
+  background: var(--panel2);
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+}
+
+.pendulum-sector-btn:hover {
+  background: var(--line);
+  color: var(--fg);
+}
+
+.pendulum-sector-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   FLOCKING SWARM MODEL STYLES (UNLINKED FREE MODEL)
+   ========================================================================== */
+.flock-layout {
+  gap: 16px;
+}
+
+.flock-display canvas {
+  cursor: crosshair;
+}
+
+.flock-display canvas:active {
+  cursor: grabbing;
+}
 
