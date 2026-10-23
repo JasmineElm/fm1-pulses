@@ -1,0 +1,601 @@
+/* css/librarian.css — FM-1 Preset & Pattern Librarian Workbench styling */
+
+.view-librarian {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: landingFadeIn 0.2s ease-out;
+}
+
+.lib-workspace {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr) 250px;
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 1120px) {
+  .lib-workspace {
+    grid-template-columns: 260px 1fr;
+  }
+  .lib-panel-right {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .lib-workspace {
+    grid-template-columns: 1fr;
+  }
+  .lib-panel-right {
+    grid-column: span 1;
+  }
+}
+
+.lib-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.lib-card {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lib-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lib-heading {
+  margin: 0 0 8px 0;
+  padding: 0 0 4px 0;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--fg);
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.2;
+}
+
+.lib-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--fg);
+}
+
+/* Segmented Pills & Bank Filters */
+.lib-seg-group {
+  display: inline-flex;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lib-seg-btn {
+  background: transparent;
+  color: var(--dim);
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 3px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.lib-seg-btn:last-child {
+  border-right: none;
+}
+
+.lib-seg-btn:hover {
+  color: var(--fg);
+}
+
+.lib-seg-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Buttons */
+.lib-btn-block {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  font-family: inherit;
+}
+
+.lib-btn-block:hover:not(:disabled) {
+  background: var(--panel2);
+  border-color: var(--line-focus);
+}
+
+.lib-btn-block.primary {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.lib-btn-block.primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.lib-btn-block.ok {
+  background: var(--ok);
+  color: #111215;
+  border-color: var(--ok);
+}
+
+.lib-btn-block.danger {
+  background: var(--err);
+  color: #ffffff;
+  border-color: var(--err);
+}
+
+.lib-btn-block kbd {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-family: inherit;
+  color: inherit;
+}
+
+.lib-btn-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.lib-btn-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.lib-btn-sm {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-btn-sm:hover:not(:disabled) {
+  border-color: var(--line-focus);
+}
+
+.lib-btn-sm.primary {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.lib-btn-sm.warning {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.lib-btn-sm.danger {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.lib-btn-sm.active-rec,
+.lib-btn-sm.playing {
+  background: var(--err);
+  color: #ffffff;
+  border-color: var(--err);
+}
+
+.lib-btn-sm:disabled,
+.lib-btn-block:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lib-select {
+  width: 100%;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-family: inherit;
+  outline: none;
+}
+
+.lib-name-input {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 2px 6px;
+  width: 96px;
+  outline: none;
+}
+
+/* Progress Bar */
+.lib-progress-wrap {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 6px 0;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.lib-progress-wrap.active {
+  display: flex;
+}
+
+.lib-progress-top,
+.lib-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.lib-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.lib-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.1s ease;
+}
+
+/* File Drop Zone */
+.lib-file-drop {
+  border: 1px dashed var(--line-focus);
+  border-radius: 4px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--dim);
+  cursor: pointer;
+  background: var(--panel);
+  margin-top: 6px;
+}
+
+.lib-file-drop:hover,
+.lib-file-drop.dragover {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+/* Header Pills & Steppers */
+.lib-header-strip,
+.lib-toolbar-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.lib-param-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.lib-micro-label {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--dim);
+  font-weight: 700;
+}
+
+.lib-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lib-stepper-btn {
+  background: var(--panel2);
+  color: var(--fg);
+  border: none;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  border-radius: 0;
+}
+
+.lib-stepper-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.lib-stepper-input {
+  width: 38px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--fg) !important;
+  text-align: center !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 2px !important;
+  outline: none !important;
+  -moz-appearance: textfield;
+}
+
+.lib-stepper-input::-webkit-outer-spin-button,
+.lib-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.lib-stepper-val {
+  min-width: 42px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg);
+  padding: 2px 5px;
+  user-select: none;
+}
+
+/* Interactive Pattern Canvas */
+.lib-canvas-wrap {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#lib-pattern-canvas {
+  display: block;
+  width: 100%;
+  height: 180px;
+  cursor: default;
+}
+
+/* Preset Inspector Summary */
+.lib-preset-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px;
+}
+
+.lib-meta-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lib-meta-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+}
+
+.lib-badge.fm {
+  color: #22c55e;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.lib-badge.va {
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.lib-badge.b8 {
+  color: #a855f7;
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.14);
+}
+
+/* Right Column: 16-Pattern Bank Grid & 128-Preset List */
+.lib-pattern-bank-grid,
+.lib-pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.lib-pat-slot {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lib-pat-slot:hover {
+  border-color: var(--line-focus);
+}
+
+.lib-pat-slot.active {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+.lib-pat-slot-id {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.lib-pat-slot.active .lib-pat-slot-id {
+  color: var(--accent);
+}
+
+.lib-pat-slot-meta {
+  font-size: 8.5px;
+  color: var(--dim);
+}
+
+.lib-pat-mini-bar {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 1px;
+  width: 100%;
+}
+
+.lib-pat-mini-bar i {
+  height: 3px;
+  background: var(--line);
+}
+
+.lib-pat-mini-bar i.on {
+  background: var(--accent);
+}
+
+/* 128-Preset Scrollable List */
+.lib-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.lib-preset-row {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  user-select: none;
+}
+
+.lib-preset-row:hover {
+  border-color: var(--line-focus);
+}
+
+.lib-preset-row.active {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+.lib-preset-row.unread {
+  opacity: 0.68;
+}
+
+.lib-preset-num {
+  color: var(--dim);
+  font-weight: 700;
+  font-size: 9px;
+}
+
+.lib-preset-row.active .lib-preset-num {
+  color: var(--accent);
+}
+
+.lib-preset-name {
+  color: var(--fg);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

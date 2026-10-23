@@ -2,12 +2,12 @@
 
 export const MODELS = [
   {
-    id: "traditional",
+    id: "mene311",
     name: "Mene311",
     kicker: "Stochastic S&H · Quantizer · Echo Loop",
     available: true,
-    desc: "Classical generative signal chain created by Mene311. Gate probability triggers Sample & Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across 18 scales, with micro-timing humanize and 16-slot bank synthesis for FM-1 SysEx freeze.",
-    tags: ["64 Steps", "16-Slot Bank", "18 Scales", "Echo / Deja-Vu", "SysEx Freeze", "Audio Audition"],
+    desc: "Classical generative signal chain created by Mene311. Gate probability triggers Sample & Hold and continuous LFO waveshaping, shaped through Gaussian distributions, quantized across 18 scales, with micro-timing humanize, real-time MIDI to the FM-1 and session save/recall.",
+    tags: ["64 Steps", "18 Scales", "Echo / Deja-Vu", "Live MIDI", "Audio Audition"],
     icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2 12h3l2-6 4 12 3-8 2 4 2-2h4" />
       <circle cx="5" cy="12" r="1.2" fill="currentColor" />
@@ -57,6 +57,62 @@ export const MODELS = [
       <path d="M8 8l8 8M18 6l-3 3M6 18l3-3" />
       <circle cx="12" cy="12" r="3" stroke-dasharray="2 2" />
     </svg>`
+  },
+  {
+    id: "pendulum",
+    name: "Double Pendulum",
+    kicker: "Deterministic Chaos · Direct Manipulation · Phase Attractor",
+    available: true,
+    desc: "Chaotic double pendulum physics engine yielding evolving trajectories, strange attractors, and phase-space polyphony. Direct-drag the bobs on canvas to prime initial angles, toggle between repeatable loops and continuous free-running chaos, and map kinetic vectors to scale degrees.",
+    tags: ["Deterministic Chaos", "RK4 Integrator", "Direct Drag", "Phase Attractor", "Dual-Voice Polyphony"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="4" r="2" fill="currentColor" />
+      <line x1="12" y1="6" x2="16" y2="13" />
+      <circle cx="16" cy="13" r="2.5" fill="currentColor" />
+      <line x1="16" y1="15.5" x2="8" y2="20" />
+      <circle cx="8" cy="20" r="3" fill="currentColor" />
+    </svg>`
+  },
+  {
+    id: "flock",
+    name: "Flocking Swarm",
+    kicker: "Autonomous Boids · Continuous Event Time · Spatial Chords",
+    available: true,
+    desc: "Autonomous boid flocking simulation unlinked to any step clock. Boids navigate a 2D field via Separation, Alignment, and Cohesion. When the flock congregates at armed attractor targets, it fires up to 8-voice polyphonic chords across custom scales with kinetic dynamics, scattering the swarm in a repulsion blast.",
+    tags: ["Continuous Event Time", "Free Boids", "Attractor Targets", "8-Voice Polyphony", "Cluster Chords", "Scatter Blasts"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 18l4-2 3 3 2-6-6 2 3 3" fill="currentColor" />
+      <path d="M11 10l3.5-1.8 2.6 2.6 1.8-5.3-5.3 1.8 2.6 2.6" fill="currentColor" />
+      <circle cx="18" cy="18" r="3" stroke-dasharray="2 2" />
+    </svg>`
+  },
+  {
+    id: "rungler",
+    name: "Rob Hordijk Rungler",
+    kicker: "Chaotic Stepped Shift Register · Benjolin · Cross-Modulation",
+    available: true,
+    desc: "Chaotic shift-register melody generator inspired by Rob Hordijk's Benjolin and Blippoo Box. Two cross-modulating analog oscillators feed a comparator into a 16-bit shift register, decoded by a 4-bit Rungler DAC ladder to produce self-steering melodic bifurcations and hypnotic repeating loops.",
+    tags: ["16-Bit Register", "4-Bit Rungler DAC", "Benjolin", "Dual Oscillators", "Cross-Mod Feedback", "Hybrid Clock"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12h4l2-6 4 12 2-6h6" />
+      <circle cx="9" cy="6" r="1.5" fill="currentColor" />
+      <circle cx="13" cy="18" r="1.5" fill="currentColor" />
+      <rect x="17" y="9" width="4" height="6" rx="1" />
+    </svg>`
+  },
+  {
+    id: "krell",
+    name: "Buchla Krell Patch",
+    kicker: "Dual Function Generators · Source of Uncertainty · Non-Metric Ambient",
+    available: true,
+    desc: "Self-generating modular patch pioneered by Todd Barton and inspired by Bebe & Louis Barron's 1956 Forbidden Planet. Dual non-linear function generators cross-modulate Rise and Fall slopes via Sample & Hold random voltages, producing organic non-metric ambient melodies and continuous FM filter swells.",
+    tags: ["Buchla 266", "Source of Uncertainty", "Sample & Hold", "Cross-Mod Dwell", "Non-Metric", "FM CC#74 Swells"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 18l5-12 6 12 7-8" />
+      <circle cx="8" cy="6" r="1.8" fill="currentColor" />
+      <circle cx="14" cy="18" r="1.8" fill="currentColor" />
+      <path d="M3 12h3m3 0h3m3 0h3" stroke-dasharray="1 2" />
+    </svg>`
   }
 ];
 
@@ -76,16 +132,15 @@ export const TOOLS = [
     </svg>`
   },
   {
-    id: "va",
-    name: "Virtual Analogue (VA)",
-    kicker: "Subtractive VA Synthesis · 16-Preset Pack · FM-1+VA",
+    id: "librarian",
+    name: "Preset & Pattern Librarian",
+    kicker: "Hardware Preset Export · 16-Slot Pattern Pull & Upload · Step Editor",
     available: true,
-    desc: "Algorithmic Virtual Analog sound design workbench for BaudGirl FM-1+VA firmware. Features 9 category recipes, 6 sonic profiles, timbral macros, interactive oscillator/filter/ADSR surfaces, real-time MIDI CC streaming, 7-unit effects chain, and 16-preset VA pack management (slots 113–128).",
-    tags: ["Virtual Analog", "BaudGirl FM-1+VA", "231B Presets", "16-Preset Pack", "Real-Time CCs", "Web Audio VA"],
+    desc: "Bi-directional hardware librarian and pattern workbench for the M-VAVE FM-1. Pull and archive all 128 presets (FM, VA, 8-Bit) and 16 64-step sequencer patterns directly from device RAM, edit sequences interactively, or upload new patterns from .syx, .mid, .json, or Pulses banks.",
+    tags: ["128 Presets (0x10)", "16 Patterns (0x11)", "Pattern Upload (0x20)", "MIDI (.mid) I/O", "64-Step Editor", "Full Backup"],
     icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 12h2l3-7 4 14 3-7h2l3-7 4 14 3-7h2" />
-      <circle cx="9" cy="12" r="1.5" fill="currentColor" />
-      <circle cx="16" cy="12" r="1.5" fill="currentColor" />
+      <path d="M4 6h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" />
+      <path d="M4 10h16M9 14h6M12 3v3M8 3v3M16 3v3" />
     </svg>`
   }
 ];
@@ -197,24 +252,39 @@ export function showLanding(updateHash = true) {
   activeModelId = null;
 
   const viewLanding = document.getElementById("view-landing");
-  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-mene311");
   const viewDxpatch = document.getElementById("view-dxpatch");
-  const viewVa = document.getElementById("view-va");
-  const modelTraditional = document.getElementById("model-traditional");
+  const viewLibrarian = document.getElementById("view-librarian");
+  const modelMene311 = document.getElementById("model-mene311");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
   const modelParticles = document.getElementById("model-particles");
+  const modelPendulum = document.getElementById("model-pendulum");
+  const modelFlock = document.getElementById("model-flock");
+  const modelRungler = document.getElementById("model-rungler");
+  const modelKrell = document.getElementById("model-krell");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
+  const seqBar = document.getElementById("sequence");
+  const rhythmBar = document.getElementById("rhythm-bar");
+  const grooveBar = document.getElementById("humanise-velocity-bar");
+
+  if (seqBar) seqBar.style.display = "block";
+  if (rhythmBar) rhythmBar.style.display = "block";
+  if (grooveBar) grooveBar.style.display = "flex";
 
   if (viewLanding) viewLanding.style.display = "block";
   if (viewWorkspace) viewWorkspace.style.display = "none";
   if (viewDxpatch) viewDxpatch.style.display = "none";
-  if (viewVa) viewVa.style.display = "none";
-  if (modelTraditional) modelTraditional.style.display = "none";
+  if (viewLibrarian) viewLibrarian.style.display = "none";
+  if (modelMene311) modelMene311.style.display = "none";
   if (modelCellular) modelCellular.style.display = "none";
   if (modelTuring) modelTuring.style.display = "none";
   if (modelParticles) modelParticles.style.display = "none";
+  if (modelPendulum) modelPendulum.style.display = "none";
+  if (modelFlock) modelFlock.style.display = "none";
+  if (modelRungler) modelRungler.style.display = "none";
+  if (modelKrell) modelKrell.style.display = "none";
   if (btnBack) btnBack.style.display = "none";
   if (modeTag) modeTag.style.display = "none";
 
@@ -224,26 +294,39 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "traditional" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "dxpatch" && id !== "va") return;
+  if (id !== "mene311" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "pendulum" && id !== "flock" && id !== "rungler" && id !== "krell" && id !== "dxpatch" && id !== "librarian") return;
 
   const viewLanding = document.getElementById("view-landing");
-  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-traditional");
+  const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-mene311");
   const viewDxpatch = document.getElementById("view-dxpatch");
-  const viewVa = document.getElementById("view-va");
-  const modelTraditional = document.getElementById("model-traditional");
+  const viewLibrarian = document.getElementById("view-librarian");
+  const modelMene311 = document.getElementById("model-mene311");
   const modelCellular = document.getElementById("model-cellular");
   const modelTuring = document.getElementById("model-turing");
   const modelParticles = document.getElementById("model-particles");
+  const modelPendulum = document.getElementById("model-pendulum");
+  const modelFlock = document.getElementById("model-flock");
+  const modelRungler = document.getElementById("model-rungler");
+  const modelKrell = document.getElementById("model-krell");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
+  const seqBar = document.getElementById("sequence");
+  const rhythmBar = document.getElementById("rhythm-bar");
+  const grooveBar = document.getElementById("humanise-velocity-bar");
 
   activeModelId = id;
 
   if (viewLanding) viewLanding.style.display = "none";
 
+  // Flocking, Pendulum, and Krell are unlinked free models: hide discrete step sequencer bars
+  const isStepModel = (id !== "flock" && id !== "pendulum" && id !== "krell" && id !== "dxpatch" && id !== "librarian");
+  if (seqBar) seqBar.style.display = isStepModel ? "block" : "none";
+  if (rhythmBar) rhythmBar.style.display = isStepModel ? "block" : "none";
+  if (grooveBar) grooveBar.style.display = isStepModel ? "flex" : "none";
+
   if (id === "dxpatch") {
     if (viewWorkspace) viewWorkspace.style.display = "none";
-    if (viewVa) viewVa.style.display = "none";
+    if (viewLibrarian) viewLibrarian.style.display = "none";
     if (viewDxpatch) viewDxpatch.style.display = "block";
     if (btnBack) {
       btnBack.textContent = "‹ Tools";
@@ -254,37 +337,45 @@ export function showModel(id, updateHash = true) {
       modeTag.textContent = "DX Patch Generator";
       modeTag.style.display = "inline-block";
     }
-  } else if (id === "va") {
+  } else if (id === "librarian") {
     if (viewWorkspace) viewWorkspace.style.display = "none";
     if (viewDxpatch) viewDxpatch.style.display = "none";
-    if (viewVa) viewVa.style.display = "block";
+    if (viewLibrarian) viewLibrarian.style.display = "block";
     if (btnBack) {
       btnBack.textContent = "‹ Tools";
       btnBack.title = "Return to Tools & Models";
       btnBack.style.display = "inline-flex";
     }
     if (modeTag) {
-      modeTag.textContent = "FM-1+VA";
+      modeTag.textContent = "Librarian";
       modeTag.style.display = "inline-block";
     }
   } else {
     if (viewDxpatch) viewDxpatch.style.display = "none";
-    if (viewVa) viewVa.style.display = "none";
+    if (viewLibrarian) viewLibrarian.style.display = "none";
     if (viewWorkspace) viewWorkspace.style.display = "block";
-    if (modelTraditional) modelTraditional.style.display = id === "traditional" ? "block" : "none";
+    if (modelMene311) modelMene311.style.display = id === "mene311" ? "block" : "none";
     if (modelCellular) modelCellular.style.display = id === "cellular" ? "block" : "none";
     if (modelTuring) modelTuring.style.display = id === "turing" ? "block" : "none";
     if (modelParticles) modelParticles.style.display = id === "particles" ? "block" : "none";
+    if (modelPendulum) modelPendulum.style.display = id === "pendulum" ? "block" : "none";
+    if (modelFlock) modelFlock.style.display = id === "flock" ? "block" : "none";
+    if (modelRungler) modelRungler.style.display = id === "rungler" ? "block" : "none";
+    if (modelKrell) modelKrell.style.display = id === "krell" ? "block" : "none";
     if (btnBack) {
       btnBack.textContent = "‹ Models";
       btnBack.title = "Return to Sequencer Models";
       btnBack.style.display = "inline-flex";
     }
     if (modeTag) {
-      if (id === "traditional") modeTag.textContent = "Mene311";
+      if (id === "mene311") modeTag.textContent = "Mene311";
       else if (id === "cellular") modeTag.textContent = "Cellular Automata";
       else if (id === "turing") modeTag.textContent = "Turing Machine";
       else if (id === "particles") modeTag.textContent = "Particles";
+      else if (id === "pendulum") modeTag.textContent = "Double Pendulum";
+      else if (id === "flock") modeTag.textContent = "Flocking Swarm";
+      else if (id === "rungler") modeTag.textContent = "Rob Hordijk Rungler";
+      else if (id === "krell") modeTag.textContent = "Buchla Krell Patch";
       modeTag.style.display = "inline-block";
     }
   }
@@ -330,25 +421,33 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   const linkDxModels = document.getElementById("dxpatch-link-models");
   linkDxModels?.addEventListener("click", returnToLanding);
 
-  const linkVaModels = document.getElementById("va-link-models");
-  linkVaModels?.addEventListener("click", returnToLanding);
+  const linkLibModels = document.getElementById("lib-link-models");
+  linkLibModels?.addEventListener("click", returnToLanding);
 
   // Handle URL hash changes
   window.addEventListener("hashchange", () => {
     const rawHash = (window.location.hash || "").toLowerCase();
     const h = rawHash.split("?")[0];
-    if (h === "#traditional" || h === "#mene311") {
-      if (activeModelId !== "traditional") showModel("traditional", false);
+    if (h === "#mene311") {
+      if (activeModelId !== "mene311") showModel("mene311", false);
     } else if (h === "#cellular") {
       if (activeModelId !== "cellular") showModel("cellular", false);
     } else if (h === "#turing") {
       if (activeModelId !== "turing") showModel("turing", false);
     } else if (h === "#particles") {
       if (activeModelId !== "particles") showModel("particles", false);
+    } else if (h === "#pendulum") {
+      if (activeModelId !== "pendulum") showModel("pendulum", false);
+    } else if (h === "#flock") {
+      if (activeModelId !== "flock") showModel("flock", false);
+    } else if (h === "#rungler") {
+      if (activeModelId !== "rungler") showModel("rungler", false);
+    } else if (h === "#krell") {
+      if (activeModelId !== "krell") showModel("krell", false);
     } else if (h === "#dxpatch" || h === "#dxpatchgen" || h === "#patch-generator") {
       if (activeModelId !== "dxpatch") showModel("dxpatch", false);
-    } else if (h === "#va" || h === "#vapatch" || h === "#fm1va" || h === "#va-patch") {
-      if (activeModelId !== "va") showModel("va", false);
+    } else if (h === "#librarian" || h === "#sync" || h === "#export") {
+      if (activeModelId !== "librarian") showModel("librarian", false);
     } else {
       if (activeModelId !== null) showLanding(false);
     }
@@ -357,18 +456,26 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
   // Initial view selection
   const rawInitial = (window.location.hash || "").toLowerCase();
   const initialHash = rawInitial.split("?")[0];
-  if (initialHash === "#traditional" || initialHash === "#mene311") {
-    showModel("traditional", false);
+  if (initialHash === "#mene311") {
+    showModel("mene311", false);
   } else if (initialHash === "#cellular") {
     showModel("cellular", false);
   } else if (initialHash === "#turing") {
     showModel("turing", false);
   } else if (initialHash === "#particles") {
     showModel("particles", false);
+  } else if (initialHash === "#pendulum") {
+    showModel("pendulum", false);
+  } else if (initialHash === "#flock") {
+    showModel("flock", false);
+  } else if (initialHash === "#rungler") {
+    showModel("rungler", false);
+  } else if (initialHash === "#krell") {
+    showModel("krell", false);
   } else if (initialHash === "#dxpatch" || initialHash === "#dxpatchgen" || initialHash === "#patch-generator") {
     showModel("dxpatch", false);
-  } else if (initialHash === "#va" || initialHash === "#vapatch" || initialHash === "#fm1va" || initialHash === "#va-patch") {
-    showModel("va", false);
+  } else if (initialHash === "#librarian" || initialHash === "#sync" || initialHash === "#export") {
+    showModel("librarian", false);
   } else {
     showLanding(false);
   }

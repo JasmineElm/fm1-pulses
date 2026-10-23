@@ -10,8 +10,8 @@ export { refreshLoopInfo };
 import { knob, dropdown, fader, seedControl, toggleBtn, actionBtn } from "./controls.js";
 import { renderBuffer, applyLocks, refreshLockCount, fitSteps, buildEditor, onSelectSlot } from "./grid.js?v=1";
 import { buildAudioControls, toggleLive, stopLive, playOnce, isLive, onPlayStartSync } from "./player.js?v=1";
-import { doFreeze, doClearAll, dumpGset, syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
-import { exportState, importState, exportSysex, renderPresets, onSyncRack } from "./storage.js";
+import { syncDeviceTempo, scheduleTempoProbe, initMidi } from "./device.js";
+import { exportState, importState, renderPresets, onSyncRack } from "./storage.js";
 import { buildTheme } from "./themes.js";
 import { initScope, renderScope } from "./scope.js";
 import { initModes, getActiveModel } from "./modes.js";
@@ -22,19 +22,23 @@ import { createVelocitySection } from "./velocity.js?v=1";
 import { initCellular, activateCellularModel, deactivateCellularModel } from "./cellular.js?v=1";
 import { initTuring, activateTuringModel, deactivateTuringModel } from "./turing.js?v=1";
 import { initParticles, activateParticlesModel, deactivateParticlesModel } from "./particles.js?v=1";
-import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js";
-import { initVaPatch, activateVaPatch, deactivateVaPatch } from "./vapatch.js";
+import { initPendulum, activatePendulumModel, deactivatePendulumModel } from "./pendulum.js?v=1";
+import { initFlock, activateFlockModel, deactivateFlockModel } from "./flock.js?v=1";
+import { initRungler, activateRunglerModel, deactivateRunglerModel } from "./rungler.js?v=3";
+import { initKrell, activateKrellModel, deactivateKrellModel } from "./krell.js?v=1";
+import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js?v=2";
+import { initLibrarian, activateLibrarian, deactivateLibrarian } from "./librarian.js?v=2";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
 import * as midi from "./midi.js";
 import * as audio from "./audio.js";
 
-let traditionalNotesSection = null;
-let traditionalHumaniseSection = null;
-let traditionalVelocitySection = null;
+let mene311NotesSection = null;
+let mene311HumaniseSection = null;
+let mene311VelocitySection = null;
 
 // Register hooks
 onRegen(() => {
-  if (getActiveModel() === "traditional") {
+  if (getActiveModel() === "mene311") {
     applyLocks();
     renderBuffer();
     syncRhythmGrid();
@@ -79,9 +83,9 @@ export function refreshLoopRanges() {
 
 export function syncRack() {
   for (const [k, el] of Object.entries(refs)) if (el && el.setValue && state[k] !== undefined) el.setValue(state[k], false);
-  if (traditionalNotesSection) traditionalNotesSection.sync();
-  if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
-  if (traditionalVelocitySection) traditionalVelocitySection.sync();
+  if (mene311NotesSection) mene311NotesSection.sync();
+  if (mene311HumaniseSection) mene311HumaniseSection.sync();
+  if (mene311VelocitySection) mene311VelocitySection.sync();
   if (refs.gateBlend?.setCheckbox) refs.gateBlend.setCheckbox(state.gateBlend <= 0);
   if (refs.randVelAmt?.setCheckbox) refs.randVelAmt.setCheckbox(!!state.randVel);
   if (state.gateBlend > 0) setPrevGateBlend(state.gateBlend);
@@ -139,7 +143,7 @@ export function buildGlobalBar() {
           status(held ? `device holds ${held} BPM — Tempo synced` : "could not read the device tempo", held ? "ok" : "err");
         });
       },
-      tip: "BPM is device-global on the FM-1 — freezing cannot change it; the unit's own BPM governs playback. The app re-syncs to the device after a freeze; double-click re-reads now." })),
+      tip: "BPM is device-global on the FM-1 — the unit's own BPM governs playback. The app syncs to the device when it connects; double-click re-reads now." })),
     R("seed", seedControl({
       label: "Pattern",
       value: state.seed,
@@ -172,7 +176,7 @@ export function buildGrooveBar() {
   if (!container) return;
   container.innerHTML = "";
 
-  traditionalHumaniseSection = createHumaniseSection({
+  mene311HumaniseSection = createHumaniseSection({
     title: "Humanise",
     humanizeKey: "humanize",
     swingKey: "swing",
@@ -182,7 +186,7 @@ export function buildGrooveBar() {
     }
   });
 
-  traditionalVelocitySection = createVelocitySection({
+  mene311VelocitySection = createVelocitySection({
     title: "Velocity",
     span: 0,
     onChange: () => {
@@ -190,14 +194,14 @@ export function buildGrooveBar() {
     }
   });
 
-  container.append(traditionalHumaniseSection.sectEl, traditionalVelocitySection.sectEl);
+  container.append(mene311HumaniseSection.sectEl, mene311VelocitySection.sectEl);
 }
 
 export function buildNotesBar() {
   const container = document.getElementById("notes-bar");
   if (!container) return;
 
-  traditionalNotesSection = createNotesSection({
+  mene311NotesSection = createNotesSection({
     container,
     title: "Notes",
     scaleKey: "scale",
@@ -215,27 +219,53 @@ export function buildNotesBar() {
     isFullWidth: true,
     badgeText: "Key & Scale",
     onChange: () => {
-      // Mirror to ca*, turing*, and particle*
+      // Mirror to ca*, turing*, particle*, flock*, and pendulum*
       state.caScale = state.scale;
       state.turingScale = state.scale;
       state.particleScale = state.scale;
+      state.flockScale = state.scale;
+      state.pendulumScale = state.scale;
+      state.runglerScale = state.scale;
+      state.krellScale = state.scale;
       state.caCustomScale = state.customScale;
       state.turingCustomScale = state.customScale;
       state.particleCustomScale = state.customScale;
+      state.flockCustomScale = state.customScale;
+      state.pendulumCustomScale = state.customScale;
+      state.runglerCustomScale = state.customScale;
+      state.krellCustomScale = state.customScale;
       state.caRoot = state.root;
       state.turingRoot = state.root;
       state.particleRoot = state.root;
+      state.flockRoot = state.root;
+      state.pendulumRoot = state.root;
+      state.runglerRoot = state.root;
+      state.krellRoot = state.root;
       state.caRootNote = state.rootNote;
       state.turingRootNote = state.rootNote;
       state.particleRootNote = state.rootNote;
+      state.flockRootNote = state.rootNote;
+      state.pendulumRootNote = state.rootNote;
+      state.runglerRootNote = state.rootNote;
+      state.krellRootNote = state.rootNote;
       state.caRootOctave = state.rootOctave;
       state.turingRootOctave = state.rootOctave;
       state.particleRootOctave = state.rootOctave;
+      state.flockRootOctave = state.rootOctave;
+      state.pendulumRootOctave = state.rootOctave;
+      state.runglerRootOctave = state.rootOctave;
+      state.krellRootOctave = state.rootOctave;
       state.caPitchSpan = state.pitchSpan;
       state.caOctaves = state.pitchSpan;
       state.turingSpan = state.pitchSpan;
       state.particleOctaves = state.pitchSpan;
+      state.pendulumPitchSpan = state.pitchSpan;
+      state.pendulumOctaves = state.pitchSpan;
+      state.runglerSpan = state.pitchSpan;
+      state.krellSpan = state.pitchSpan;
       if (refs.turingSpan?.setValue) refs.turingSpan.setValue(state.pitchSpan, false);
+      if (refs.runglerSpan?.setValue) refs.runglerSpan.setValue(state.pitchSpan, false);
+      if (refs.krellSpan?.setValue) refs.krellSpan.setValue(state.pitchSpan, false);
       state.caQuantSteps = state.quantSteps;
       state.turingQuantSteps = state.quantSteps;
       state.particleQuantSteps = state.quantSteps;
@@ -342,7 +372,38 @@ function buildTransport() {
     if (f) importState(f);
     finp.value = "";
   });
-  document.getElementById("syx")?.addEventListener("click", exportSysex);
+
+  // Landing Page LOAD button, footer link, and Drag-and-Drop
+  const landingFile = document.getElementById("landing-load-file");
+  landingFile?.addEventListener("change", () => {
+    const f = landingFile.files?.[0];
+    if (f) importState(f);
+    landingFile.value = "";
+  });
+
+  const landingFooterFile = document.getElementById("landing-footer-load-file");
+  landingFooterFile?.addEventListener("change", () => {
+    const f = landingFooterFile.files?.[0];
+    if (f) importState(f);
+    landingFooterFile.value = "";
+  });
+
+  const landingEl = document.getElementById("view-landing");
+  if (landingEl) {
+    landingEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      landingEl.classList.add("drag-hover");
+    });
+    landingEl.addEventListener("dragleave", () => {
+      landingEl.classList.remove("drag-hover");
+    });
+    landingEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      landingEl.classList.remove("drag-hover");
+      const f = e.dataTransfer?.files?.[0];
+      if (f) importState(f);
+    });
+  }
 
   const bleBtn = document.getElementById("ble");
   const blePaint = (s) => {
@@ -363,7 +424,7 @@ function buildTransport() {
         try {
           status("bluetooth: connect…");
           const name = await midi.connectBle();
-          status(`bluetooth ✓ ${name} — notes ride BLE, freeze still uses USB`, "ok");
+          status(`bluetooth ✓ ${name} — notes ride BLE`, "ok");
         } catch (e) {
           status("bluetooth: " + (e.message || e), "err");
         }
@@ -379,15 +440,14 @@ function buildTransport() {
     }
   }
 
-  document.getElementById("freeze")?.addEventListener("click", () => doFreeze(getSelected()));
-  document.getElementById("clearall")?.addEventListener("click", doClearAll);
-  document.getElementById("diag")?.addEventListener("click", dumpGset);
   renderPresets();
 }
 
 // Global keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const active = getActiveModel();
+  if (!active || active === "dxpatch" || active === "va" || active === "librarian") return;
   if (e.code === "Space") { e.preventDefault(); toggleLive(); return; }
   if (e.key === "m" || e.key === "M") {
     const muteBtn = document.getElementById("mute");
@@ -401,8 +461,6 @@ document.addEventListener("keydown", (e) => {
     randomize();
     return;
   }
-  if (getActiveModel() !== "traditional") return;
-  if (e.key === "f" || e.key === "F") doFreeze(getSelected());
 });
 
 // Tab visibility re-sync
@@ -449,21 +507,30 @@ initRhythm(document.getElementById("rhythm-bar"), document.getElementById("seque
 initCellular();
 initTuring();
 initParticles();
+initPendulum();
+initFlock();
+initRungler();
+initKrell();
 initDxPatch();
-initVaPatch();
+initLibrarian();
 doGenerate(true);
 initMidi();
 initModes({
   onEnterModel: (modelId) => {
-    if (traditionalNotesSection) traditionalNotesSection.sync();
-    if (traditionalHumaniseSection) traditionalHumaniseSection.sync();
-    if (traditionalVelocitySection) traditionalVelocitySection.sync();
-    if (modelId === "traditional") {
+    renderPresets();
+    if (mene311NotesSection) mene311NotesSection.sync();
+    if (mene311HumaniseSection) mene311HumaniseSection.sync();
+    if (mene311VelocitySection) mene311VelocitySection.sync();
+    if (modelId === "mene311") {
       deactivateCellularModel();
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
       deactivateDxPatch();
-      deactivateVaPatch();
+      deactivateLibrarian();
       fitSteps();
       renderScope();
       renderBuffer();
@@ -471,35 +538,97 @@ initModes({
     } else if (modelId === "cellular") {
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
       deactivateDxPatch();
-      deactivateVaPatch();
+      deactivateLibrarian();
       activateCellularModel();
     } else if (modelId === "turing") {
       deactivateCellularModel();
       deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
       deactivateDxPatch();
-      deactivateVaPatch();
+      deactivateLibrarian();
       activateTuringModel();
     } else if (modelId === "particles") {
       deactivateCellularModel();
       deactivateTuringModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
       deactivateDxPatch();
-      deactivateVaPatch();
+      deactivateLibrarian();
       activateParticlesModel();
+    } else if (modelId === "pendulum") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
+      deactivateDxPatch();
+      deactivateLibrarian();
+      activatePendulumModel();
+    } else if (modelId === "flock") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
+      deactivateDxPatch();
+      deactivateLibrarian();
+      if (isLive()) stopLive();
+      activateFlockModel();
+    } else if (modelId === "rungler") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateKrellModel();
+      deactivateDxPatch();
+      deactivateLibrarian();
+      activateRunglerModel();
+    } else if (modelId === "krell") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateDxPatch();
+      deactivateLibrarian();
+      if (isLive()) stopLive();
+      activateKrellModel();
     } else if (modelId === "dxpatch") {
       deactivateCellularModel();
       deactivateTuringModel();
       deactivateParticlesModel();
-      deactivateVaPatch();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
+      deactivateLibrarian();
       if (isLive()) stopLive();
       activateDxPatch();
-    } else if (modelId === "va") {
+    } else if (modelId === "librarian") {
       deactivateCellularModel();
       deactivateTuringModel();
       deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
       deactivateDxPatch();
       if (isLive()) stopLive();
-      activateVaPatch();
+      activateLibrarian();
     }
   },
   onLeaveModel: () => {
@@ -513,8 +642,12 @@ initModes({
     try { deactivateCellularModel(); } catch (e) { console.warn("Error deactivating cellular model:", e); }
     try { deactivateTuringModel(); } catch (e) { console.warn("Error deactivating turing model:", e); }
     try { deactivateParticlesModel(); } catch (e) { console.warn("Error deactivating particles model:", e); }
+    try { deactivatePendulumModel(); } catch (e) { console.warn("Error deactivating pendulum model:", e); }
+    try { deactivateFlockModel(); } catch (e) { console.warn("Error deactivating flock model:", e); }
+    try { deactivateRunglerModel(); } catch (e) { console.warn("Error deactivating rungler model:", e); }
+    try { deactivateKrellModel(); } catch (e) { console.warn("Error deactivating krell model:", e); }
     try { deactivateDxPatch(); } catch (e) { console.warn("Error deactivating dxpatch model:", e); }
-    try { deactivateVaPatch(); } catch (e) { console.warn("Error deactivating va model:", e); }
+    try { deactivateLibrarian(); } catch (e) { console.warn("Error deactivating librarian model:", e); }
   }
 });
 setTimeout(applyTips, 0);

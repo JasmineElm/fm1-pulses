@@ -29,7 +29,7 @@ export const HUMANIZE_PRESETS = [
  * @param {string} [options.title="Humanise"] - Section title
  * @param {string} [options.humanizeKey="humanize"] - State key for humanize
  * @param {string} [options.swingKey="swing"] - State key for swing
- * @param {number} [options.span=6] - Grid column span for Traditional panel
+ * @param {number} [options.span=6] - Grid column span for Mene311 panel
  * @param {string} [options.extraClass=""] - Extra CSS class
  * @param {Function} [options.onChange] - Callback on input change
  * @returns {{ sectEl: HTMLElement, humCtrl: HTMLElement, swingCtrl: HTMLElement, sync: Function }}

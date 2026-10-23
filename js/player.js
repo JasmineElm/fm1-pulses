@@ -14,7 +14,24 @@ const previewHeld = new Set();   // pitches still sounding from a slot preview
 let onPlayStartSyncCallback = null;
 export function onPlayStartSync(fn) { onPlayStartSyncCallback = fn; }
 
-export function isLive() { return live; }
+let modelTransportHandler = null;
+
+/**
+ * Sets or clears custom transport start/stop/toggle handlers for autonomous
+ * models that manage their own continuous event time (e.g. flocking swarm).
+ *
+ * @param {{ toggle: Function, stop?: Function, start?: Function, isRunning?: Function }|null} handler
+ */
+export function setModelTransportHandler(handler) {
+  modelTransportHandler = handler && typeof handler.toggle === "function" ? handler : null;
+}
+
+export function isLive() {
+  if (modelTransportHandler?.isRunning) {
+    return !!modelTransportHandler.isRunning();
+  }
+  return live;
+}
 
 export function swingFrac() {
   const s = Math.min(75, Math.max(50, state.swing ?? 50));
@@ -41,6 +58,7 @@ export function panicPreview() {
 }
 
 export async function playOnce(index) {
+  if (modelTransportHandler) return;
   const slot = typeof index === "number" ? index : getSelected();
   const bank = getBank();
   const p = bank[slot];
@@ -119,6 +137,9 @@ export function markStep(i) {
 }
 
 export function stopLive() {
+  if (modelTransportHandler?.stop) {
+    try { modelTransportHandler.stop(); } catch (_) {}
+  }
   live = false;
   liveToken++;
   clearPlayhead();
@@ -128,6 +149,20 @@ export function stopLive() {
 }
 
 export function toggleLive() {
+  if (modelTransportHandler?.toggle) {
+    const running = modelTransportHandler.toggle();
+    const btn = document.getElementById("audition");
+    if (btn) {
+      if (running) {
+        btn.textContent = "■ Stop";
+        btn.classList.add("playing");
+      } else {
+        btn.textContent = "▶ Play";
+        btn.classList.remove("playing");
+      }
+    }
+    return;
+  }
   if (live) { stopLive(); return; }
   onceToken++;
   panicPreview();
@@ -152,6 +187,7 @@ export async function liveLoop(token) {
   let elapsed = 0;
   let i = 0;
   while (live && token === liveToken) {
+    if (modelTransportHandler) break;
     try {
       const bank = getBank();
       const p = bank[getSelected()];

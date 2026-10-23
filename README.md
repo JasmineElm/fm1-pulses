@@ -8,7 +8,7 @@ Browser-based generative MIDI workstation for the **M-VAVE FM-1** (6-operator FM
 
 ## Overview
 
-FM-1 Pulses generates evolving 64-step musical phrases and freezes them directly into the hardware sequencer memory of the M-VAVE FM-1 via MIDI SysEx. Once frozen, the FM-1 plays standalone without a computer. The workstation also functions as a live generative MIDI performance broadcaster, complete with a built-in browser FM synthesizer for cable-free auditioning.
+FM-1 Pulses generates evolving 64-step musical phrases and plays them in real time to the M-VAVE FM-1 over MIDI, with a built-in browser FM synthesizer for cable-free auditioning. Sessions can be saved and restored exactly (see **Session files** below).
 
 ### Sequencer Models
 
@@ -18,12 +18,15 @@ FM-1 Pulses includes four distinct algorithmic sequencing engines accessible fro
 - **Turing Machine**: A shift-register melody generator inspired by the Music Thing Modular Turing Machine. Circulating bit registers mutate probabilistically, moving between locked repetitive loops and gradual melodic drift.
 - **Cellular Automata**: An emergent step generator powered by one-dimensional elementary cellular automata (Wolfram Rules 30, 90, 110, and 150), producing organic, evolving fractal patterns across generations.
 - **Particles**: A 2D kinetic collision engine inspired by Orca and Plinky. Autonomous directional playheads traverse an interactive surface, rebounding off boundaries and deflector nodes to trigger musical notes on collisions.
+- **Double Pendulum**: A chaotic attractor physics engine powered by Runge-Kutta 4th-order (RK4) integration of Euler-Lagrange equations. Direct-drag bobs on canvas to set release angles, switch between reproducible loops and continuous chaos, and map kinetic vectors to scale degrees.
+- **Flocking Swarm**: An autonomous boid flocking chord engine unlinked to any step clock. Boids navigate a 2D field via Separation, Alignment, and Cohesion. When the flock congregates at interactive Attractor Targets, it triggers up to 8-voice polyphonic chords across custom scales with kinetic dynamics, and scatters the swarm in a repulsion blast.
 
 ---
 
 ## Tools
 
 - **DX Patch Generator**: Algorithmic sound designer and SysEx patch manager for Yamaha DX7 and FM-1 hardware. Generates organic FM patches across 11 sonic categories using seedable macro controls, mutates existing voices with controlled drift, renders interactive envelope and algorithm topologies, auditions via a built-in 6-operator FM Web Audio engine, and transmits voices/banks directly to hardware over USB MIDI or standard `.syx` files.
+- **Preset & Pattern Librarian**: Bidirectional hardware librarian and 64-step pattern workbench for the M-VAVE FM-1. Pulls and exports all 128 presets (`SysEx 0x10` → 231B BaudGirl v4 `.syx`, 163B DX7 VCED, 4104B VMEM bank, or `.json`), pulls all 16 64-step patterns directly from hardware RAM (`SysEx 0x11` → `.syx`, `.mid`, or `.json`), edits polyphonic patterns interactively, and uploads new patterns (`SysEx 0x20`) from `.syx`, `.mid`, `.json`, or the Pulses sequencer bank.
 
 ---
 
@@ -37,7 +40,7 @@ All sequencer models operate within a unified modular workstation environment:
 - **Groove & Dynamics**: Micro-timing humanize jitter, velocity randomization, and a swing engine with hardware-compatible presets (Straight, Light, MPC, Hard, Triplet).
 - **Dual Auditioning**: Real-time MIDI transmission alongside a built-in multi-voice Web Audio synthesizer with selectable timbres (Electric Piano, Bell, Bass, Organ, Square).
 - **Hardware Integration**: Bidirectional USB MIDI communication, automatic hardware BPM sync, and Bluetooth (BLE) wireless MIDI support.
-- **Presets & Storage**: Five quick-recall browser storage slots, reproducible JSON state export/import, and raw `.syx` SysEx file export.
+- **Presets & Storage**: Five quick-recall browser slots per model, plus versioned `.fm1p.json` session export/import.
 - **Skeuomorphic Interface**: Eurorack-inspired design with color themes decoded directly from the FM-1 firmware's `BGTHEME` table.
 
 ---
@@ -52,22 +55,42 @@ python3 -m http.server 8080
 
 1. Open `http://localhost:8080` in Chrome, Edge, or any Web MIDI-enabled browser.
 2. Connect the FM-1 via USB and grant MIDI access when prompted.
-3. Select an engine from the **Sequencing Models** hub or open the **DX Patch Generator** under **Tools**.
+3. Select an engine from the **Sequencing Models** hub or open **DX Patch Generator** or **Preset & Pattern Librarian** under **Tools**.
 4. Tweak parameters or press **Randomise** (or `R` / `G`) to roll a new pattern.
-5. Click **▶ Play** (or `Space`) to audition live through the browser synth and FM-1.
-6. Click **Freeze** (or `F`) to write the active 64-step pattern into the FM-1's sequencer.
+5. Click **▶ Play** (or `Space`) to play live through the browser synth and FM-1.
+6. Click **export** to download the session, or use a preset slot to keep it in the browser.
 
-> ### ⚠ Firmware & Hardware Caveats
+> ### ⚠ Hardware Notes
 >
-> - **Firmware Requirement**: Pattern write (`SysEx 0x20`) is implemented in the **FM-1+VA / Baud Girl** custom firmware. Stock firmware does not support pattern writes over SysEx, but functions with live MIDI auditioning.
-> - **Sequencer Must Be Stopped**: The FM-1 refuses SysEx writes while its internal sequencer is actively running. Turn **SEQ off** on the device before freezing.
-> - **Bluetooth MIDI**: BLE supports wireless live performance playback. Device reads and pattern freezing require a wired USB connection.
+> - **Bluetooth MIDI**: BLE supports wireless live playback. Device reads (tempo sync) require a wired USB connection.
+
+---
+
+## Session files
+
+A session is a JSON envelope that records the *recipe* for the exact browser state, not the generated notes:
+
+```jsonc
+{
+  "format": "fm1-pulses.session", "formatVersion": 1,
+  "model": { "id": "turing", "version": 1 },
+  "state": { "params": {…}, "locks": {…}, "selected": 0, "hidden": { "bits": […] } },
+  "ui": { "theme": "dark" }, "output": { "sound": "…", "volume": 0.8 }
+}
+```
+
+- Each sequencer model has its own `version` and an ordered chain of migrations (`js/snapshot.js`). Older files are upgraded on import; files from a **newer** version are refused rather than truncated.
+- Unknown parameters are preserved through an import/export round trip.
+- Models register hidden state (Turing shift register and gates, Cellular grids, Particle seeds and obstacles) from their own module.
+- Files from before this format load as Mene311 v1.
+- Run `node --test tests/` for the format tests.
 
 ---
 
 ## Project Structure
 
 ```
+├── AGENTS.md           # Engineering guidelines, hardware constraints & contracts
 ├── index.html          # Main application markup & hub
 ├── guide.html          # Comprehensive interactive user guide
 ├── manifest.json       # PWA manifest
@@ -75,7 +98,10 @@ python3 -m http.server 8080
 ├── css/
 │   ├── style.css       # Core layout & base styling
 │   ├── rack.css        # Skeuomorphic Eurorack styling & themes
-│   └── dxpatch.css     # DX Patch Generator modular panel styling
+│   ├── dxpatch.css     # DX Patch Generator modular panel styling
+│   └── librarian.css   # Preset & Pattern Librarian workbench styling
+├── docs/
+│   └── plan.md         # Master roadmap & specs for generative sequencer models
 ├── js/
 │   ├── rack.js         # Master UI coordinator & lifecycle wiring
 │   ├── modes.js        # Sequencer model & tools manager, landing view
@@ -83,19 +109,27 @@ python3 -m http.server 8080
 │   ├── dxgenerator.js  # FM patch generator & mutator algorithms
 │   ├── dxaudio.js      # 6-operator FM Web Audio synthesis engine
 │   ├── dxpatch.js      # DX Patch Generator UI & interactive matrix
+│   ├── va.js           # BaudGirl FM-1+VA domain model & 231B SysEx codec (for Librarian)
+│   ├── librarian.js    # Preset & Pattern Librarian UI, hardware sync & editor
 │   ├── generator.js    # Mene311 stochastic generation engine
 │   ├── turing.js       # Turing Machine shift-register model
 │   ├── cellular.js     # Cellular Automata Wolfram rule engine
 │   ├── particles.js    # 2D kinetic particle collision engine
+│   ├── pendulum.js     # Chaotic Double Pendulum attractor engine
+│   ├── flock.js        # Autonomous Flocking Swarm chord engine
+│   ├── rungler.js      # Rob Hordijk Rungler / chaotic stepped shift register model
+│   ├── krell.js        # Buchla 266 Krell Patch autonomous generative engine
 │   ├── rhythm.js       # 64-step grid & Euclidean rhythm generator
 │   ├── scale.js        # Scale quantizer & pitch controls
 │   ├── humanise.js     # Micro-timing jitter & swing engine
 │   ├── velocity.js     # Velocity dynamics & range controls
-│   ├── pattern.js      # FM-1 SysEx 0x20 pattern encoder/decoder
-│   ├── device.js       # Hardware communication & tempo sync
+│   ├── pattern.js      # FM-1 SysEx 0x20 / RAM 0x11 / .mid pattern codecs (used by the Librarian)
+│   ├── device.js       # Device status & tempo sync
+│   ├── snapshot.js     # Versioned session format, model registry & migrations
 │   ├── midi.js         # Web MIDI & Web Bluetooth BLE interface
 │   ├── audio.js        # Internal Web Audio audition synthesizer
-│   └── storage.js      # Preset slots, JSON & SysEx file export
+│   └── storage.js      # Session export/import & per-model preset slots
+├── tests/              # node --test (snapshot format & migrations)
 └── presets/
     └── scales.json     # Scale interval definitions
 ```

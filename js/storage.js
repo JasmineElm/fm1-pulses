@@ -1,14 +1,31 @@
-// storage.js — Preset storage, state JSON export/import, and .syx export.
-import { state, refs, locks, getBank, getSelected, setSelected, DEFAULT, SLOTS, PRESET_N, STATE_VERSION, status, doGenerate } from "./state.js";
-import { syncHeader } from "./device.js";
-import { encodeWrite } from "./pattern.js";
-import { renderBuffer, refreshLockCount } from "./grid.js";
+// storage.js — Session snapshots (download / upload / browser preset slots).
+// The file format, versioning and migrations live in snapshot.js; this module wires
+// them to the live app state and DOM. Sequencer-model hidden state registers itself
+// from each model's own module.
+import { state, locks, getSelected, setSelected, DEFAULT, PRESET_N, status, doGenerate } from "./state.js";
+import { refreshLockCount } from "./grid.js";
+import { getActiveModel, showModel } from "./modes.js";
+import { applyTheme } from "./themes.js";
+import * as audio from "./audio.js";
+import {
+  registerModel, getModelDef, pickParams, ownsKey, splitParams,
+  buildEnvelope, migrateEnvelope, SnapshotError,
+} from "./snapshot.js";
 
-const PRESET_KEY = "fm1p.presets";
+const PRESET_KEY = "fm1p.presets.v2";       // { [modelId]: [envelope|null × PRESET_N] }
+const LEGACY_PRESET_KEY = "fm1p.presets";    // pre-envelope array, belonged to "mene311"
+const APP_BUILD = "100";
 let presetArm = null;   // "save" | "load" | null
+
+// Mene311 is fully determined by seed + parameters; it has no hidden state.
+registerModel({ id: "mene311", version: 1, migrations: {} });
 
 let onSyncRackCallback = null;
 export function onSyncRack(fn) { onSyncRackCallback = fn; }
+
+// Parameters present in a loaded file that this build doesn't know. They are written
+// back out on the next export so a newer file survives a round trip through an older app.
+let carriedUnknown = {};
 
 export function download(name, data, type) {
   const blob = new Blob([data], { type });
@@ -19,61 +36,116 @@ export function download(name, data, type) {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-export function exportState() {
-  const data = {
-    app: "fm1-pulses",
-    version: STATE_VERSION,
-    seed: state.seed >>> 0,
-    params: { ...state },
+// The sequencer model that owns the current state; falls back to Mene311 when a
+// non-sequencer tool or the landing page is showing.
+function currentModelId() {
+  const id = getActiveModel();
+  return id && getModelDef(id) ? id : "mene311";
+}
+
+export function captureSession(name = "") {
+  const modelId = currentModelId();
+  const def = getModelDef(modelId);
+  return buildEnvelope({
+    modelId,
+    name,
+    params: { ...pickParams(modelId, state), ...carriedUnknown },
     locks: Object.fromEntries(locks),
     selected: getSelected(),
-  };
-  download(`fm1p-${state.seed >>> 0}.json`, JSON.stringify(data, null, 2), "application/json");
-  status(`exported seed ${state.seed >>> 0} ✓`);
+    hidden: def.capture ? def.capture() : {},
+    ui: { theme: document.documentElement.dataset.theme || "dark" },
+    output: { sound: audio.getSound(), volume: audio.getVolume() },
+    build: APP_BUILD,
+  });
+}
+
+export function applySession(raw) {
+  const env = migrateEnvelope(raw);          // throws SnapshotError on anything unsafe
+  const id = env.model.id;
+  const def = getModelDef(id);
+
+  const { known, unknown } = splitParams(id, env.state.params, DEFAULT);
+  for (const k of Object.keys(DEFAULT)) {
+    if (!ownsKey(id, k)) continue;           // never touch another model's parameters
+    state[k] = k in known ? known[k] : structuredClone(DEFAULT[k]);
+  }
+  state.seed = state.seed >>> 0;
+  carriedUnknown = unknown;
+
+  locks.clear();
+  for (const [k, v] of Object.entries(env.state.locks ?? {})) {
+    if (Array.isArray(v)) locks.set(k, v.map((n) => ({ ...n })));
+  }
+  setSelected(Number(env.state.selected) || 0);
+
+  if (def.restore) def.restore(env.state.hidden);
+
+  if (env.ui?.theme) applyTheme(env.ui.theme);
+  const vol = Number(env.output?.volume);
+  if (typeof env.output?.sound === "string") { audio.setSound(env.output.sound); localStorage.setItem("fm1p.sound", audio.getSound()); }
+  if (Number.isFinite(vol)) { audio.setVolume(vol); localStorage.setItem("fm1p.volume", String(audio.getVolume())); }
+
+  if (onSyncRackCallback) onSyncRackCallback();
+  showModel(id);                              // (re)activates the model, which regenerates
+  if (def.restore) def.restore(env.state.hidden);
+  if (id === "mene311") doGenerate(false);
+  refreshLockCount();
+  renderPresets();
+  return env;
+}
+
+function describeError(e) {
+  return e instanceof SnapshotError ? e.message : (e?.message || String(e));
+}
+
+export function exportState() {
+  const env = captureSession();
+  const seed = env.state.params.seed >>> 0;
+  download(`${env.model.id}-${seed}.fm1p.json`, JSON.stringify(env, null, 2), "application/json");
+  status(`exported ${env.model.id} v${env.model.version} · seed ${seed} ✓`);
 }
 
 export async function importState(file) {
   try {
-    const d = JSON.parse(await file.text());
-    if (!d || d.app !== "fm1-pulses") throw new Error("not an FM-1 Pulses file");
-    applyStateData(d);
-    status(`imported seed ${state.seed >>> 0} ✓`);
+    const env = applySession(JSON.parse(await file.text()));
+    status(`Loaded ${env.model.id} · seed ${state.seed >>> 0} ✓`, "ok");
+    return env;
   } catch (e) {
-    status("import failed: " + (e.message || e), "err");
+    status("import failed: " + describeError(e), "err");
   }
 }
 
-export function readPresets() {
+// ---- Browser preset slots (same envelope as file export, namespaced per model) ----
+function readAllPresets() {
   try {
-    const p = JSON.parse(localStorage.getItem(PRESET_KEY));
-    return Array.isArray(p) ? p.slice(0, PRESET_N) : Array(PRESET_N).fill(null);
-  } catch { return Array(PRESET_N).fill(null); }
+    const all = JSON.parse(localStorage.getItem(PRESET_KEY));
+    if (all && typeof all === "object" && !Array.isArray(all)) {
+      if (all.traditional && !all.mene311) all.mene311 = all.traditional;   // former model id
+      delete all.traditional;
+      return all;
+    }
+  } catch { /* fall through to legacy */ }
+  try {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_PRESET_KEY));
+    if (Array.isArray(legacy)) return { mene311: legacy };
+  } catch { /* nothing stored */ }
+  return {};
 }
 
-export function applyStateData(d) {
-  if (d.params) Object.assign(state, d.params);
-  else if (d.seed != null) Object.assign(state, d);
-  for (const k of Object.keys(state)) if (!(k in DEFAULT)) delete state[k];
-  state.seed = (d.seed ?? state.seed) >>> 0;
-  locks.clear();
-  for (const [k, v] of Object.entries(d.locks ?? {})) locks.set(k, v.map((n) => ({ ...n })));
-  setSelected(Math.max(0, Math.min(SLOTS - 1, Number(d.selected) || 0)));
-  if (onSyncRackCallback) onSyncRackCallback();
-  doGenerate(false);
-  refreshLockCount();
+export function readPresets(modelId = currentModelId()) {
+  const list = readAllPresets()[modelId];
+  const out = Array(PRESET_N).fill(null);
+  if (Array.isArray(list)) for (let i = 0; i < PRESET_N; i++) out[i] = list[i] ?? null;
+  return out;
 }
 
 export function savePreset(i) {
-  const p = readPresets();
-  p[i] = {
-    app: "fm1-pulses",
-    version: STATE_VERSION,
-    seed: state.seed >>> 0,
-    params: { ...state },
-    locks: Object.fromEntries(locks),
-    selected: getSelected(),
-  };
-  localStorage.setItem(PRESET_KEY, JSON.stringify(p));
+  const modelId = currentModelId();
+  const all = readAllPresets();
+  const slots = readPresets(modelId);
+  slots[i] = captureSession();
+  all[modelId] = slots;
+  localStorage.setItem(PRESET_KEY, JSON.stringify(all));
   renderPresets();
   status(`preset ${i + 1} saved ✓ seed ${state.seed >>> 0}`);
 }
@@ -81,9 +153,15 @@ export function savePreset(i) {
 export function recallPreset(i) {
   const d = readPresets()[i];
   if (!d) { status(`preset ${i + 1} is empty`, "err"); return; }
-  applyStateData(d);
-  status(`preset ${i + 1} recalled ✓ seed ${state.seed >>> 0}`);
+  try {
+    applySession(d);
+    status(`preset ${i + 1} recalled ✓ seed ${state.seed >>> 0}`);
+  } catch (e) {
+    status(`preset ${i + 1}: ` + describeError(e), "err");
+  }
 }
+
+const slotSeed = (p) => p?.state?.params?.seed ?? p?.seed;
 
 export function renderPresets() {
   const el = document.getElementById("preset-slots") || document.getElementById("presets");
@@ -106,7 +184,7 @@ export function renderPresets() {
     const b = document.createElement("button");
     b.className = "pslot" + (p[i] ? " filled" : "");
     b.textContent = String(i + 1);
-    b.title = p[i] ? `preset ${i + 1}: seed ${p[i].seed} — tap to recall, double-click to overwrite` : `preset ${i + 1}: empty`;
+    b.title = p[i] ? `preset ${i + 1}: seed ${slotSeed(p[i])} — tap to recall, double-click to overwrite` : `preset ${i + 1}: empty`;
     b.addEventListener("click", () => {
       if (presetArm === "save") { savePreset(i); presetArm = null; }
       else if (presetArm === "load") { recallPreset(i); presetArm = null; }
@@ -116,13 +194,4 @@ export function renderPresets() {
     el.appendChild(b);
   }
   el.append(armBtn("◂ load", "load", "Arm recalling, then tap a filled slot. Or just tap a slot: tap = recall, double-click = save."));
-}
-
-export function exportSysex() {
-  syncHeader();
-  const bank = getBank();
-  const bytes = [];
-  for (let i = 0; i < SLOTS; i++) for (const m of encodeWrite(bank[i], i, true)) bytes.push(...m);
-  download(`fm1p-${state.seed >>> 0}.syx`, new Uint8Array(bytes), "application/octet-stream");
-  status(`pattern .syx downloaded ✓ (${bytes.length} bytes)`);
 }

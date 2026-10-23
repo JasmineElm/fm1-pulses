@@ -47,17 +47,14 @@
     <h1>FM-1 <b>PULSES</b></h1>
     <span class="sub">guide</span>
   </div>
-  <p class="intro">High-level guide to the FM-1 Pulses generative workstation: select an algorithmic sequencer model, shape musical phrases, audition in real time, and freeze patterns into the M-VAVE FM-1's hardware memory. <a class="back" href="index.html">← back to panel</a></p>
+  <p class="intro">High-level guide to the FM-1 Pulses generative workstation: select an algorithmic sequencer model, shape musical phrases, and play them live to the M-VAVE FM-1 over MIDI. <a class="back" href="index.html">← back to panel</a></p>
 
   <h2>Workflow</h2>
   <div class="note">
     <p><b>1. Select Model:</b> Choose an engine from the landing hub (or click <code>‹ models</code> in the status bar).</p>
     <p><b>2. Connect Device:</b> Plug the FM-1 in via USB. The status LED turns green when Web MIDI connects.</p>
     <p><b>3. Shape &amp; Audition:</b> Tweak parameters or press <b>Randomise</b> (<code>R</code> / <code>G</code>). Click <b>▶ Play</b> (<code>Space</code>) to audition through the browser synth and FM-1.</p>
-    <p><b>4. Freeze:</b> Press <b>Freeze</b> (<code>F</code>) to write the pattern into the FM-1. Stop device playback first.</p>
-  </div>
-  <div class="note" style="border-left-color: var(--err)">
-    <p><b>Stop device sequencer before freezing:</b> The firmware rejects pattern writes (<code>status 3</code>) while playing. Turn <b>SEQ off</b> on the FM-1 before freezing.</p>
+    <p><b>4. Save &amp; Recall:</b> Press <b>export</b> to download a versioned <code>.fm1p.json</code> session (model, parameters, seed and any model buffers such as Turing bits or Cellular grids). <b>import</b> restores it in any browser, switching to the model it was saved from. The five preset slots keep sessions in the browser, separately for each model.</p>
   </div>
 
   <h2>Sequencer Models</h2>
@@ -104,6 +101,14 @@
   <div class="param">
     <h3>DX Patch Generator <span class="kind">6-OP FM Voice &amp; Bank Design</span></h3>
     <p>Algorithmic sound designer and SysEx patch manager for Yamaha DX7 and FM-1 hardware. Generate patches across 11 sonic categories (Keys, Bass, Pads, Leads, Bells, etc.), mutate sounds with controlled drift, edit operator ratios/levels/envelopes, audition with an internal 6-OP FM synth, and send directly to FM-1 hardware over USB MIDI or export 32-voice <code>.syx</code> banks.</p>
+  </div>
+  <div class="param">
+    <h3>Virtual Analogue (VA) <span class="kind">Subtractive VA &amp; 16-Preset Pack</span></h3>
+    <p>Subtractive Virtual Analog workbench for BaudGirl FM-1+VA firmware. Features 9 category recipes, 6 sonic profiles, interactive oscillator/filter/ADSR surfaces, real-time MIDI CC streaming, a 7-unit effects chain, and 16-preset VA pack management (slots 113–128).</p>
+  </div>
+  <div class="param">
+    <h3>Preset &amp; Pattern Librarian <span class="kind">Hardware Preset Export &amp; Pattern Sync</span></h3>
+    <p>Bidirectional hardware librarian and 64-step pattern workbench. Pull and archive all 128 presets from the FM-1 via SysEx <code>0x10</code> (exporting as 231B BaudGirl v4 <code>.syx</code>, 163B DX7 VCED, 4104B VMEM banks, or <code>.json</code>, or opening directly in the DX/VA editors). Pull all 16 64-step patterns directly from device RAM via SysEx <code>0x11</code>, edit polyphonic sequences on the interactive pitch/velocity canvas, or upload new patterns (<code>SysEx 0x20</code>) from <code>.syx</code>, <code>.mid</code>, <code>.json</code>, or the Pulses sequencer bank.</p>
   </div>
 
   <h2>Connectivity &amp; Portability</h2>

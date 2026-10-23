@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="css/style.css?v=1">
 <link rel="stylesheet" href="css/rack.css?v=4">
 <link rel="stylesheet" href="css/dxpatch.css?v=10">
-<link rel="stylesheet" href="css/vapatch.css?v=1">
+<link rel="stylesheet" href="css/librarian.css?v=3">
 </head>
 <body>
 <div class="case">
@@ -31,9 +31,20 @@
   <!-- LANDING INTERFACE: Model Selection -->
   <section id="view-landing" class="view-landing" aria-label="Sequencing Models">
     <div class="landing-hero">
-      <div class="landing-kicker">FM-1 GENERATIVE WORKSTATION</div>
-      <h2 class="landing-title">Select Sequencing Model</h2>
-      <p class="landing-subtitle">Choose an algorithmic architecture to generate 64-step phrases and freeze them into the M-VAVE FM-1's hardware sequencer memory.</p>
+      <div class="landing-hero-header">
+        <div>
+          <div class="landing-kicker">FM-1 GENERATIVE WORKSTATION</div>
+          <h2 class="landing-title">Select Sequencing Model</h2>
+        </div>
+        <div class="landing-hero-actions">
+          <label class="landing-load-btn" id="landing-load-btn" title="Upload a saved session JSON to load and launch its model">
+            <span class="load-icon" aria-hidden="true">📂</span>
+            <span>LOAD</span>
+            <input type="file" id="landing-load-file" accept=".json,.fm1p.json" style="display:none;">
+          </label>
+        </div>
+      </div>
+      <p class="landing-subtitle">Choose an algorithmic architecture to generate phrases, or load a saved JSON session state to jump directly into its model.</p>
     </div>
 
     <div id="models-grid" class="models-grid"></div>
@@ -49,26 +60,24 @@
 
     <div class="landing-footer">
       <div class="landing-firmware-note">
-        <span class="note-pill">FIRMWARE</span> SysEx Freeze requires <b>FM-1+VA / Baud Girl</b> firmware. Stock firmware supports live Web Audio &amp; MIDI audition.
+        <span class="note-pill">LIVE</span> Sequencers stream MIDI notes to the FM-1 in real time and work on any firmware. The browser synth auditions with no device attached.
       </div>
       <div class="landing-footer-actions">
+        <label class="glink landing-load-link" title="Upload a saved session JSON">load state<input type="file" id="landing-footer-load-file" accept=".json,.fm1p.json" style="display:none;"></label>
         <a class="glink" href="guide.html">guide</a>
       </div>
     </div>
   </section>
 
   <!-- SEQUENCER WORKSPACE: Shared Statusrow & Global Settings Bar -->
-  <section id="view-workspace" class="view-workspace view-traditional" style="display: none;" aria-label="Sequencer Workspace">
+  <section id="view-workspace" class="view-workspace view-mene311" style="display: none;" aria-label="Sequencer Workspace">
     <div class="statusrow">
       <a class="glink glink-model" id="link-models" href="#models" title="Return to sequencer models">‹ models</a>
       <a class="glink" href="guide.html">guide</a>
-      <a class="glink" id="export" title="Download the current state (knobs, seed, locks) as JSON — share it, import it later, reproduce the exact bank.">export</a>
-      <a class="glink" id="import" title="Load a state JSON file exported from FM-1 Pulses.">import</a>
-      <a class="glink" id="syx" title="Download the whole 16-slot bank as a .syx file — the SysEx messages any FM-1 tool can push to the device.">sysex</a>
-      <a class="glink" id="ble" title="Connect the FM-1 over Bluetooth MIDI for cable-free playback. Freeze and device reads still need USB.">bluetooth</a>
+      <a class="glink" href="#librarian" id="librarian-link" title="Switch to Preset &amp; Pattern Librarian">librarian</a>
+      <a class="glink" id="ble" title="Connect the FM-1 over Bluetooth MIDI for cable-free playback. Device reads still need USB.">bluetooth</a>
+
       <a class="glink" id="tips" title="Show or hide tooltips — turn them off if the hints cover the panel on a phone.">tips on</a>
-      <input type="file" id="importfile" accept=".json,application/json" hidden>
-      <button class="glink" id="diag" style="display:none" title="Read the FM-1's settings block, show it, and sync the Tempo knob to the device's BPM. Change one thing on the device itself, read again, and the bytes that move are that setting.">read device</button>
       <span id="status" class="status">loading…</span>
     </div>
 
@@ -83,8 +92,9 @@
           </div>
           <div class="presets global-presets" id="presets">
             <div id="preset-slots" class="preset-slots"></div>
-            <button id="freeze" title="Write the pattern into the FM-1 (F)">Freeze</button>
-            <button id="clearall" title="Erase pattern on the FM-1">Clear</button>
+            <button id="export" title="Download this session (model, parameters, seed, locks and model buffers) as a versioned .fm1p.json file.">export</button>
+            <button id="import" title="Load a .fm1p.json session — switches to the sequencer model it was saved from and restores its exact state.">import</button>
+            <input type="file" id="importfile" accept=".json,application/json" hidden>
           </div>
         </div>
         <div class="global-controls" id="global-controls"></div>
@@ -104,7 +114,7 @@
     <div class="sect sequence-bar" id="sequence" aria-label="Sequence"></div>
 
     <!-- MODEL 1: MENE311 SEQUENCER -->
-    <div id="model-traditional" class="model-view" style="display: none;">
+    <div id="model-mene311" class="model-view" style="display: none;">
       <div class="layout">
         <div class="module">
           <div class="rack" id="panel"></div>
@@ -143,6 +153,26 @@
     <div id="model-particles" class="model-view" style="display: none;">
       <!-- Populated dynamically by js/particles.js -->
     </div>
+
+    <!-- MODEL 5: DOUBLE PENDULUM CHAOTIC ATTRACTOR -->
+    <div id="model-pendulum" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/pendulum.js -->
+    </div>
+
+    <!-- MODEL 6: FLOCKING SWARM CHORD ENGINE (UNLINKED CONTINUOUS MODEL) -->
+    <div id="model-flock" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/flock.js -->
+    </div>
+
+    <!-- MODEL 7: ROB HORDIJK RUNGLER (CHAOTIC STEPPED SHIFT REGISTER) -->
+    <div id="model-rungler" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/rungler.js -->
+    </div>
+
+    <!-- MODEL 8: BUCHLA 266 KRELL GENERATIVE PATCH -->
+    <div id="model-krell" class="model-view" style="display: none;">
+      <!-- Populated dynamically by js/krell.js -->
+    </div>
   </section>
 
   <!-- TOOL: DX PATCH GENERATOR WORKBENCH -->
@@ -156,7 +186,7 @@
         open .syx
         <input type="file" id="dxpatch-file-input" accept=".syx,application/octet-stream" hidden>
       </label>
-      <a class="glink" href="#va" id="dxpatch-link-va" title="Switch to Virtual Analogue Generator (FM-1+VA)">virtual analogue (va) ›</a>
+      <a class="glink" href="#librarian" title="Switch to Preset &amp; Pattern Librarian">librarian ›</a>
     </div>
 
     <div class="dxpatch-workspace">
@@ -451,292 +481,220 @@
     </div>
   </section>
 
-  <!-- TOOL: VA PATCH GENERATOR WORKBENCH -->
-  <section id="view-va" class="view-workspace view-va" style="display: none;" aria-label="Virtual Analogue Patch Generator">
+  <!-- TOOL: PRESET & PATTERN LIBRARIAN WORKBENCH -->
+  <section id="view-librarian" class="view-workspace view-librarian" style="display: none;" aria-label="Preset and Pattern Librarian">
     <div class="statusrow">
-      <a class="glink glink-model" id="va-link-models" href="#models" title="Return to models and tools">‹ tools</a>
+      <a class="glink glink-model" id="lib-link-models" href="#models" title="Return to models and tools">‹ tools</a>
       <a class="glink" href="guide.html">guide</a>
-      <a class="glink" id="va-top-dl-preset" title="Download current preset as 231-byte BaudGirl v4 SysEx file">save preset (.syx)</a>
-      <a class="glink" id="va-top-dl-pack" title="Download 16-preset pack as BaudGirl SysEx file">save pack (.syx)</a>
-      <label class="glink" title="Open .syx file (Preset or Pack)" style="cursor: pointer;">
-        open .syx
-        <input type="file" id="va-top-file-input" accept=".syx,application/octet-stream" hidden>
+      <a class="glink" id="lib-top-pull-presets" title="Pull presets in selected bank filter from FM-1 via SysEx 0x10">pull presets</a>
+      <a class="glink" id="lib-top-pull-patterns" title="Pull all 16 patterns from FM-1 RAM via SysEx 0x11">pull patterns</a>
+      <a class="glink" id="lib-top-export-bundle" title="Export all pulled presets and patterns as a single JSON backup bundle">backup (.json)</a>
+      <label class="glink" title="Import .syx, .mid, or .json files (Presets, Banks, or Patterns)" style="cursor: pointer;">
+        import file
+        <input type="file" id="lib-top-file-input" accept=".syx,.mid,.midi,.json,application/octet-stream,application/json" hidden>
       </label>
-      <a class="glink" href="#dxpatch" id="va-link-dxpatch" title="Switch to DX Patch Generator (FM-1 6-Op FM)">‹ dx patch (fm)</a>
+      <a class="glink" href="#dxpatch" title="Switch to DX Patch Generator (FM-1 6-Op FM)">dx patch</a>
     </div>
 
-    <div class="va-workspace">
-      <!-- Left Column: Generator Controls & Hardware -->
-      <aside class="va-panel va-panel-left">
-        <div class="va-card">
-          <h3 class="va-heading">Sound Generator</h3>
-
-          <label class="va-field-label" for="va-category-select">Category Template</label>
-          <select id="va-category-select" class="va-select">
-            <option value="supersaw">⚡ Trance Supersaw Lead</option>
-            <option value="acid">🧪 Acid 303 Squelch Bass</option>
-            <option value="reese">🔊 Reese / Neuro Sub Bass</option>
-            <option value="pad">🌊 Warm Analog Drift Pad</option>
-            <option value="pluck">🪕 Poly Pluck / Arp</option>
-            <option value="pwm">🎻 Hollow PWM Strings</option>
-            <option value="brass">🎺 Vintage CS / OB Brass</option>
-            <option value="chip">👾 Bitcrushed Pulse Lead</option>
-            <option value="fx">🛸 Modulated Noise / FX</option>
-          </select>
-
-          <label class="va-field-label" for="va-profile-select">Sonic Profile Layer</label>
-          <select id="va-profile-select" class="va-select">
-            <option value="none">Neutral (Standard)</option>
-            <option value="warm">Warm &amp; Subby</option>
-            <option value="bright">Bright &amp; Open</option>
-            <option value="aggressive">Aggressive &amp; Driven</option>
-            <option value="wide">Wide Unison</option>
-            <option value="lofi">Lo-Fi Drifty</option>
-          </select>
-        </div>
-
-        <div class="va-card">
-          <h3 class="va-heading">Timbral Macros</h3>
-
-          <div class="va-slider-row" title="Filter Cutoff Bias">
-            <div class="va-slider-header">
-              <span>Cutoff</span>
-              <span id="va-val-cutoff" class="va-mono-val">0.60</span>
+    <div class="lib-workspace">
+      <!-- Left Column: Hardware Preset & Pattern Transfer Operations -->
+      <aside class="lib-panel lib-panel-left">
+        <div class="lib-card">
+          <div class="lib-card-header">
+            <h3 class="lib-heading">Presets (1–128)</h3>
+            <div class="lib-seg-group" id="lib-bank-filter-group" title="Filter preset slots by bank (A: 1–32, B: 33–64, C: 65–96, D: 97–128, VA: 113–128)">
+              <button type="button" class="lib-seg-btn active" data-bank="all" title="All 128 Presets">ALL</button>
+              <button type="button" class="lib-seg-btn" data-bank="A" title="Bank A (Slots 1–32)">A</button>
+              <button type="button" class="lib-seg-btn" data-bank="B" title="Bank B (Slots 33–64)">B</button>
+              <button type="button" class="lib-seg-btn" data-bank="C" title="Bank C (Slots 65–96)">C</button>
+              <button type="button" class="lib-seg-btn" data-bank="D" title="Bank D (Slots 97–128)">D</button>
+              <button type="button" class="lib-seg-btn" data-bank="VA" title="VA Pack (Slots 113–128)">VA</button>
             </div>
-            <input type="range" id="va-slider-cutoff" class="va-range" min="0" max="1" step="0.05" value="0.6" />
           </div>
 
-          <div class="va-slider-row" title="Unison Supersaw &amp; Detune Spread">
-            <div class="va-slider-header">
-              <span>Unison</span>
-              <span id="va-val-unison" class="va-mono-val">0.50</span>
-            </div>
-            <input type="range" id="va-slider-unison" class="va-range" min="0" max="1" step="0.05" value="0.5" />
+          <div class="lib-btn-grid-2">
+            <button type="button" id="lib-btn-pull-preset" class="lib-btn-sm primary" title="Read selected preset slot from FM-1 via SysEx 0x10">📥 Pull Slot</button>
+            <button type="button" id="lib-btn-pull-bank" class="lib-btn-sm primary" title="Read all slots in active bank filter from FM-1">📥 Pull Bank</button>
+            <button type="button" id="lib-btn-write-preset" class="lib-btn-sm warning" title="Write selected preset to FM-1 slot via 231B SysEx 0x04">📤 Write Slot</button>
+            <button type="button" id="lib-btn-open-editor" class="lib-btn-sm" title="Open selected preset in DX Patch or VA Patch Editor">🔧 Edit Patch</button>
           </div>
 
-          <div class="va-slider-row" title="Envelope Speed">
-            <div class="va-slider-header">
-              <span>Env Speed</span>
-              <span id="va-val-speed" class="va-mono-val">0.50</span>
-            </div>
-            <input type="range" id="va-slider-speed" class="va-range" min="0" max="1" step="0.05" value="0.5" />
+          <div class="lib-btn-grid-2" style="margin-top:6px;">
+            <button type="button" id="lib-btn-dl-preset-v4" class="lib-btn-sm" title="Download selected preset as 231-byte BaudGirl v4 .syx">💾 Slot 231B</button>
+            <button type="button" id="lib-btn-dl-preset-dx7" class="lib-btn-sm" title="Download selected preset as 163-byte DX7 VCED .syx">💾 Slot VCED</button>
+            <button type="button" id="lib-btn-dl-bank-v4" class="lib-btn-sm" title="Download active bank filter as multi-preset 231B .syx pack">📦 Bank 231B</button>
+            <button type="button" id="lib-btn-dl-bank-dx7" class="lib-btn-sm" title="Download 32-voice DX7 VMEM cartridge bank (4104B .syx)">📦 DX7 4104B</button>
           </div>
+          <button type="button" id="lib-btn-dl-presets-json" class="lib-btn-block" style="margin-top:6px; margin-bottom:0;" title="Export pulled presets as JSON">
+            <span>📄 Export Presets (.json)</span>
+          </button>
 
-          <div class="va-slider-row" title="Effects Chain Density">
-            <div class="va-slider-header">
-              <span>FX Density</span>
-              <span id="va-val-fx" class="va-mono-val">0.50</span>
+          <div id="lib-progress-wrap" class="lib-progress-wrap">
+            <div class="lib-progress-header">
+              <span id="lib-progress-label">Reading…</span>
+              <button type="button" id="lib-btn-cancel-transfer" class="lib-btn-sm" style="padding:1px 6px;" title="Cancel active MIDI transfer">✕</button>
             </div>
-            <input type="range" id="va-slider-fx" class="va-range" min="0" max="1" step="0.05" value="0.5" />
-          </div>
-
-          <div class="va-slider-row" title="Mutation Rate">
-            <div class="va-slider-header">
-              <span>Mutation Rate</span>
-              <span id="va-val-mutation" class="va-mono-val">0.20</span>
+            <div class="lib-progress-bar">
+              <div id="lib-progress-fill" class="lib-progress-fill"></div>
             </div>
-            <input type="range" id="va-slider-mutation" class="va-range" min="0.05" max="1" step="0.05" value="0.2" />
           </div>
         </div>
 
-        <div class="va-card">
-          <button id="va-btn-generate" class="va-btn-block primary" title="Generate VA preset (Space)">
-            <span>🎲 Generate Preset</span> <kbd>Space</kbd>
+        <div class="lib-card">
+          <div class="lib-card-header">
+            <h3 class="lib-heading">Patterns (P1–P16)</h3>
+          </div>
+
+          <button type="button" id="lib-btn-upload-pattern" class="lib-btn-block primary" title="Upload active pattern to FM-1 slot via SysEx 0x20 (U or F)">
+            <span>📤 Upload Pattern to FM-1</span> <kbd>U</kbd>
           </button>
-          <button id="va-btn-mutate" class="va-btn-block warning" title="Mutate current preset (M)">
-            <span>🧬 Mutate Preset</span> <kbd>M</kbd>
-          </button>
-          <button id="va-btn-add-bank" class="va-btn-block" title="Store preset into active pack slot (B)">
-            <span>📥 Save to Pack Slot</span> <kbd>B</kbd>
+
+          <div class="lib-btn-grid-2">
+            <button type="button" id="lib-btn-pull-pattern" class="lib-btn-sm primary" title="Pull selected pattern slot from FM-1 RAM via SysEx 0x11">📥 Pull Pat</button>
+            <button type="button" id="lib-btn-pull-all-patterns" class="lib-btn-sm primary" title="Pull all 16 patterns from FM-1 RAM">📥 Pull 16</button>
+            <button type="button" id="lib-btn-upload-all-patterns" class="lib-btn-sm warning" title="Upload all 16 patterns to FM-1 slots 1–16">📤 Upload 16</button>
+            <button type="button" id="lib-btn-pull-seq" class="lib-btn-sm" title="Import all 16 slots from Pulses Sequencer workspace bank">🔄 From Seq</button>
+          </div>
+
+          <div class="lib-btn-grid-2" style="margin-top:6px;">
+            <button type="button" id="lib-btn-send-seq" class="lib-btn-sm" title="Copy active pattern into Pulses Sequencer workspace bank">➡ To Seq Slot</button>
+            <button type="button" id="lib-btn-dl-pat-syx" class="lib-btn-sm" title="Download active pattern as FM-1 0x20 .syx">💾 Pat .syx</button>
+            <button type="button" id="lib-btn-dl-all-pat-syx" class="lib-btn-sm" title="Download all 16 patterns as a single .syx file">📦 16 Pat .syx</button>
+            <button type="button" id="lib-btn-dl-pat-mid" class="lib-btn-sm" title="Export active pattern as a Standard MIDI File (.mid)">🎵 Export .mid</button>
+          </div>
+          <button type="button" id="lib-btn-dl-pat-json" class="lib-btn-block" style="margin-top:6px; margin-bottom:0;" title="Export all 16 patterns as JSON">
+            <span>📄 Export Patterns (.json)</span>
           </button>
         </div>
 
-        <div class="va-card">
-          <h3 class="va-heading">Hardware &amp; SysEx</h3>
-          <div class="va-btn-grid-2">
-            <button id="va-btn-send-cc" class="va-btn-sm" title="Beam real-time MIDI CCs to M-VAVE FM-1 (no flash wear)">📡 Beam CCs</button>
-            <button id="va-btn-send-v4" class="va-btn-sm" title="Write 231-byte BaudGirl v4 SysEx to Target Slot">💾 Write 231B</button>
+        <div class="lib-card">
+          <div class="lib-card-header">
+            <h3 class="lib-heading">Audition &amp; File I/O</h3>
           </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:10px; color:var(--dim);">
-            <label style="display:flex; align-items:center; gap:5px; cursor:pointer;" title="Automatically stream real-time MIDI CCs on generate/edit">
-              <input type="checkbox" id="va-chk-auto-cc" checked />
-              <span>Auto-CC</span>
-            </label>
-            <div class="va-stepper" title="Target FM-1 Preset Number (1-128, VA Pack defaults to 113-128)">
-              <button type="button" id="va-slot-prev" class="va-stepper-btn" title="Previous Slot">‹</button>
-              <input type="number" id="va-target-slot" min="1" max="128" value="113" class="va-stepper-input" title="Slot (1–128)" />
-              <button type="button" id="va-slot-next" class="va-stepper-btn" title="Next Slot">›</button>
-            </div>
-            <label style="display:flex; align-items:center; gap:4px;">
-              <span>Ch:</span>
-              <select id="va-midi-channel-select" class="va-select" style="width: auto; padding: 1px 4px; margin-bottom: 0;">
-                <option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option>
-                <option value="4">5</option><option value="5">6</option><option value="6">7</option><option value="7">8</option>
-                <option value="8">9</option><option value="9">10</option><option value="10">11</option><option value="11">12</option>
-                <option value="12">13</option><option value="13">14</option><option value="14">15</option><option value="15">16</option>
-              </select>
-            </label>
-          </div>
-
-          <div style="margin-top:6px;">
-            <label class="va-field-label" for="va-audition-mode-select">Audition Audio</label>
-            <select id="va-audition-mode-select" class="va-select">
-              <option value="auto">Auto (FM-1 if connected, else Browser)</option>
-              <option value="browser">Browser VA Synth Only</option>
-              <option value="hardware">M-VAVE FM-1 Hardware Only</option>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="lib-audition-mode-select" class="lib-select" style="margin-bottom:0; flex:1;" title="Audio output target for pattern &amp; keyboard audition">
+              <option value="auto">Auto (FM-1 or Browser)</option>
+              <option value="browser">Browser Synth Only</option>
+              <option value="hardware">FM-1 Hardware Only</option>
               <option value="both">Both (Browser + FM-1)</option>
             </select>
+            <select id="lib-midi-channel-select" class="lib-select" style="width:auto; margin-bottom:0; padding:4px 6px;" title="MIDI Channel (1–16)">
+              <option value="0">Ch 1</option><option value="1">Ch 2</option><option value="2">Ch 3</option><option value="3">Ch 4</option>
+              <option value="4">Ch 5</option><option value="5">Ch 6</option><option value="6">Ch 7</option><option value="7">Ch 8</option>
+              <option value="8">Ch 9</option><option value="9">Ch 10</option><option value="10">Ch 11</option><option value="11">Ch 12</option>
+              <option value="12">Ch 13</option><option value="13">Ch 14</option><option value="14">Ch 15</option><option value="15">Ch 16</option>
+            </select>
           </div>
-
-          <div class="va-btn-grid-2" style="margin-top:8px;">
-            <button id="va-btn-dl-preset" class="va-btn-sm" title="Download 231-byte single preset .syx">💾 Preset 231B</button>
-            <button id="va-btn-dl-pack" class="va-btn-sm" title="Download 16-preset pack .syx (compatible with BaudGirl Device Manager)">💾 Pack 16 .syx</button>
-          </div>
-          <div class="va-file-drop" id="va-drop-area">
-            <span>📂 Drop or click to load <code>.syx</code></span>
-            <input type="file" id="va-panel-file-input" accept=".syx,application/octet-stream" hidden />
+          <div class="lib-file-drop" id="lib-drop-area" title="Drop or click to import .syx (Preset, Bank, or Pattern), .mid (MIDI sequence), or .json">
+            <span>📂 Drop or click: <code>.syx</code> <code>.mid</code> <code>.json</code></span>
+            <input type="file" id="lib-panel-file-input" accept=".syx,.mid,.midi,.json,application/octet-stream,application/json" hidden />
           </div>
         </div>
       </aside>
 
-      <!-- Center Column: Voice Inspector & Interactive VA Surfaces -->
-      <div class="va-panel va-panel-center">
-        <!-- Voice Header Card -->
-        <div class="va-voice-header">
-          <div class="va-title-group">
-            <span class="va-micro-label">PRESET NAME (10 CHARS)</span>
-            <input type="text" id="va-name-input" class="va-name-input" maxlength="10" value="INIT VA" spellcheck="false" />
-          </div>
+      <!-- Center Column: 64-Step Pattern Preview & Preset Inspector -->
+      <div class="lib-panel lib-panel-center">
+        <!-- Pattern Preview Card -->
+        <div class="lib-card">
+          <div class="lib-toolbar-strip">
+            <button type="button" id="lib-btn-play-pattern" class="lib-btn-sm primary" title="Play / Stop active pattern (Space)">▶ Play</button>
 
-          <div class="va-param-pill" title="Oscillator Waveform">
-            <span class="va-micro-label">WAVE</span>
-            <div class="va-seg-group" id="va-wave-group">
-              <button type="button" class="va-seg-btn" data-wave="0">SIN</button>
-              <button type="button" class="va-seg-btn active" data-wave="1">SAW</button>
-              <button type="button" class="va-seg-btn" data-wave="2">TRI</button>
-              <button type="button" class="va-seg-btn" data-wave="3">SQR</button>
+            <div class="lib-param-pill" title="Target FM-1 Pattern Slot (P1–P16)">
+              <span class="lib-micro-label">SLOT</span>
+              <div class="lib-stepper">
+                <button type="button" id="lib-pat-slot-prev" class="lib-stepper-btn" title="Previous Pattern">‹</button>
+                <span id="lib-pat-slot-val" class="lib-stepper-val">P1</span>
+                <button type="button" id="lib-pat-slot-next" class="lib-stepper-btn" title="Next Pattern">›</button>
+              </div>
+            </div>
+
+            <div class="lib-param-pill" title="Pattern Step Length (1–64)">
+              <span class="lib-micro-label">LEN</span>
+              <span id="lib-pat-len-val" class="lib-stepper-val">16 st</span>
+            </div>
+
+            <div class="lib-param-pill" title="Step Rate Division">
+              <span class="lib-micro-label">RATE</span>
+              <span id="lib-pat-rate" class="lib-stepper-val" style="min-width:34px;">1/16</span>
+            </div>
+
+            <div class="lib-param-pill" title="Pattern Tempo (30–300 BPM)">
+              <span class="lib-micro-label">BPM</span>
+              <span id="lib-pat-tempo-val" class="lib-stepper-val">120</span>
+            </div>
+
+            <div class="lib-param-pill" title="Gate Duration (5–100%)">
+              <span class="lib-micro-label">GATE</span>
+              <span id="lib-pat-gate-val" class="lib-stepper-val">80%</span>
+            </div>
+
+            <div class="lib-param-pill" title="Swing (50–75%)">
+              <span class="lib-micro-label">SWG</span>
+              <span id="lib-pat-swing-val" class="lib-stepper-val">50%</span>
+            </div>
+
+            <div class="lib-param-pill" title="Total Notes in Pattern" style="margin-left:auto;">
+              <span class="lib-micro-label">NOTES</span>
+              <span id="lib-pat-notes-val" class="lib-stepper-val" style="color:var(--accent); font-weight:700;">0</span>
             </div>
           </div>
 
-          <div class="va-param-pill" title="Filter Mode">
-            <span class="va-micro-label">FILTER</span>
-            <div class="va-seg-group" id="va-filter-group">
-              <button type="button" class="va-seg-btn active" data-ftype="0">LP12</button>
-              <button type="button" class="va-seg-btn" data-ftype="1">LP24</button>
-              <button type="button" class="va-seg-btn" data-ftype="2">BP</button>
-              <button type="button" class="va-seg-btn" data-ftype="3">HP</button>
-            </div>
-          </div>
-
-          <div class="va-param-pill" title="Filter Key Tracking">
-            <span class="va-micro-label">KEY TRK</span>
-            <div class="va-seg-group" id="va-keytrk-group">
-              <button type="button" class="va-seg-btn" data-ktrk="0">0%</button>
-              <button type="button" class="va-seg-btn" data-ktrk="1">33%</button>
-              <button type="button" class="va-seg-btn active" data-ktrk="2">67%</button>
-              <button type="button" class="va-seg-btn" data-ktrk="3">100%</button>
-            </div>
-          </div>
-
-          <div class="va-param-pill" title="Polyphonic / Monophonic Glide Mode">
-            <span class="va-micro-label">VOICE</span>
-            <div class="va-seg-group" id="va-mono-group">
-              <button type="button" class="va-seg-btn active" data-mono="0">POLY</button>
-              <button type="button" class="va-seg-btn" data-mono="1">MONO</button>
-            </div>
-          </div>
-
-          <div class="va-param-pill" title="Transpose (0–48 semitones, 24 = C3)">
-            <span class="va-micro-label">TRANSPOSE</span>
-            <div class="va-stepper">
-              <button type="button" id="va-transpose-prev" class="va-stepper-btn" title="Decrease Transpose">‹</button>
-              <input type="number" id="va-transpose-input" min="0" max="48" value="24" class="va-stepper-input" title="Transpose (0–48)" />
-              <button type="button" id="va-transpose-next" class="va-stepper-btn" title="Increase Transpose">›</button>
-            </div>
+          <!-- Read-Only Pattern Visualizer Canvas -->
+          <div class="lib-canvas-wrap" style="margin-top:6px;">
+            <canvas id="lib-pattern-canvas" width="720" height="180" title="Pattern Preview"></canvas>
           </div>
         </div>
 
-        <!-- 3 Interactive Visualizers Grid -->
-        <div class="va-viz-grid">
-          <div class="va-card">
-            <div class="va-card-header">
-              <span class="va-card-title">Oscillator</span>
+        <!-- Preset Inspector Card -->
+        <div class="lib-card">
+          <div class="lib-toolbar-strip">
+            <div class="lib-param-pill" title="Selected Preset Slot (1–128)">
+              <span class="lib-micro-label">PRESET</span>
+              <div class="lib-stepper">
+                <button type="button" id="lib-preset-prev" class="lib-stepper-btn" title="Previous Preset">‹</button>
+                <span id="lib-preset-slot-label" class="lib-stepper-val" style="min-width:64px;">#001 · A01</span>
+                <button type="button" id="lib-preset-next" class="lib-stepper-btn" title="Next Preset">›</button>
+              </div>
             </div>
-            <div class="va-canvas-body">
-              <canvas id="va-osc-canvas" width="240" height="120" title="Click to cycle Waveform; drag X for Detune/PWM, drag Y for Super unison"></canvas>
-            </div>
-          </div>
 
-          <div class="va-card">
-            <div class="va-card-header">
-              <span class="va-card-title">Filter Response</span>
+            <div class="lib-param-pill" title="Preset Name (10 ASCII chars)">
+              <span class="lib-micro-label">NAME</span>
+              <input type="text" id="lib-preset-name-input" class="lib-name-input" maxlength="10" value="" placeholder="EMPTY" spellcheck="false" />
             </div>
-            <div class="va-canvas-body">
-              <canvas id="va-filter-canvas" width="280" height="120" title="Drag X for Cutoff, drag Y for Resonance, scroll wheel for Filter Env"></canvas>
-            </div>
-          </div>
 
-          <div class="va-card">
-            <div class="va-card-header">
-              <span class="va-card-title">Amp ADSR</span>
-            </div>
-            <div class="va-canvas-body">
-              <canvas id="va-env-canvas" width="240" height="120" title="Drag Attack, Decay, Sustain, and Release nodes directly"></canvas>
-            </div>
-          </div>
-        </div>
+            <span id="lib-preset-engine-badge" class="lib-badge" title="Detected Synth Engine (FM / VA / 8BIT)">EMPTY</span>
 
-        <!-- Scrubbable Parameter Grid -->
-        <div class="va-card">
-          <div class="va-card-header">
-            <span class="va-card-title">Synth Parameters (Drag or Scroll on Any Cell)</span>
+            <div id="lib-preset-summary" class="lib-preset-summary" style="flex:1;"></div>
           </div>
-          <div id="va-scrub-grid" class="va-param-strip"></div>
-        </div>
-
-        <!-- 7-Unit Effects Chain -->
-        <div class="va-card">
-          <div class="va-card-header">
-            <span class="va-card-title">7-Unit Effects Chain</span>
-          </div>
-          <div id="va-fx-grid" class="va-fx-grid"></div>
-        </div>
-
-        <!-- Audition Keyboard -->
-        <div class="va-card">
-          <div class="va-card-header">
-            <span class="va-card-title" title="Click keys or use keys A–K (W E T Y U for sharps)">Interactive Audition Keyboard</span>
-          </div>
-          <div id="va-piano-keyboard" class="va-keyboard-wrap"></div>
         </div>
       </div>
 
-      <!-- Right Column: 16-Preset VA Pack Manager (Slots 113–128) -->
-      <aside class="va-panel va-panel-right">
-        <div class="va-card">
-          <div class="va-card-header">
-            <h3 class="va-heading" style="margin:0;">16-Preset VA Pack</h3>
-            <span id="va-bank-slot-indicator" class="va-badge">Slot 113</span>
+      <!-- Right Column: 16 Pattern Slots & 128 Preset Library -->
+      <aside class="lib-panel lib-panel-right">
+        <div class="lib-card">
+          <div class="lib-card-header">
+            <h3 class="lib-heading">16 Pattern Slots</h3>
+            <span id="lib-active-pat-badge" class="lib-badge">P1</span>
           </div>
-          <div class="va-btn-grid-2">
-            <button id="va-btn-fill-pack" class="va-btn-sm" title="Generate 16 VA presets of current category">⚡ Gen 16</button>
-            <button id="va-btn-fill-mixed" class="va-btn-sm" title="Generate 16 mixed-category VA presets">🌈 Mixed 16</button>
+          <div id="lib-pattern-list" class="lib-pattern-grid"></div>
+        </div>
+
+        <div class="lib-card">
+          <div class="lib-card-header">
+            <h3 class="lib-heading">Preset Library</h3>
+            <span id="lib-preset-count-badge" class="lib-badge">0 / 128</span>
           </div>
-          <button id="va-btn-export-pack" class="va-btn-block primary" style="margin-top:6px; font-size:10px;">
-            <span>📦 Download Pack (.syx)</span>
-          </button>
-          <div id="va-bank-list" class="va-bank-list" style="margin-top:8px;"></div>
+          <div id="lib-preset-list" class="lib-preset-list"></div>
         </div>
       </aside>
     </div>
 
     <div style="font-size:10px; color:var(--dim); padding:4px 2px; display:flex; justify-content:space-between;">
-      <span id="va-status-message">Ready. Drag on Oscillator, Filter, or ADSR canvases, or press Space to generate.</span>
-      <span><kbd>Space</kbd> Generate &nbsp; <kbd>M</kbd> Mutate &nbsp; <kbd>B</kbd> To Pack &nbsp; <kbd>E</kbd> Export Pack</span>
+      <span id="lib-status-message">Ready. Pull or import presets and patterns, or upload and export to FM-1 hardware.</span>
+      <span><kbd>Space</kbd> Play/Stop Pattern &nbsp; <kbd>U</kbd> Upload Pattern</span>
     </div>
   </section>
 </div>
-<script type="module" src="js/rack.js?v=11"></script>
+<script type="module" src="js/rack.js?v=17"></script>
 </body>
 </html>
