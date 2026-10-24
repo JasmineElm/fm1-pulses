@@ -609,7 +609,14 @@ function highlightActiveRibbon(stepIndex) {
   const activeChip = ribbonContainer.querySelector(`.lsystem-chip[data-idx="${targetIdx}"]`);
   if (activeChip) {
     activeChip.classList.add("is-active");
-    activeChip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    // Scroll only the ribbonContainer horizontally, preventing window/page scrolling
+    const chipLeft = activeChip.offsetLeft;
+    const chipWidth = activeChip.offsetWidth;
+    const containerWidth = ribbonContainer.clientWidth;
+    ribbonContainer.scrollTo({
+      left: chipLeft - (containerWidth / 2) + (chipWidth / 2),
+      behavior: "smooth"
+    });
   }
 }
 
