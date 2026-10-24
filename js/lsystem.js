@@ -17,7 +17,7 @@ import {
 import { knob, dropdown, actionBtn } from "./controls.js";
 import { isLive, setModelStepHandler } from "./player.js?v=1";
 import { liveNoteOn, liveNoteOff, panicPreview } from "./player.js";
-import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals } from "./scale.js?v=1";
+import { SCALE_LABELS, ROOT_NOTE_OPTIONS, ROOT_OCTAVE_OPTIONS, mapNormalizedToNote, getRootMidi, getActiveScaleIntervals, computeOctaveShift } from "./scale.js?v=1";
 import { syncRhythmGrid, randomizeRhythm } from "./rhythm.js";
 import { getActiveModel } from "./modes.js";
 import { quantize, midiName, SCALES } from "./generator.js";
@@ -227,17 +227,19 @@ export function compileLSystem() {
 /**
  * Builds the geometric tree coordinates and the 64-step sequence notes.
  */
-function buildSimulationCache() {
+export function buildSimulationCache() {
   compiledNotes = [];
   treeSegments = [];
 
   const intervals = getActiveScaleIntervals();
   const root = getRootMidi();
-  const octSpan = Math.min(4, Math.max(1, state.lsystemSpan ?? state.pitchSpan ?? 3));
+  const octSpan = Math.min(4, Math.max(1, state.pitchSpan ?? state.lsystemSpan ?? 3));
   const degreeStep = Math.min(7, Math.max(1, state.lsystemDegreeStep ?? 1));
   const angleRad = ((state.lsystemAngle ?? 25) * Math.PI) / 180;
   const decayRate = (state.lsystemBranchDecay ?? 85) / 100;
   const baseVel = state.velocity ?? 100;
+  const octChance = (state.octave ?? 0) / 100;
+  const octMode = state.octaveMode || "up";
 
   let currentDegree = 0;
   let currentOctave = 0;
@@ -266,7 +268,8 @@ function buildSimulationCache() {
         const deg = ((currentDegree % intLen) + intLen) % intLen;
         const octOffset = Math.floor(currentDegree / intLen) + currentOctave;
         const clampedOct = Math.min(octSpan - 1, Math.max(-1, octOffset));
-        const rawPitch = root + clampedOct * 12 + (intervals[deg] || 0);
+        const octShift = computeOctaveShift(octChance, octMode);
+        const rawPitch = root + clampedOct * 12 + (intervals[deg] || 0) + octShift;
         const note = quantize(rawPitch, intervals, root);
 
         // Velocity scaled by branch depth
@@ -364,6 +367,7 @@ function buildSimulationCache() {
 
 // ---- Core Bank Generator Contract ----
 export function generateLsystemBank(targetState = state) {
+  buildSimulationCache();
   const rate = targetState.rate !== undefined ? targetState.rate : 6;
   const seqLen = Math.min(64, Math.max(1, targetState.length || 64));
 
@@ -414,6 +418,11 @@ export function randomizeLsystem() {
   compileLSystem();
   doGenerate(true);
   status(`L-System randomized: ${p.name}`, "ok");
+}
+
+export function syncLsystemFromRegen() {
+  buildSimulationCache();
+  renderTreeCanvas();
 }
 
 // ---- Live Step Handler ----

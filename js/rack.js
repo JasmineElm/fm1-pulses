@@ -26,7 +26,7 @@ import { initPendulum, activatePendulumModel, deactivatePendulumModel } from "./
 import { initFlock, activateFlockModel, deactivateFlockModel } from "./flock.js?v=1";
 import { initRungler, activateRunglerModel, deactivateRunglerModel } from "./rungler.js?v=3";
 import { initKrell, activateKrellModel, deactivateKrellModel } from "./krell.js?v=1";
-import { initLsystem, activateLsystemModel, deactivateLsystemModel } from "./lsystem.js?v=1";
+import { initLsystem, activateLsystemModel, deactivateLsystemModel, syncLsystemFromRegen } from "./lsystem.js?v=1";
 import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js?v=2";
 import { initLibrarian, activateLibrarian, deactivateLibrarian } from "./librarian.js?v=2";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
@@ -43,6 +43,8 @@ onRegen(() => {
     applyLocks();
     renderBuffer();
     syncRhythmGrid();
+  } else if (getActiveModel() === "lsystem") {
+    syncLsystemFromRegen();
   }
 });
 
@@ -264,18 +266,28 @@ export function buildNotesBar() {
       state.pendulumOctaves = state.pitchSpan;
       state.runglerSpan = state.pitchSpan;
       state.krellSpan = state.pitchSpan;
+      state.lsystemSpan = state.pitchSpan;
       if (refs.turingSpan?.setValue) refs.turingSpan.setValue(state.pitchSpan, false);
       if (refs.runglerSpan?.setValue) refs.runglerSpan.setValue(state.pitchSpan, false);
       if (refs.krellSpan?.setValue) refs.krellSpan.setValue(state.pitchSpan, false);
+      if (refs.lsystemSpan?.setValue) refs.lsystemSpan.setValue(state.pitchSpan, false);
       state.caQuantSteps = state.quantSteps;
       state.turingQuantSteps = state.quantSteps;
       state.particleQuantSteps = state.quantSteps;
+      state.lsystemQuantSteps = state.quantSteps;
       state.caOctave = state.octave;
       state.turingOctave = state.octave;
       state.particleOctave = state.octave;
+      state.lsystemOctave = state.octave;
       state.caOctaveMode = state.octaveMode;
       state.turingOctaveMode = state.octaveMode;
       state.particleOctaveMode = state.octaveMode;
+      state.lsystemOctaveMode = state.octaveMode;
+      state.lsystemScale = state.scale;
+      state.lsystemCustomScale = state.customScale;
+      state.lsystemRoot = state.root;
+      state.lsystemRootNote = state.rootNote;
+      state.lsystemRootOctave = state.rootOctave;
 
       scheduleRegen();
     }
