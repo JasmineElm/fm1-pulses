@@ -135,6 +135,19 @@ export const LSYSTEM_PRESETS = [
     degreeStep: 1,
     angle: 45,
     decay: 90
+  },
+  {
+    id: "custom",
+    name: "Custom (Procedural)",
+    desc: "Procedurally generated valid, finite morphogenetic grammar",
+    axiom: "F",
+    ruleF: "F[+F]F[-F]",
+    ruleX: "X",
+    ruleY: "Y",
+    depth: 3,
+    degreeStep: 1,
+    angle: 25,
+    decay: 85
   }
 ];
 
@@ -397,27 +410,141 @@ export function generateLsystemBank(targetState = state) {
   return [phrase];
 }
 
-export function randomizeLsystem() {
-  const p = LSYSTEM_PRESETS[(Math.random() * LSYSTEM_PRESETS.length) | 0];
-  state.lsystemPreset = p.id;
-  state.lsystemAxiom = p.axiom;
-  state.lsystemRuleF = p.ruleF;
-  state.lsystemRuleX = p.ruleX;
-  state.lsystemRuleY = p.ruleY;
-  state.lsystemDepth = p.depth;
-  state.lsystemDegreeStep = p.degreeStep;
-  state.lsystemAngle = p.angle;
-  state.lsystemBranchDecay = p.decay;
-
-  // Perturb degree step or angle slightly for fresh variation
-  if (Math.random() > 0.5) {
-    state.lsystemDegreeStep = 1 + ((Math.random() * 3) | 0);
+/**
+ * Validates that an L-System rule string has strictly balanced brackets
+ * and at least one movement/note token ('F').
+ */
+export function isValidLSystemRule(str) {
+  let depth = 0;
+  let hasF = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === "F") hasF = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth < 0) return false;
+    }
   }
+  return depth === 0 && hasF;
+}
+
+/**
+ * Procedurally generates a random, valid, and finite L-system grammar.
+ * Guarantees:
+ * 1. Strict bracket balance (every '[' has a matching ']', never negative depth).
+ * 2. Strict finiteness (growth bounded: F count in ruleF <= 3, total expanded string < 1000 symbols).
+ * 3. Musically meaningful intervals and branch displacements.
+ */
+export function generateRandomValidGrammar() {
+  const archetypes = ["branching", "branching", "nested", "contour", "dualVar"];
+  const archetype = archetypes[(Math.random() * archetypes.length) | 0];
+
+  const turnTokens = ["+", "-", "++", "--"];
+  const octTokens = ["^", "v", ""];
+
+  if (archetype === "branching" || archetype === "nested") {
+    // Branching tree: 2-3 F stems with 1-2 balanced bracket arms
+    const branchCount = 1 + ((Math.random() * 2) | 0);
+    const parts = ["F"];
+
+    for (let b = 0; b < branchCount; b++) {
+      const turn = turnTokens[(Math.random() * turnTokens.length) | 0];
+      const oct = octTokens[(Math.random() * octTokens.length) | 0];
+      let inner = `${turn}${oct}F`;
+
+      // Optional nested sub-branch in "nested" archetype
+      if (archetype === "nested" && Math.random() < 0.5) {
+        const subTurn = turn.startsWith("+") ? "-" : "+";
+        inner += `[${subTurn}F]`;
+      }
+
+      parts.push(`[${inner}]`);
+      parts.push("F");
+    }
+
+    if (Math.random() < 0.3) {
+      parts.push(turnTokens[(Math.random() * turnTokens.length) | 0]);
+    }
+
+    let ruleF = parts.join("");
+    if (!isValidLSystemRule(ruleF)) ruleF = "F[+F]F[-F]";
+
+    return {
+      axiom: "F",
+      ruleF,
+      ruleX: "X",
+      ruleY: "Y",
+      depth: archetype === "nested" ? 2 : 3,
+      degreeStep: 1 + ((Math.random() * 3) | 0),
+      angle: [20, 25, 30, 36, 45, 60][(Math.random() * 6) | 0],
+      decay: 75 + Math.round(Math.random() * 20)
+    };
+  } else if (archetype === "contour") {
+    // Angular geometric contour without brackets (Snowflake / Dragon style)
+    const segments = 2 + ((Math.random() * 2) | 0);
+    const parts = ["F"];
+
+    for (let s = 0; s < segments; s++) {
+      const turn = turnTokens[(Math.random() * turnTokens.length) | 0];
+      const oct = Math.random() < 0.25 ? octTokens[(Math.random() * 2) | 0] : "";
+      parts.push(`${turn}${oct}F`);
+    }
+
+    let ruleF = parts.join("");
+    if (!isValidLSystemRule(ruleF)) ruleF = "F+F-F+F";
+
+    return {
+      axiom: "F",
+      ruleF,
+      ruleX: "X",
+      ruleY: "Y",
+      depth: 3,
+      degreeStep: 1 + ((Math.random() * 3) | 0),
+      angle: [45, 60, 90][(Math.random() * 3) | 0],
+      decay: 90
+    };
+  } else {
+    // Dual variable X/Y grammar
+    const xTurns = ["+", "-", "+F+", "-F-"];
+    const tX = xTurns[(Math.random() * xTurns.length) | 0];
+    const tY = tX.includes("+") ? tX.replace(/\+/g, "-") : tX.replace(/-/g, "+");
+
+    return {
+      axiom: "FX",
+      ruleF: "F",
+      ruleX: `X${tX}YF+`,
+      ruleY: `-FX${tY}Y`,
+      depth: 3,
+      degreeStep: 1 + ((Math.random() * 2) | 0),
+      angle: [45, 60, 90][(Math.random() * 3) | 0],
+      decay: 85
+    };
+  }
+}
+
+export function randomizeLsystem() {
+  const g = generateRandomValidGrammar();
+  state.lsystemPreset = "custom";
+  state.lsystemAxiom = g.axiom;
+  state.lsystemRuleF = g.ruleF;
+  state.lsystemRuleX = g.ruleX;
+  state.lsystemRuleY = g.ruleY;
+  state.lsystemDepth = g.depth;
+  state.lsystemDegreeStep = g.degreeStep;
+  state.lsystemAngle = g.angle;
+  state.lsystemBranchDecay = g.decay;
+
+  // Sync parameter knobs if mounted
+  if (refs.lsystemDepth?.setValue) refs.lsystemDepth.setValue(g.depth, false);
+  if (refs.lsystemDegreeStep?.setValue) refs.lsystemDegreeStep.setValue(g.degreeStep, false);
+  if (refs.lsystemAngle?.setValue) refs.lsystemAngle.setValue(g.angle, false);
+  if (refs.lsystemBranchDecay?.setValue) refs.lsystemBranchDecay.setValue(g.decay, false);
 
   updateInputsFromState();
   compileLSystem();
   doGenerate(true);
-  status(`L-System randomized: ${p.name}`, "ok");
+  status(`L-System rule randomized: ${g.ruleF}`, "ok");
 }
 
 export function syncLsystemFromRegen() {
@@ -683,8 +810,8 @@ export function initLsystem() {
   btnMutate.className = "btn-action";
   btnMutate.style.fontSize = "10px";
   btnMutate.style.padding = "3px 8px";
-  btnMutate.textContent = "Mutate";
-  btnMutate.title = "Randomly mutate grammar rules or select next preset";
+  btnMutate.textContent = "Randomise";
+  btnMutate.title = "Generate a new valid, finite procedural L-System rule (or press R/G)";
   btnMutate.addEventListener("click", () => {
     randomizeLsystem();
   });
