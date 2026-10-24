@@ -54,6 +54,7 @@ const PREFIX = {
   flock: /^flock[A-Z]/,
   rungler: /^rungler[A-Z]/,
   krell: /^krell[A-Z]/,
+  lsystem: /^lsystem[A-Z]/,
 };
 
 export function ownsKey(modelId, key) {

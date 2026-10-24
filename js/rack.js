@@ -26,6 +26,7 @@ import { initPendulum, activatePendulumModel, deactivatePendulumModel } from "./
 import { initFlock, activateFlockModel, deactivateFlockModel } from "./flock.js?v=1";
 import { initRungler, activateRunglerModel, deactivateRunglerModel } from "./rungler.js?v=3";
 import { initKrell, activateKrellModel, deactivateKrellModel } from "./krell.js?v=1";
+import { initLsystem, activateLsystemModel, deactivateLsystemModel } from "./lsystem.js?v=1";
 import { initDxPatch, activateDxPatch, deactivateDxPatch } from "./dxpatch.js?v=2";
 import { initLibrarian, activateLibrarian, deactivateLibrarian } from "./librarian.js?v=2";
 import { initRhythm, syncRhythmGrid } from "./rhythm.js?v=1";
@@ -511,6 +512,7 @@ initPendulum();
 initFlock();
 initRungler();
 initKrell();
+initLsystem();
 initDxPatch();
 initLibrarian();
 doGenerate(true);
@@ -529,6 +531,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       fitSteps();
@@ -542,6 +545,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       activateCellularModel();
@@ -552,6 +556,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       activateTuringModel();
@@ -562,6 +567,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       activateParticlesModel();
@@ -572,6 +578,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       activatePendulumModel();
@@ -582,6 +589,7 @@ initModes({
       deactivatePendulumModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       if (isLive()) stopLive();
@@ -593,6 +601,7 @@ initModes({
       deactivatePendulumModel();
       deactivateFlockModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       activateRunglerModel();
@@ -603,6 +612,7 @@ initModes({
       deactivatePendulumModel();
       deactivateFlockModel();
       deactivateRunglerModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       deactivateLibrarian();
       if (isLive()) stopLive();
@@ -615,6 +625,7 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateLibrarian();
       if (isLive()) stopLive();
       activateDxPatch();
@@ -626,9 +637,24 @@ initModes({
       deactivateFlockModel();
       deactivateRunglerModel();
       deactivateKrellModel();
+      deactivateLsystemModel();
       deactivateDxPatch();
       if (isLive()) stopLive();
       activateLibrarian();
+    } else if (modelId === "lsystem") {
+      deactivateCellularModel();
+      deactivateTuringModel();
+      deactivateParticlesModel();
+      deactivatePendulumModel();
+      deactivateFlockModel();
+      deactivateRunglerModel();
+      deactivateKrellModel();
+      deactivateDxPatch();
+      deactivateLibrarian();
+      activateLsystemModel();
+      fitSteps();
+      renderScope();
+      syncRhythmGrid();
     }
   },
   onLeaveModel: () => {

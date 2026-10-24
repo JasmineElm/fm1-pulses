@@ -113,6 +113,27 @@ export const MODELS = [
       <circle cx="14" cy="18" r="1.8" fill="currentColor" />
       <path d="M3 12h3m3 0h3m3 0h3" stroke-dasharray="1 2" />
     </svg>`
+  },
+  {
+    id: "lsystem",
+    name: "L-System Grammar",
+    kicker: "Lindenmayer Formal Grammar · Fractal Turtle · Motif Branching",
+    available: true,
+    desc: "Recursive string-rewriting morphogenetic engine based on Aristid Lindenmayer's biological grammars. A musical turtle navigates branching rewrite rules with bracket stack push/pop, transforming recursive axioms (Fractal Canopy, Dragon Curve, Sierpinski, Hilbert) into self-similar polyphonic motifs and evolving melodic structures.",
+    tags: ["Formal Grammar", "Recursive Rewriting", "Stack Push / Pop", "Fractal Turtle", "Self-Similar Motifs", "Direct Rule Edit"],
+    icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="22" x2="12" y2="13" />
+      <line x1="12" y1="13" x2="7" y2="7" />
+      <line x1="12" y1="13" x2="17" y2="7" />
+      <line x1="7" y1="7" x2="4" y2="3" />
+      <line x1="7" y1="7" x2="9" y2="3" />
+      <line x1="17" y1="7" x2="15" y2="3" />
+      <line x1="17" y1="7" x2="20" y2="3" />
+      <circle cx="4" cy="3" r="1.5" fill="currentColor" />
+      <circle cx="9" cy="3" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="3" r="1.5" fill="currentColor" />
+      <circle cx="20" cy="3" r="1.5" fill="currentColor" />
+    </svg>`
   }
 ];
 
@@ -263,6 +284,7 @@ export function showLanding(updateHash = true) {
   const modelFlock = document.getElementById("model-flock");
   const modelRungler = document.getElementById("model-rungler");
   const modelKrell = document.getElementById("model-krell");
+  const modelLsystem = document.getElementById("model-lsystem");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
   const seqBar = document.getElementById("sequence");
@@ -285,6 +307,7 @@ export function showLanding(updateHash = true) {
   if (modelFlock) modelFlock.style.display = "none";
   if (modelRungler) modelRungler.style.display = "none";
   if (modelKrell) modelKrell.style.display = "none";
+  if (modelLsystem) modelLsystem.style.display = "none";
   if (btnBack) btnBack.style.display = "none";
   if (modeTag) modeTag.style.display = "none";
 
@@ -294,7 +317,7 @@ export function showLanding(updateHash = true) {
 }
 
 export function showModel(id, updateHash = true) {
-  if (id !== "mene311" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "pendulum" && id !== "flock" && id !== "rungler" && id !== "krell" && id !== "dxpatch" && id !== "librarian") return;
+  if (id !== "mene311" && id !== "cellular" && id !== "turing" && id !== "particles" && id !== "pendulum" && id !== "flock" && id !== "rungler" && id !== "krell" && id !== "lsystem" && id !== "dxpatch" && id !== "librarian") return;
 
   const viewLanding = document.getElementById("view-landing");
   const viewWorkspace = document.getElementById("view-workspace") || document.getElementById("view-mene311");
@@ -308,6 +331,7 @@ export function showModel(id, updateHash = true) {
   const modelFlock = document.getElementById("model-flock");
   const modelRungler = document.getElementById("model-rungler");
   const modelKrell = document.getElementById("model-krell");
+  const modelLsystem = document.getElementById("model-lsystem");
   const btnBack = document.getElementById("btn-back-landing");
   const modeTag = document.getElementById("brand-mode-tag");
   const seqBar = document.getElementById("sequence");
@@ -362,6 +386,7 @@ export function showModel(id, updateHash = true) {
     if (modelFlock) modelFlock.style.display = id === "flock" ? "block" : "none";
     if (modelRungler) modelRungler.style.display = id === "rungler" ? "block" : "none";
     if (modelKrell) modelKrell.style.display = id === "krell" ? "block" : "none";
+    if (modelLsystem) modelLsystem.style.display = id === "lsystem" ? "block" : "none";
     if (btnBack) {
       btnBack.textContent = "‹ Models";
       btnBack.title = "Return to Sequencer Models";
@@ -376,6 +401,7 @@ export function showModel(id, updateHash = true) {
       else if (id === "flock") modeTag.textContent = "Flocking Swarm";
       else if (id === "rungler") modeTag.textContent = "Rob Hordijk Rungler";
       else if (id === "krell") modeTag.textContent = "Buchla Krell Patch";
+      else if (id === "lsystem") modeTag.textContent = "L-System Grammar";
       modeTag.style.display = "inline-block";
     }
   }
@@ -444,6 +470,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
       if (activeModelId !== "rungler") showModel("rungler", false);
     } else if (h === "#krell") {
       if (activeModelId !== "krell") showModel("krell", false);
+    } else if (h === "#lsystem") {
+      if (activeModelId !== "lsystem") showModel("lsystem", false);
     } else if (h === "#dxpatch" || h === "#dxpatchgen" || h === "#patch-generator") {
       if (activeModelId !== "dxpatch") showModel("dxpatch", false);
     } else if (h === "#librarian" || h === "#sync" || h === "#export") {
@@ -472,6 +500,8 @@ export function initModes({ onEnterModel, onLeaveModel } = {}) {
     showModel("rungler", false);
   } else if (initialHash === "#krell") {
     showModel("krell", false);
+  } else if (initialHash === "#lsystem") {
+    showModel("lsystem", false);
   } else if (initialHash === "#dxpatch" || initialHash === "#dxpatchgen" || initialHash === "#patch-generator") {
     showModel("dxpatch", false);
   } else if (initialHash === "#librarian" || initialHash === "#sync" || initialHash === "#export") {

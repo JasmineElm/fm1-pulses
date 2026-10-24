@@ -155,6 +155,23 @@ export const DEFAULT = {
   krellRootOctave: 3,
   krellCcDest: 74,     // FM-1 CC #74 Brightness
   krellCcDepth: 95,    // Continuous filter modulation depth (0 to 127)
+
+  // L-System Morphogenetic Grammar parameters
+  lsystemAxiom: "F",
+  lsystemRuleF: "F[+F]F[-F][F]",
+  lsystemRuleX: "X",
+  lsystemRuleY: "Y",
+  lsystemDepth: 3,
+  lsystemDegreeStep: 1,
+  lsystemBranchDecay: 85, // % velocity retention per bracket depth level
+  lsystemOctaveStep: 1,
+  lsystemAngle: 25,       // degrees for visual turtle branch angle
+  lsystemPreset: "canopy",
+  lsystemMode: "sync",     // "sync" | "free"
+  lsystemSpan: 3,
+  lsystemCcDest: 74,
+  lsystemCcDepth: 80,
+  lsystemGateLen: 180,
 };
 
 export const state = { ...DEFAULT };

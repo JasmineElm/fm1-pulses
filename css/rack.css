@@ -2538,3 +2538,152 @@ kbd {
   cursor: grabbing;
 }
 
+/* ==========================================================================
+   L-SYSTEM MORPHOGENETIC GRAMMAR MODEL STYLES
+   ========================================================================== */
+.lsystem-layout {
+  gap: 16px;
+}
+
+.lsystem-rule-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lsystem-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lsystem-rule-lhs {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 68px;
+  user-select: none;
+}
+
+.lsystem-rule-input {
+  flex: 1;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .12s ease;
+}
+
+.lsystem-rule-input:focus {
+  border-color: var(--accent);
+}
+
+.lsystem-select {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+.lsystem-select:focus {
+  border-color: var(--accent);
+}
+
+.lsystem-param-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 800px) {
+  .lsystem-param-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.lsystem-canvas {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  display: block;
+}
+
+.lsystem-ribbon {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding: 6px 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) var(--panel2);
+}
+
+.lsystem-chip {
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all .1s ease;
+}
+
+.lsystem-chip:hover {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+.lsystem-chip.chip-f {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.lsystem-chip.chip-turn {
+  color: var(--accent2);
+}
+
+.lsystem-chip.chip-bracket {
+  color: var(--ok);
+}
+
+.lsystem-chip.chip-oct {
+  color: var(--fg);
+}
+
+.lsystem-chip.chip-var {
+  color: var(--dim);
+}
+
+.lsystem-chip.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  outline: 2px solid var(--fg);
+}
+
+.lsystem-chip.chip-more {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  cursor: default;
+}
+

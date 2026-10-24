@@ -37,17 +37,17 @@ The models are ordered first by the **fundamental algorithmic, mathematical, and
 
 ### Roadmap Summary Table
 
-| Step | Model ID | Model Name | Primary Domain | Core Primitives Satisfied / Reused | Complexity |
-|---|---|---|---|---|---|
-| **01** | `lsystem` | **L-System Morphogenetic Grammar** | Evolutionary / Formal Grammar | Recursive string rewriting, stack-based sub-motif branching (`[`, `]`) | Low (1/5) |
-| **02** | `lotka_volterra` | **Lotka-Volterra Predator-Prey** | Non-Linear Dynamics | Runge-Kutta 4th Order (RK4), Poincaré cutting plane triggers, phase loops | Low (1.5/5) |
-| **03** | `orbital` | **Keplerian Orbital Resonance** | Celestial Mechanics | Symplectic Velocity-Verlet, periapsis transit detection, angular conjunctions | Moderate (2/5) |
-| **04** | `hanenbow` | **Electroplankton Hanenbow Ballistics** | Physical Toy / Ballistics | 2D circle-to-line segment projection, specular momentum rebound, leaf springs | Moderate (2.5/5) |
-| **05** | `sandpile` | **Abelian Sandpile (SOC)** | Statistical Physics / Avalanches | 2D integer lattice, relaxation queue, center-of-mass pitch, $1/f$ pink noise | Moderate (3/5) |
-| **06** | `percolation` | **Percolation Cluster Phase Transition** | Fluid Porosity / Criticality | Disjoint Set Union (DSU / Union-Find), cluster scaling, conductive wave fronts | Mod-High (3.5/5) |
-| **07** | `dla` | **Diffusion-Limited Aggregation (DLA)** | Fractal Growth / Brownian Walks | 2D Brownian motion, perimeter boundary kill zones, sticky bitmask lookup | High (4/5) |
-| **08** | `epidemic` | **SIR Epidemic Network Dynamics** | Population / Epidemiology | Spatial contact proximity graphs, multi-state Markov transitions, $R_0$ density | High (4/5) |
-| **09** | `physarum` | **Physarum Slime Mould Network** | Biological Foraging / Transport | 3-sensor agent steering, 2D Float32Array pheromone diffusion/decay, flux tubes | Highest (5/5) |
+| Step | Model ID | Model Name | Primary Domain | Core Primitives Satisfied / Reused | Complexity | Status |
+|---|---|---|---|---|---|---|
+| **01** | `lsystem` | **L-System Morphogenetic Grammar** | Evolutionary / Formal Grammar | Recursive string rewriting, stack-based sub-motif branching (`[`, `]`) | Low (1/5) | ✅ Complete |
+| **02** | `lotka_volterra` | **Lotka-Volterra Predator-Prey** | Non-Linear Dynamics | Runge-Kutta 4th Order (RK4), Poincaré cutting plane triggers, phase loops | Low (1.5/5) | Pending |
+| **03** | `orbital` | **Keplerian Orbital Resonance** | Celestial Mechanics | Symplectic Velocity-Verlet, periapsis transit detection, angular conjunctions | Moderate (2/5) | Pending |
+| **04** | `hanenbow` | **Electroplankton Hanenbow Ballistics** | Physical Toy / Ballistics | 2D circle-to-line segment projection, specular momentum rebound, leaf springs | Moderate (2.5/5) | Pending |
+| **05** | `sandpile` | **Abelian Sandpile (SOC)** | Statistical Physics / Avalanches | 2D integer lattice, relaxation queue, center-of-mass pitch, $1/f$ pink noise | Moderate (3/5) | Pending |
+| **06** | `percolation` | **Percolation Cluster Phase Transition** | Fluid Porosity / Criticality | Disjoint Set Union (DSU / Union-Find), cluster scaling, conductive wave fronts | Mod-High (3.5/5) | Pending |
+| **07** | `dla` | **Diffusion-Limited Aggregation (DLA)** | Fractal Growth / Brownian Walks | 2D Brownian motion, perimeter boundary kill zones, sticky bitmask lookup | High (4/5) | Pending |
+| **08** | `epidemic` | **SIR Epidemic Network Dynamics** | Population / Epidemiology | Spatial contact proximity graphs, multi-state Markov transitions, $R_0$ density | High (4/5) | Pending |
+| **09** | `physarum` | **Physarum Slime Mould Network** | Biological Foraging / Transport | 3-sensor agent steering, 2D Float32Array pheromone diffusion/decay, flux tubes | Highest (5/5) | Pending |
 
 ---
 
@@ -79,7 +79,7 @@ Every model implementation must strictly adhere to the following shared framewor
 
 ---
 
-### Model 01 (Step 1): L-System (Lindenmayer Morphogenetic Grammars)
+### Model 01 (Step 1): L-System (Lindenmayer Morphogenetic Grammars) — [COMPLETED]
 - **Model ID**: `lsystem`
 - **Category**: Evolutionary / Biological Grammars / Recursive Morphogenesis.
 - **Why First**: Zero spatial physics dependencies. Establishes formal grammar string rewriting and the stack-based musical turtle (`[`, `]`), providing a deterministic foundation for nested motif development.
